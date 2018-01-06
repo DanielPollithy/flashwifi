@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:showIn="navigation_view">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_search"
+            android:icon="@drawable/ic_search_black"
+            android:title="@string/menuSearchHotspot" />
+        <item
+            android:id="@+id/nav_start"
+            android:icon="@drawable/icon_tethering_on"
+            android:title="@string/menuStartHotspot" />
+        <item
+            android:id="@+id/nav_itp"
+            android:icon="@drawable/ic_highlight_black"
+            android:title="@string/initialTrustPayment" />
+
+    </group>
+
+    <item android:title="Wallet">
+        <menu>
+            <item
+                android:id="@+id/nav_fund"
+                android:icon="@drawable/ic_keyboard_arrow_right"
+                android:title="@string/fundWallet" />
+            <item
+                android:id="@+id/nav_withdraw"
+                android:icon="@drawable/ic_attach_money"
+                android:title="Withdraw" />
+        </menu>
+    </item>
+
+    <item android:title="Communicate">
+        <menu>
+            <item
+                android:id="@+id/nav_conditions"
+                android:icon="@drawable/ic_compare_arrows"
+                android:title="@string/navConditions" />
+            <item
+                android:id="@+id/nav_settings"
+                android:icon="@drawable/ic_menu_manage"
+                android:title="@string/settings" />
+        </menu>
+    </item>
+
+</menu>
