@@ -41,4 +41,11 @@
     <string name="hotspotIntroduction">Do you want to start a new Wifiota hotspot? Find conditions in the menu to adjust things.</string>
     <string name="internetTestSuccess">Your device has access to the internet</string>
     <string name="iotaNodeTestSuccess">Connection to Iota Node is possible.</string>
+
+    <!-- Fund Wallet Fragment -->
+    <string name="FundWalletAddressTitle">ADDRESS:</string>
+    <string name="FundWalletNoAddress">No address generated, click +</string>
+
+
+
 </resources>
