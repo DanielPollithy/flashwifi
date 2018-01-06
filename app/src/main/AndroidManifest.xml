@@ -12,6 +12,7 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
 
     <application
         android:allowBackup="true"
@@ -20,23 +21,35 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme.NoActionBar">
-        <activity android:name="com.flashwifi.wifip2p.MainActivity">
+        <activity android:name=".HomeActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".SearchActivity" />
+        <activity
+            android:name=".ChatActivity"
+            android:parentActivityName=".SearchActivity" />
 
-        <activity android:name="com.flashwifi.wifip2p.ChatActivity"
-            android:parentActivityName="com.flashwifi.wifip2p.MainActivity" >
-        </activity>
+        <service
+            android:name=".WiFiDirectBroadcastService"
+            android:description="@string/wifi_direct" />
+        <service
+            android:name=".MessengerService"
+            android:process=":remote" />
+        <service android:name=".AccessPointService" />
 
-        <service android:name="com.flashwifi.wifip2p.WiFiDirectBroadcastService"  android:description="@string/wifi_direct" />
-
-        <service android:name="com.flashwifi.wifip2p.MessengerService" android:process=":remote" />
-        <service android:name="com.flashwifi.wifip2p.AccessPointService" android:process=":remote" />
-
+        <activity android:name=".DesktopActivity" />
+        <activity
+            android:name="jenny.daniel.wifip2p.TestActivity"
+            android:label="@string/title_activity_test"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".MainActivity"
+            android:label="@string/title_activity_main"
+            android:theme="@style/AppTheme.NoActionBar"></activity>
     </application>
 
 </manifest>

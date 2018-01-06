@@ -22,7 +22,7 @@ public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
 
     private WifiP2pManager mManager;
     private WifiP2pManager.Channel mChannel;
-    private MainActivity mActivity;
+    private SearchActivity mActivity;
 
     private WiFiDirectBroadcastService service;
 
@@ -86,9 +86,19 @@ public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
 
             Log.d(TAG, "onReceive: " + network_info.getState().toString());
             service.setConnectionStateChanged(p2p_info, network_info, p2p_group);
+
+            mManager.requestConnectionInfo(mChannel, new WifiP2pManager.ConnectionInfoListener() {
+                @Override
+                public void onConnectionInfoAvailable(WifiP2pInfo wifiP2pInfo) {
+                    service.setNewIncomingConnection(wifiP2pInfo);
+                }
+            });
+
         } else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
             Log.d(TAG, "onReceive: WIFI_P2P_THIS_DEVICE_CHANGED_ACTION");
             // Respond to this device's wifi state changing
         }
     }
+
+
 }

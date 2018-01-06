@@ -12,6 +12,7 @@ import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Binder;
 import android.os.IBinder;
+import android.support.design.widget.Snackbar;
 import android.util.Log;
 
 import java.net.InetAddress;
@@ -42,16 +43,27 @@ public class WiFiDirectBroadcastService extends Service {
     ArrayList<String> receivedMessages = new ArrayList<>();
 
     // socket stuff
-    ServerTask serverTask;
+    NegotiationServerTask negotiationServerTask;
     boolean serverRuns;
 
-    public void startSocketServer() {
+    private String currentDeviceConnected = null;
+
+    // discovery mode
+    private boolean discoveryModeActive = false;
+
+    public void startNegotiationServer(boolean isClient) {
         Log.d("", "startSocketServer: ");
-        if (!serverRuns) {
-            serverTask.execute();
-        } else {
-            Log.d("", "startSocketServer: ALREADY RUNNING");
-        }
+        //negotiationServerTask = new NegotiationServerTask();
+        //negotiationServerTask.execute();
+        String isClientString = (isClient) ? "True" : "False";
+        new NegotiationServerTask().execute(isClientString);
+    }
+
+    public void startNegotiationClient(InetAddress address, boolean isClient) {
+        Log.d("", "startSocketClient: ");
+        String isClientString = (isClient) ? "True" : "False";
+        String ipaddr = address.getHostAddress();
+        new NegotiationClientTask().execute(isClientString, ipaddr);
     }
 
     public void sendMessageToSocketServer(InetAddress address, String message) {
@@ -84,12 +96,16 @@ public class WiFiDirectBroadcastService extends Service {
 
             registerReceiver(mReceiver, mIntentFilter);
 
-            serverTask = new ServerTask();
             serverRuns = false;
 
 
             setup = true;
         }
+    }
+
+    public void startDiscoveryMode(WifiP2pManager.ActionListener action_listener) {
+        mManager.discoverPeers(mChannel, action_listener);
+        discoveryModeActive = true;
     }
 
     /**
@@ -142,16 +158,34 @@ public class WiFiDirectBroadcastService extends Service {
         sendUpdateUIBroadcast();
     }
 
+    public void setNewIncomingConnection(WifiP2pInfo wifiP2pInfo){
+        // This method is called when a new device connected to this one
+        this.p2p_info = wifiP2pInfo;
+        if (p2p_info.groupFormed) {
+            if (currentDeviceConnected == null || !currentDeviceConnected.equals(p2p_info.groupOwnerAddress.getHostAddress())) {
+                currentDeviceConnected = p2p_info.groupOwnerAddress.getHostAddress();
+                sendUpdateUIBroadcastNewConnection();
+            }
+        }
+    }
+
     public void setConnectionStateChanged(WifiP2pInfo p2p_info, NetworkInfo network_info, WifiP2pGroup p2p_group) {
         this.p2p_info = p2p_info;
         this.network_info = network_info;
         this.p2p_group = p2p_group;
-        sendUpdateUIBroadcast();
     }
 
     private void sendUpdateUIBroadcast(){
         Intent local = new Intent();
         local.setAction("jenny.daniel.wifip2p.update_ui");
+        this.sendBroadcast(local);
+    }
+
+    private void sendUpdateUIBroadcastNewConnection(){
+        Log.d(TAG, "sendUpdateUIBroadcastNewConnection: SEND THEEM SHIIIIIIIT");
+        Intent local = new Intent();
+        local.setAction("jenny.daniel.wifip2p.update_ui");
+        local.putExtra("what", "connectivity_changed");
         this.sendBroadcast(local);
     }
 
@@ -166,6 +200,10 @@ public class WiFiDirectBroadcastService extends Service {
         WifiP2pDevice device;
         WifiP2pConfig config = new WifiP2pConfig();
         config.deviceAddress = address;
+        // groupOwnerIntent determines how much you want to become the group onwer
+        // 0 means little and 15 means a lot
+        // https://stackoverflow.com/questions/18703881/how-to-make-a-specific-group-owner-in-wifi-direct-android
+        config.groupOwnerIntent = 0;
         mManager.connect(mChannel, config, actionListener);
     }
 }

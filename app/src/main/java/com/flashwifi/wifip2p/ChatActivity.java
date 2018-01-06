@@ -11,8 +11,11 @@ import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -40,6 +43,7 @@ public class ChatActivity  extends AppCompatActivity {
     InetAddress groupOwnerAddress;
 
     BroadcastReceiver updateUIReceiver;
+    private boolean hotspot_running = false;
 
     @Override
     protected void onStart() {
@@ -51,7 +55,7 @@ public class ChatActivity  extends AppCompatActivity {
         updateUIReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                updateUi();
+                updateUi(intent);
             }
         };
         registerReceiver(updateUIReceiver, filter);
@@ -59,25 +63,20 @@ public class ChatActivity  extends AppCompatActivity {
         // Bind to LocalService
         Intent intent = new Intent(this, WiFiDirectBroadcastService.class);
         bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+
+        // Bind to
+        Intent intent2 = new Intent(this, AccessPointService.class);
+        bindService(intent2, apConnection, Context.BIND_AUTO_CREATE);
     }
 
-    private void updateUi() {
+    private void updateUi(Intent intent) {
         NetworkInfo network_info = mService.getNetwork_info();
         WifiP2pInfo p2p_info = mService.getP2p_info();
+
         TextView connection_status = (TextView) findViewById(R.id.connection_status);
+        final View activity_view = findViewById(R.id.chatView);
+
         connection_status.setText(network_info.toString());
-        if (network_info.getState() == NetworkInfo.State.CONNECTED) {
-            if (p2p_info.isGroupOwner) {
-                addMessageRight("Network", "You are the group owner");
-                // start the socket on port 9999
-                mService.startSocketServer();
-            } else {
-                addMessageRight("Network", "You are a member of the group");
-                // connect to the socket
-                groupOwnerAddress = p2p_info.groupOwnerAddress;
-            }
-            addMessageRight("Network", "Group owner address: " + p2p_info.groupOwnerAddress.getHostAddress());
-        }
 
     }
 
@@ -137,11 +136,41 @@ public class ChatActivity  extends AppCompatActivity {
             }
         });
 
+        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(final View view) {
+                toggleHotspot();
+            }
+        });
+
         listView = (ListView) findViewById(R.id.peer_list);
         arrayList = new ArrayList<>();
 
         listAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, arrayList);
         listView.setAdapter(listAdapter);
+    }
+
+    public void toggleHotspot() {
+        if (hotspot_running) {
+            stopHotspot();
+        } else {
+            startHotspot();
+        }
+    }
+
+    private void startHotspot() {
+        apService.startAP();
+        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        fab.setImageResource(R.drawable.icon_tethering_on);
+        hotspot_running = true;
+    }
+
+    private void stopHotspot() {
+        apService.stopAP();
+        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        fab.setImageResource(R.drawable.icon_tethering_off);
+        hotspot_running = false;
     }
 
     public void addMessageLeft(String name, String text) {
@@ -169,7 +198,7 @@ public class ChatActivity  extends AppCompatActivity {
             mService = binder.getService();
             mBound = true;
             // start connection
-            connectToPeer(address);
+            // connectToPeer(address);
         }
 
         @Override
@@ -189,9 +218,7 @@ public class ChatActivity  extends AppCompatActivity {
             apService = binder.getService();
             //apBound = true;
             // start connection
-            //connectToPeer(address);
-            apService.startAP();
-
+            connectToPeer(address);
         }
 
         @Override

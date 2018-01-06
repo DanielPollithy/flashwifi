@@ -5,7 +5,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
-    tools:context="com.flashwifi.wifip2p.MainActivity">
+    android:id="@+id/chatView"
+    tools:context="com.flashwifi.wifip2p.ChatActivity">
 
     <android.support.design.widget.AppBarLayout
         android:id="@+id/app_bar"
@@ -52,10 +53,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="@dimen/fab_margin"
+        app:fabSize="normal"
         app:layout_anchor="@id/app_bar"
         app:layout_anchorGravity="bottom|end"
-        app:fabSize="normal"
-        app:srcCompat="@drawable/icon_refresh" />
+        app:srcCompat="@drawable/icon_tethering_off" />
 
     <RelativeLayout
         android:layout_width="wrap_content"

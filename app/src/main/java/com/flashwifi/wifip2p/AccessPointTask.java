@@ -10,16 +10,21 @@ import android.util.Log;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import static android.content.Context.WIFI_SERVICE;
+
 public class AccessPointTask extends AsyncTask<Context, Void, String> {
 
     private final static String TAG = "AccessPointTask";
+    private  Context context;
+    String ssid = "iota-wifi-121431";
+    WifiManager wifi;
+    WifiInfo w;
 
     @Override
     protected String doInBackground(Context... params) {
-        String ssid = "iota-wifi-121431";
-        Context context = params[0];
-        WifiManager wifi = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
-        WifiInfo w = wifi.getConnectionInfo();
+        context = params[0];
+        wifi = (WifiManager) context.getSystemService(WIFI_SERVICE);
+        w = wifi.getConnectionInfo();
         Log.d("dsd", w.toString());
 
         if (wifi.isWifiEnabled())
@@ -33,16 +38,12 @@ public class AccessPointTask extends AsyncTask<Context, Void, String> {
             if (method.getName().equals("setWifiApEnabled")){
                 methodFound = true;
                 WifiConfiguration netConfig = new WifiConfiguration();
-                netConfig.SSID = "\""+ssid+"\"";
-                netConfig.allowedAuthAlgorithms.set(WifiConfiguration.AuthAlgorithm.OPEN);
-                //netConfig.allowedProtocols.set(WifiConfiguration.Protocol.RSN);
-                //netConfig.allowedProtocols.set(WifiConfiguration.Protocol.WPA);
-                //netConfig.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.WPA_PSK);
-                //netConfig.preSharedKey = password;
-                //netConfig.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.CCMP);
-                //netConfig.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.TKIP);
-                //netConfig.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.CCMP);
-                //netConfig.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.TKIP);
+                netConfig.SSID = "Iotify";
+                netConfig.preSharedKey = "1234567890";
+                netConfig.allowedAuthAlgorithms.set(WifiConfiguration.AuthAlgorithm.SHARED);
+                netConfig.allowedProtocols.set(WifiConfiguration.Protocol.RSN);
+                netConfig.allowedProtocols.set(WifiConfiguration.Protocol.WPA);
+                netConfig.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.WPA_PSK);
 
                 try {
                     boolean apstatus = (Boolean) method.invoke(wifi, netConfig,true);
@@ -65,7 +66,7 @@ public class AccessPointTask extends AsyncTask<Context, Void, String> {
 
                     if(apstatus)
                     {
-                        System.out.println("SUCCESSdddd");
+                        System.out.println("SUCCESS");
                         //statusView.append("\nAccess Point Created!");
                         //finish();
                         //Intent searchSensorsIntent = new Intent(this,SearchSensors.class);
@@ -92,11 +93,52 @@ public class AccessPointTask extends AsyncTask<Context, Void, String> {
         if (!methodFound){
             //statusView.setText("Your phone's API does not contain setWifiApEnabled method to configure an access point");
         }
+
+        int number_minutes = 60;
+        for (int i=0; i<number_minutes; i++) {
+            try {
+                Thread.sleep(1000*60);
+            } catch (InterruptedException e) {
+                break;
+            }
+        }
+
+
         return null;
     }
 
+
     @Override
-    protected void onPostExecute(String result) {}
+    protected void onCancelled() {
+        super.onCancelled();
+        stopAP();
+    }
+
+    private void stopAP() {
+        Log.d(TAG, "stopAP: THIS IS STOPPING THE AP");
+        WifiManager wifiManager = (WifiManager) context.getApplicationContext().getSystemService(WIFI_SERVICE);
+
+        Method[] methods = wifiManager.getClass().getDeclaredMethods();
+        for (Method method : methods) {
+            if (method.getName().equals("setWifiApEnabled")) {
+                try {
+                    method.invoke(wifiManager, null, false);
+                } catch (Exception ex) {
+                }
+                break;
+            }
+        }
+
+        if (!wifi.isWifiEnabled())
+        {
+            wifi.setWifiEnabled(true);
+        }
+    }
+
+    @Override
+    protected void onPostExecute(String result) {
+
+    }
 
     @Override
     protected void onPreExecute() {}

@@ -6,4 +6,39 @@
     <string name="remote_service_started">remote_service_started</string>
     <string name="remote_service_stopped">remote_service_stopped</string>
     <string name="local_service_label">local_service_label</string>
+    <string name="homeWelcomeMessage">Wifiota</string>
+    <string name="preference_file_key">com.flashwifi.wifip2p.iota_wifi_file</string>
+    <string name="number_of_usages">numberOfUsages</string>
+    <string name="active_seed">activeSeed</string>
+    <string name="passwordField">Password</string>
+    <string name="no_seed_present">We have no active seed</string>
+    <string name="generateSeed">Generate Seed</string>
+    <string name="weStoreThisSeed">The seed will be stored encrypted on your phone. Please supply a password. There is no fallback if you loose this password.</string>
+    <string name="newPasswordField">Choose a new password</string>
+    <string name="new_password">Use this password</string>
+    <string name="encrypted_seed">encryptedSeed</string>
+    <string name="seed_stored">The new seed is stored.</string>
+    <string name="decryptTheSeed">Decrypt the Seed</string>
+    <string name="seed_decrypted">The seed got decrypted.</string>
+    <string name="wrong_password">Password was wrong.</string>
+    <string name="startAP">Start Wifiota Access Point</string>
+    <string name="findAP">Search for Wifiota Access Point</string>
+    <string name="generateITPs">Generate ITPs (initial trust payments)</string>
+    <string name="title_activity_test">TestActivity</string>
+
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="title_activity_main">Wifiota</string>
+    <string name="menuSearchHotspot">Search Hotspot</string>
+    <string name="menuStartHotspot">Start Hotspot</string>
+    <string name="initialTrustPayment">Initial Trust Payment</string>
+    <string name="fundWallet">Fund Wallet</string>
+    <string name="navConditions">Conditions</string>
+    <string name="settings">Settings</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="hotspotIntroduction">Do you want to start a new Wifiota hotspot? Find conditions in the menu to adjust things.</string>
+    <string name="internetTestSuccess">Your device has access to the internet</string>
+    <string name="iotaNodeTestSuccess">Connection to Iota Node is possible.</string>
 </resources>

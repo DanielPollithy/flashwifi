@@ -8,33 +8,37 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 
-import java.util.Random;
-
 public class AccessPointService extends Service {
     public final static String TAG = "AccessPointService";
 
     // Binder given to clients
     private final IBinder mBinder = new LocalBinder();
-    // Random number generator
-    private final Random mGenerator = new Random();
 
     private boolean setup = false;
 
     // broadcast stuff
-    WifiP2pManager mManager;
-    WifiP2pManager.Channel mChannel;
     BroadcastReceiver mReceiver;
-    IntentFilter mIntentFilter;
 
     // socket stuff
     AccessPointTask apTask;
-    boolean apRuns;
+    boolean apRuns = false;
 
     public void startAP() {
-        Log.d("", "start AP");
+        Log.d("xxxxxxxxxxxxxx", "start AP");
         if (!apRuns) {
             apRuns = true;
+            apTask = new AccessPointTask();
             apTask.execute(this);
+        } else {
+            Log.d("", "startSocketServer: ALREADY RUNNING");
+        }
+    }
+
+    public void stopAP() {
+        Log.d("xxxxxxxxxxxxxx", "stop AP");
+        if (apRuns) {
+            apRuns = false;
+            apTask.cancel(true);
         } else {
             Log.d("", "startSocketServer: ALREADY RUNNING");
         }
@@ -66,7 +70,6 @@ public class AccessPointService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        apTask = new AccessPointTask();
     }
 
     private void sendUpdateUIBroadcast(){

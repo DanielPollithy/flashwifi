@@ -1,0 +1,55 @@
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/hotspot_fragment"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical" >
+
+
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/hotspotIntroduction"
+            android:textSize="20sp" />
+
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/internetTestSuccess"
+            android:textSize="20sp"
+            android:id="@+id/internetTest"
+            android:visibility="invisible" />
+
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/iotaNodeTestSuccess"
+            android:textSize="20sp"
+            android:id="@+id/iotaNodeTest"
+            android:visibility="invisible" />
+
+        <ToggleButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/startAP"
+            android:id="@+id/startAPButton"
+            />
+
+        <ProgressBar
+            style="?android:attr/progressBarStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="invisible"
+            android:id="@+id/progressbarAP"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="0 peers"
+            android:id="@+id/numberPeers"
+            android:textSize="30sp"/>
+
+</LinearLayout>
