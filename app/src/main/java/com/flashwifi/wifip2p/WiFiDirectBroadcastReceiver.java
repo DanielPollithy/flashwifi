@@ -11,6 +11,9 @@ import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.util.Log;
 
+import com.flashwifi.wifip2p.datastore.PeerInformation;
+import com.flashwifi.wifip2p.datastore.PeerStore;
+
 import java.util.ArrayList;
 
 /**
@@ -22,7 +25,6 @@ public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
 
     private WifiP2pManager mManager;
     private WifiP2pManager.Channel mChannel;
-    private SearchActivity mActivity;
 
     private WiFiDirectBroadcastService service;
 
@@ -40,9 +42,22 @@ public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
             @Override
             public void onPeersAvailable(WifiP2pDeviceList wifiP2pDeviceList) {
                 ArrayList<String> arrayList = new ArrayList<>();
+                PeerInformation peer;
+
+                // let the PeerInformations age
+                PeerStore.getInstance().makeNewGeneration();
+
                 for (WifiP2pDevice device : wifiP2pDeviceList.getDeviceList()) {
                     arrayList.add(device.deviceName + " : " + device.deviceAddress);
+
+                    // create a PeerInformation from the WifiP2pDevice
+                    peer = new PeerInformation();
+                    peer.setWifiP2pDevice(device);
+                    // update the PeerStore
+                    PeerStore.getInstance().updateOrCreate(peer);
+
                 }
+
                 // change the state of the service
                 service.setArrayList(arrayList);
             }
@@ -70,8 +85,6 @@ public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
             if (mManager != null) {
                 mManager.requestPeers(mChannel, myPeerListListener);
             }
-
-
 
 
         } else if (WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {

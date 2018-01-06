@@ -24,8 +24,11 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.ListView;
+
+import com.flashwifi.wifip2p.datastore.PeerInformation;
+import com.flashwifi.wifip2p.datastore.PeerListAdapter;
+import com.flashwifi.wifip2p.datastore.PeerStore;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -42,99 +45,8 @@ public class SearchFragment extends Fragment {
     BroadcastReceiver updateUIReceiver;
 
     ArrayList<String> arrayList;
-    ArrayAdapter<String> listAdapter;
+    PeerListAdapter peerListAdapter;
 
-    Messenger xService = null;
-    /** Flag indicating whether we have called bind on the service. */
-    boolean xIsBound;
-
-    static class IncomingHandler extends Handler {
-        @Override
-        public void handleMessage(Message msg) {
-            switch (msg.what) {
-                case MessengerService.MSG_SET_VALUE:
-                    Log.d(TAG, "Received from service: " + msg.arg1);
-                    break;
-                default:
-                    super.handleMessage(msg);
-            }
-        }
-    }
-
-    /**
-     * Target we publish for clients to send messages to IncomingHandler.
-     */
-    final Messenger xMessenger = new Messenger(new SearchActivity.IncomingHandler());
-
-    /**
-     * Class for interacting with the main interface of the service.
-     */
-    private ServiceConnection xConnection = new ServiceConnection() {
-        public void onServiceConnected(ComponentName className,
-                                       IBinder service) {
-            // This is called when the connection with the service has been
-            // established, giving us the service object we can use to
-            // interact with the service.  We are communicating with our
-            // service through an IDL interface, so get a client-side
-            // representation of that from the raw service object.
-            xService = new Messenger(service);
-
-            // We want to monitor the service for as long as we are
-            // connected to it.
-            try {
-                Message msg = Message.obtain(null,
-                        MessengerService.MSG_REGISTER_CLIENT);
-                msg.replyTo = xMessenger;
-                xService.send(msg);
-
-                // Give it some value as an example.
-                msg = Message.obtain(null,
-                        MessengerService.MSG_SET_VALUE, this.hashCode(), 0);
-                xService.send(msg);
-            } catch (RemoteException e) {
-                // In this case the service has crashed before we could even
-                // do anything with it; we can count on soon being
-                // disconnected (and then reconnected if it can be restarted)
-                // so there is no need to do anything here.
-            }
-        }
-
-        public void onServiceDisconnected(ComponentName className) {
-            // This is called when the connection with the service has been
-            // unexpectedly disconnected -- that is, its process crashed.
-            xService = null;
-        }
-    };
-
-    void doBindService() {
-        // Establish a connection with the service.  We use an explicit
-        // class name because there is no reason to be able to let other
-        // applications replace our component.
-        getActivity().bindService(new Intent(getActivity(), MessengerService.class), xConnection, Context.BIND_AUTO_CREATE);
-        xIsBound = true;
-    }
-
-    void doUnbindService() {
-        if (xIsBound) {
-            // If we have received the service, and hence registered with
-            // it, then now is the time to unregister.
-            if (xService != null) {
-                try {
-                    Message msg = Message.obtain(null,
-                            MessengerService.MSG_UNREGISTER_CLIENT);
-                    msg.replyTo = xMessenger;
-                    xService.send(msg);
-                } catch (RemoteException e) {
-                    // There is nothing special we need to do if the service
-                    // has crashed.
-                }
-            }
-
-            // Detach our existing connection.
-            getActivity().unbindService(xConnection);
-            xIsBound = false;
-        }
-    }
 
     public SearchFragment() {
         // Empty constructor required for fragment subclasses
@@ -180,10 +92,10 @@ public class SearchFragment extends Fragment {
     }
 
     private void updateUi(Intent intent) {
-        listAdapter.notifyDataSetInvalidated();
-        listAdapter.clear();
-        listAdapter.addAll(mService.getArrayList());
-        listAdapter.notifyDataSetChanged();
+        peerListAdapter.notifyDataSetInvalidated();
+        peerListAdapter.clear();
+        peerListAdapter.addAll(PeerStore.getInstance().getPeerArrayList());
+        peerListAdapter.notifyDataSetChanged();
 
         String what = intent.getStringExtra("what");
         Log.d(">>>>>>>>>>>>", "updateUi: " + what);
@@ -192,24 +104,49 @@ public class SearchFragment extends Fragment {
             what = "";
         }
 
+        // ToDo: do we need this???
         if (what.equals("connectivity_changed")) {
+            // startNegotiationProtocol();
+        }
+    }
 
-            NetworkInfo network_info = mService.getNetwork_info();
-            WifiP2pInfo p2p_info = mService.getP2p_info();
+    private void startNegotiationProtocol(String macAddress){
+        WifiP2pInfo p2p_info = mService.getP2p_info();
 
-            if (network_info.getState() == NetworkInfo.State.CONNECTED) {
-                if (p2p_info.isGroupOwner) {
-                    Log.d(TAG, "You are the group owner");
-                    mService.startNegotiationServer(true);
-                    Log.d(TAG, "SocketServer started");
-                } else {
-                    Log.d(TAG, "You are a member of the group");
-                    // groupOwnerAddress = p2p_info.groupOwnerAddress;
-                    InetAddress groupOwnerAddress = p2p_info.groupOwnerAddress;
-                    Log.d(TAG, "Group owner address: " + p2p_info.groupOwnerAddress.getHostAddress());
-                    mService.startNegotiationClient(groupOwnerAddress, true);
-                    Log.d(TAG, "Client Socket started");
-                }
+        if (p2p_info.isGroupOwner) {
+            startNegotiationProtocolServer(macAddress);
+        } else {
+            startNegotiationProtocolClient(macAddress);
+        }
+    }
+
+    private void startNegotiationProtocolServer(String macAddress) {
+        // starts the server if necessary
+        WifiP2pInfo p2p_info = mService.getP2p_info();
+        NetworkInfo network_info = mService.getNetwork_info();
+
+        if (network_info.getState() == NetworkInfo.State.CONNECTED) {
+            if (p2p_info.isGroupOwner) {
+                Log.d(TAG, "You are the group owner");
+                mService.startNegotiationServer(true, macAddress);
+                Log.d(TAG, "SocketServer started");
+            }
+        }
+    }
+
+    private void startNegotiationProtocolClient(String macAddress){
+        // starts the server if necessary
+        WifiP2pInfo p2p_info = mService.getP2p_info();
+        NetworkInfo network_info = mService.getNetwork_info();
+
+        if (network_info.getState() == NetworkInfo.State.CONNECTED) {
+            if (!p2p_info.isGroupOwner) {
+                Log.d(TAG, "You are a member of the group");
+                // groupOwnerAddress = p2p_info.groupOwnerAddress;
+                InetAddress groupOwnerAddress = p2p_info.groupOwnerAddress;
+                Log.d(TAG, "Group owner address: " + p2p_info.groupOwnerAddress.getHostAddress());
+                mService.startNegotiationClient(groupOwnerAddress, true, macAddress);
+                Log.d(TAG, "Client Socket started");
             }
         }
     }
@@ -226,7 +163,7 @@ public class SearchFragment extends Fragment {
         super.onActivityCreated(savedInstanceState);
 
         IntentFilter filter = new IntentFilter();
-        filter.addAction("jenny.daniel.wifip2p.update_ui");
+        filter.addAction("com.flashwifi.wifip2p.update_ui");
 
         updateUIReceiver = new BroadcastReceiver() {
             @Override
@@ -260,15 +197,20 @@ public class SearchFragment extends Fragment {
         ListView listView = (ListView) getActivity().findViewById(R.id.peer_list);
         arrayList = new ArrayList<>();
 
-        listAdapter = new ArrayAdapter<>(getActivity(), android.R.layout.simple_list_item_1, arrayList);
-        listView.setAdapter(listAdapter);
+        peerListAdapter = new PeerListAdapter(
+                getActivity(),
+                R.layout.itemlistview,
+                PeerStore.getInstance().getPeerArrayList());
+
+        listView.setAdapter(peerListAdapter);
 
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                String[] splittedLine = arrayList.get(i).split(" : ");
-                String address = splittedLine[1];
-                String name = splittedLine[0];
+                PeerInformation peer = PeerStore.getInstance().getPeerArrayList().get(i);
+
+                String address = peer.getWifiP2pDevice().deviceAddress;
+                String name = peer.getWifiP2pDevice().deviceName;
 
                 startChat(address, name);
             }
@@ -276,6 +218,10 @@ public class SearchFragment extends Fragment {
     }
 
     public void startChat(String address, String name) {
+        // start the socket for the negotiation
+        startNegotiationProtocol(address);
+
+
         Intent intent = new Intent(getActivity(), ChatActivity.class);
         intent.putExtra("address", address);
         intent.putExtra("name", name);

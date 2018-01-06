@@ -1,4 +1,7 @@
 package com.flashwifi.wifip2p;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -15,6 +18,7 @@ import android.os.IBinder;
 import android.support.design.widget.Snackbar;
 import android.util.Log;
 
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Random;
@@ -51,19 +55,19 @@ public class WiFiDirectBroadcastService extends Service {
     // discovery mode
     private boolean discoveryModeActive = false;
 
-    public void startNegotiationServer(boolean isClient) {
+    public void startNegotiationServer(boolean isClient, String macAddress) {
         Log.d("", "startSocketServer: ");
         //negotiationServerTask = new NegotiationServerTask();
         //negotiationServerTask.execute();
         String isClientString = (isClient) ? "True" : "False";
-        new NegotiationServerTask().execute(isClientString);
+        new NegotiationServerTask().execute(isClientString, macAddress);
     }
 
-    public void startNegotiationClient(InetAddress address, boolean isClient) {
+    public void startNegotiationClient(InetAddress address, boolean isClient, String macAddress) {
         Log.d("", "startSocketClient: ");
         String isClientString = (isClient) ? "True" : "False";
         String ipaddr = address.getHostAddress();
-        new NegotiationClientTask().execute(isClientString, ipaddr);
+        new NegotiationClientTask().execute(isClientString, ipaddr, macAddress);
     }
 
     public void sendMessageToSocketServer(InetAddress address, String message) {
@@ -82,11 +86,30 @@ public class WiFiDirectBroadcastService extends Service {
         return p2p_group;
     }
 
+    private void deletePersistentGroups() {
+        try {
+            Method[] methods = WifiP2pManager.class.getMethods();
+            for (int i = 0; i < methods.length; i++) {
+                if (methods[i].getName().equals("deletePersistentGroup")) {
+                    // Delete any persistent group
+                    for (int netid = 0; netid < 32; netid++) {
+                        methods[i].invoke(mManager, mChannel, netid, null);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     private void setupService() {
         if (!setup) {
             mManager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
             mChannel = mManager.initialize(this, getMainLooper(), null);
             mReceiver = new WiFiDirectBroadcastReceiver(mManager, mChannel, this);
+
+            // delete all old groups
+            deletePersistentGroups();
 
             mIntentFilter = new IntentFilter();
             mIntentFilter.addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION);
@@ -162,10 +185,8 @@ public class WiFiDirectBroadcastService extends Service {
         // This method is called when a new device connected to this one
         this.p2p_info = wifiP2pInfo;
         if (p2p_info.groupFormed) {
-            if (currentDeviceConnected == null || !currentDeviceConnected.equals(p2p_info.groupOwnerAddress.getHostAddress())) {
-                currentDeviceConnected = p2p_info.groupOwnerAddress.getHostAddress();
-                sendUpdateUIBroadcastNewConnection();
-            }
+            currentDeviceConnected = p2p_info.groupOwnerAddress.getHostAddress();
+            sendUpdateUIBroadcastNewConnection();
         }
     }
 
@@ -177,22 +198,23 @@ public class WiFiDirectBroadcastService extends Service {
 
     private void sendUpdateUIBroadcast(){
         Intent local = new Intent();
-        local.setAction("jenny.daniel.wifip2p.update_ui");
+        local.setAction("com.flashwifi.wifip2p.update_ui");
         this.sendBroadcast(local);
     }
 
     private void sendUpdateUIBroadcastNewConnection(){
         Log.d(TAG, "sendUpdateUIBroadcastNewConnection: SEND THEEM SHIIIIIIIT");
         Intent local = new Intent();
-        local.setAction("jenny.daniel.wifip2p.update_ui");
+        local.setAction("com.flashwifi.wifip2p.update_ui");
         local.putExtra("what", "connectivity_changed");
+        local.putExtra("currentDeviceConnected", currentDeviceConnected);
         this.sendBroadcast(local);
     }
 
     private void sendUpdateUIBroadcastWithMessage(String message){
         Intent local = new Intent();
         local.putExtra("message", message);
-        local.setAction("jenny.daniel.wifip2p.update_ui");
+        local.setAction("com.flashwifi.wifip2p.update_ui");
         this.sendBroadcast(local);
     }
 

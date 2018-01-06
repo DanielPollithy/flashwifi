@@ -50,7 +50,7 @@ public class ChatActivity  extends AppCompatActivity {
         super.onStart();
 
         IntentFilter filter = new IntentFilter();
-        filter.addAction("jenny.daniel.wifip2p.update_ui");
+        filter.addAction("com.flashwifi.wifip2p.update_ui");
 
         updateUIReceiver = new BroadcastReceiver() {
             @Override

@@ -28,10 +28,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".SearchActivity" />
+
         <activity
             android:name=".ChatActivity"
-            android:parentActivityName=".SearchActivity" />
+            android:parentActivityName=".DesktopActivity" />
 
         <service
             android:name=".WiFiDirectBroadcastService"
@@ -42,14 +42,10 @@
         <service android:name=".AccessPointService" />
 
         <activity android:name=".DesktopActivity" />
-        <activity
-            android:name="jenny.daniel.wifip2p.TestActivity"
-            android:label="@string/title_activity_test"
-            android:theme="@style/AppTheme.NoActionBar" />
-        <activity
-            android:name=".MainActivity"
+
+        <activity android:name=".MainActivity"
             android:label="@string/title_activity_main"
-            android:theme="@style/AppTheme.NoActionBar"></activity>
+            android:theme="@style/AppTheme.NoActionBar" />
     </application>
 
 </manifest>

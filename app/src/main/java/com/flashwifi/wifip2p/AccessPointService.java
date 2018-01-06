@@ -74,7 +74,7 @@ public class AccessPointService extends Service {
 
     private void sendUpdateUIBroadcast(){
         Intent local = new Intent();
-        local.setAction("jenny.daniel.wifip2p.update_ui");
+        local.setAction("com.flashwifi.wifip2p.update_ui");
         this.sendBroadcast(local);
     }
 }
