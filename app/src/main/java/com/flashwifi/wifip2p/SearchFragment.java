@@ -21,6 +21,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import com.flashwifi.wifip2p.datastore.PeerInformation;
 import com.flashwifi.wifip2p.datastore.PeerListAdapter;
@@ -44,6 +45,9 @@ public class SearchFragment extends Fragment {
 
     ArrayList<String> arrayList;
     PeerListAdapter peerListAdapter;
+
+    View view;
+    private boolean busy = false;
 
 
     public SearchFragment() {
@@ -89,11 +93,15 @@ public class SearchFragment extends Fragment {
         return f;
     }
 
-    private void updateUi(Intent intent) {
+    private void updateList() {
         peerListAdapter.notifyDataSetInvalidated();
         peerListAdapter.clear();
         peerListAdapter.addAll(PeerStore.getInstance().getPeerArrayList());
         peerListAdapter.notifyDataSetChanged();
+    }
+
+    private void updateUi(Intent intent) {
+        updateList();
 
         String what = intent.getStringExtra("what");
         Log.d(">>>>>>>>>>>>", "updateUi: " + what);
@@ -176,6 +184,8 @@ public class SearchFragment extends Fragment {
         Intent intent = new Intent(getActivity(), WiFiDirectBroadcastService.class);
         getActivity().bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
 
+        view = getActivity().findViewById(R.id.main_view);
+
         initUI();
     }
 
@@ -205,20 +215,39 @@ public class SearchFragment extends Fragment {
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                PeerInformation peer = PeerStore.getInstance().getPeerArrayList().get(i);
+                if (!busy) {
+                    busy = true;
+                    PeerInformation peer = PeerStore.getInstance().getPeerArrayList().get(i);
 
-                String address = peer.getWifiP2pDevice().deviceAddress;
-                String name = peer.getWifiP2pDevice().deviceName;
+                    peer.setSelected(true);
+                    updateList();
 
-                startChat(address, name);
+                    String address = peer.getWifiP2pDevice().deviceAddress;
+                    String name = peer.getWifiP2pDevice().deviceName;
+
+                    startChat(address, name);
+                } else {
+                    Toast.makeText(view.getContext(), "Busy", Toast.LENGTH_SHORT).show();
+                }
             }
         });
     }
 
-    public void startChat(String address, String name) {
-        // start the socket for the negotiation
-        startNegotiationProtocol(address);
-
+    public void startChat(final String address, String name) {
+        mService.connect(address, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+                Toast.makeText(view.getContext(), "Connected to peer", Toast.LENGTH_SHORT).show();
+                // start the protocol
+                startNegotiationProtocol(address);
+                busy = false;
+            }
+            @Override
+            public void onFailure(int reason) {
+                Toast.makeText(view.getContext(), "Error connecting to peer", Toast.LENGTH_SHORT).show();
+                busy = false;
+            }
+        });
 
         /*Intent intent = new Intent(getActivity(), ChatActivity.class);
         intent.putExtra("address", address);
@@ -227,7 +256,7 @@ public class SearchFragment extends Fragment {
     }
 
     public void onRefreshButtonClick() {
-        final View view = getActivity().findViewById(R.id.main_view);
+
         if (mBound) {
             mService.getPeerList(new WifiP2pManager.ActionListener() {
                 @Override

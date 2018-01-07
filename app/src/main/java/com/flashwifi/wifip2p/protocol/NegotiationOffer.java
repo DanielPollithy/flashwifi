@@ -6,12 +6,14 @@ public class NegotiationOffer {
     private int minMinutes;
     private int maxMinutes;
     private int iotaPerMegabyte;
+    private String hotspotMac;
 
-    public NegotiationOffer(int minMinutes, int maxMinutes, int iotaPerMegabyte) {
+    public NegotiationOffer(int minMinutes, int maxMinutes, int iotaPerMegabyte, String hotspotMac) {
         this.type = "offer";
         this.minMinutes = minMinutes;
         this.maxMinutes = maxMinutes;
         this.iotaPerMegabyte = iotaPerMegabyte;
+        this.hotspotMac = hotspotMac;
     }
 
     public String getType() {
@@ -28,5 +30,9 @@ public class NegotiationOffer {
 
     public int getIotaPerMegabyte() {
         return iotaPerMegabyte;
+    }
+
+    public String getHotspotMac() {
+        return hotspotMac;
     }
 }

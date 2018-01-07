@@ -103,22 +103,7 @@ public class ChatActivity  extends AppCompatActivity {
 
 
 
-    private void connectToPeer(String address) {
-        if (mBound) {
-            mService.connect(address, new WifiP2pManager.ActionListener() {
-                @Override
-                public void onSuccess() {
-                    Toast.makeText(getApplicationContext(), "Connected to peer", Toast.LENGTH_SHORT).show();
-                }
-                @Override
-                public void onFailure(int reason) {
-                    Toast.makeText(getApplicationContext(), "Error connecting to peer", Toast.LENGTH_SHORT).show();
-                }
-            });
-        } else {
-            Toast.makeText(getApplicationContext(), "Service not available", Toast.LENGTH_SHORT).show();
-        }
-    }
+
 
     private void initUI() {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);

@@ -5,19 +5,28 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.NetworkInfo;
+import android.net.wifi.WifiInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
+import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
+import android.widget.Toast;
 
+
+import com.flashwifi.wifip2p.WalletAddressAndBalanceChecker;
+import com.flashwifi.wifip2p.negotiation.Negotiator;
 
 import java.lang.reflect.Method;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 
 public class WiFiDirectBroadcastService extends Service {
@@ -49,21 +58,74 @@ public class WiFiDirectBroadcastService extends Service {
     // discovery mode
     private boolean discoveryModeActive = false;
 
-    public void startNegotiationServer(boolean isClient, String macAddress) {
-        Log.d("", "startSocketServer: ");
-        //negotiationServerTask = new NegotiationServerTask();
-        //negotiationServerTask.execute();
-        String isClientString = (isClient) ? "True" : "False";
-        // ToDo: rewire this
-        // new NegotiationServerTask().execute(isClientString, macAddress);
+    public String getWFDMacAddress(){
+        try {
+            List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
+            for (NetworkInterface ntwInterface : interfaces) {
+
+                if (ntwInterface.getName().equalsIgnoreCase("p2p0")) {
+                    byte[] byteMac = ntwInterface.getHardwareAddress();
+                    if (byteMac==null){
+                        return null;
+                    }
+                    StringBuilder strBuilder = new StringBuilder();
+                    for (int i=0; i<byteMac.length; i++) {
+                        strBuilder.append(String.format("%02X:", byteMac[i]));
+                    }
+
+                    if (strBuilder.length()>0){
+                        strBuilder.deleteCharAt(strBuilder.length()-1);
+                    }
+
+                    return strBuilder.toString();
+                }
+
+            }
+        } catch (Exception e) {
+            Log.d(TAG, e.getMessage());
+        }
+        return null;
     }
 
-    public void startNegotiationClient(InetAddress address, boolean isClient, String macAddress) {
-        Log.d("", "startSocketClient: ");
-        String isClientString = (isClient) ? "True" : "False";
-        String ipaddr = address.getHostAddress();
-        // ToDo: use the Negotiator here
-        // new NegotiationClientTask().execute(isClientString, ipaddr, macAddress);
+    public void startNegotiationServer(final boolean isClient, String macAddress) {
+        AsyncTask.execute(new Runnable() {
+            @Override
+            public void run() {
+                Negotiator negotiator = new Negotiator(isClient, getWFDMacAddress());
+                // ToDo: run as long as this group is connected
+                while (true) {
+                    negotiator.workAsServer();
+                    deletePersistentGroups();
+                    sendUpdateUIBroadcast();
+                    try {
+                        Thread.sleep(2000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+    }
+
+    public void startNegotiationClient(final InetAddress address, final boolean isClient, String macAddress) {
+        AsyncTask.execute(new Runnable() {
+            @Override
+            public void run() {
+                Negotiator negotiator = new Negotiator(isClient, getWFDMacAddress());
+                // ToDo: run as long as this group is connected
+                while (true) {
+                    negotiator.workAsClient(address.getHostAddress());
+                    deletePersistentGroups();
+                    sendUpdateUIBroadcast();
+
+                    try {
+                        Thread.sleep(2000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
     }
 
     public WifiP2pInfo getP2p_info() {

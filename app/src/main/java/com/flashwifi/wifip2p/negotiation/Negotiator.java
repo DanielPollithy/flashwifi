@@ -19,7 +19,9 @@ import java.net.SocketTimeoutException;
 public class Negotiator {
     private static final String TAG = "Negotiator";
     private static final int PORT = 9898;
-    private static final int timeoutMillis = 1000;
+    private static final int clientTimeoutMillis = 100000;
+    private static final int serverTimeoutMillis = 100000;
+    private final String ownMacAddress;
 
     private SocketWrapper socketWrapper;
 
@@ -56,9 +58,11 @@ public class Negotiator {
         ERROR
     }
 
-    public Negotiator(boolean isConsumer) {
+    public Negotiator(boolean isConsumer, String ownMacAddress) {
         this.isConsumer = isConsumer;
         gson = new GsonBuilder().create();
+        this.ownMacAddress = ownMacAddress;
+        Log.d(TAG, "Negotiator: " + ownMacAddress);
     }
 
     public boolean workAsClient(String serverIPAddress) {
@@ -70,14 +74,14 @@ public class Negotiator {
         try {
             // create client socket that connects to server
             socket = new Socket(serverIPAddress, PORT);
-            socket.setSoTimeout(timeoutMillis);
+            socket.setSoTimeout(clientTimeoutMillis);
             Log.d(TAG, "workAsClient: client socket created");
 
             // wrap the socket
             socketWrapper = new SocketWrapper(socket);
 
             // send Client Request
-            String hello = isConsumer ? "HELLO I AM CLIENT" : "HELLO I AM SERVER";
+            String hello = isClient ? "HELLO I AM CLIENT" : "HELLO I AM SERVER";
             socketWrapper.sendLine(hello);
 
             // Whether we want to provide a hotspot or use one
@@ -113,12 +117,12 @@ public class Negotiator {
         try {
             // use the port to start
             serverSocket = new ServerSocket(PORT);
-            serverSocket.setSoTimeout(timeoutMillis);
+            //serverSocket.setSoTimeout(serverTimeoutMillis);
             Log.d(TAG, "doInBackground: Server is waiting for connection");
 
             // accept one connection
             socket = serverSocket.accept();
-            socket.setSoTimeout(timeoutMillis);
+            //socket.setSoTimeout(serverTimeoutMillis);
 
             // wrap the socket
             socketWrapper = new SocketWrapper(socket);
@@ -126,9 +130,14 @@ public class Negotiator {
             // WAIT FOR CLIENT
             String hello = socketWrapper.getLine();
 
+            if (hello == null) {
+                error(0, "no hello received");
+                return false;
+            }
+
             // Check: Is the peer in the same role as we are
             // server and server or client and client MAKES NO SENSE
-            if (hello.contains("SERVER") && !isClient || hello.contains("CLIENT") && isClient) {
+            if (hello.contains("SERVER") && !isClient || hello.contains("CLIENT") && isClient){
                 error(1, "Pairing roles are broken");
                 return false;
             }
@@ -176,8 +185,9 @@ public class Negotiator {
         // CHECK OFFER
         consumer_state = ConsumerState.CHECK_OFFER;
         NegotiationOffer offer = gson.fromJson(offerString, NegotiationOffer.class);
+        String otherMac = offer.getHotspotMac();
         // Write offer to the PeerStore
-        PeerStore.getInstance().setLatestOffer(ipAddress, offer);
+        PeerStore.getInstance().setLatestOffer(otherMac, offer);
 
         // ToDo: implement accept or deny logic
         if (!true) {
@@ -187,7 +197,7 @@ public class Negotiator {
 
         // SEND NegotiationAnswer
         // ToDo: where shall the input come from?
-        NegotiationOfferAnswer answer = new NegotiationOfferAnswer(true, 10);
+        NegotiationOfferAnswer answer = new NegotiationOfferAnswer(true, 10, ownMacAddress);
         String answerString = gson.toJson(answer);
         socketWrapper.sendLine(answerString);
 
@@ -202,7 +212,7 @@ public class Negotiator {
 
         NegotiationFinalization finalization = gson.fromJson(finalizationString, NegotiationFinalization.class);
         // Write offer to the PeerStore
-        PeerStore.getInstance().setLatestFinalization(ipAddress, finalization);
+        PeerStore.getInstance().setLatestFinalization(otherMac, finalization);
 
 
         // Send OK
@@ -220,7 +230,8 @@ public class Negotiator {
         hotspot_state = HotspotState.CHECK_CLIENT_REQUEST;
 
         // send offer
-        NegotiationOffer offer = new NegotiationOffer(1, 100, 0);
+        int iotaPerMegabyte = (int) (Math.random() * (1000 - 10)) + 10;
+        NegotiationOffer offer = new NegotiationOffer(1, 100, iotaPerMegabyte, ownMacAddress);
         String offerString = gson.toJson(offer);
         socketWrapper.sendLine(offerString);
 
@@ -228,9 +239,15 @@ public class Negotiator {
         hotspot_state = HotspotState.WAIT_FOR_ANSWER;
         String answerString = socketWrapper.getLine();
 
+        if (answerString == null) {
+            error(8, "No answer received");
+            return false;
+        }
+
         // Parse the answer
         NegotiationOfferAnswer answer = gson.fromJson(answerString, NegotiationOfferAnswer.class);
-        PeerStore.getInstance().setLatestOfferAnswer(ipAddress, answer);
+        String otherMac = answer.getConsumerMac();
+        PeerStore.getInstance().setLatestOfferAnswer(otherMac, answer);
 
         // CHECK_ANSWER
         hotspot_state = HotspotState.CHECK_ANSWER;
