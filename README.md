@@ -2,13 +2,8 @@
 
 ## What is this?
 
+
 ## ToDos
-
-Wlad: 2d + 3d = 5d
-Daniel: 5,25d
-Toby: 6,25d
-
-
 
 Iota stuff: 2d 
 - [ ] Address generation and storage 0.5d DANIEL
