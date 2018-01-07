@@ -43,9 +43,7 @@
     <string name="iotaNodeTestSuccess">Connection to Iota Node is possible.</string>
 
     <!-- Fund Wallet Fragment -->
-    <string name="FundWalletAddressTitle">ADDRESS:</string>
-    <string name="FundWalletNoAddress">No address generated, click +</string>
-
-
+    <string name="FundWalletAddressTitle">DEPOSIT ADDRESS:</string>
+    <string name="FundWalletBalance">ACCOUNT BLANCE: </string>
 
 </resources>

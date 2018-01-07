@@ -158,6 +158,7 @@ public class MainActivity extends AppCompatActivity
         Bundle bundle = new Bundle();
         bundle.putString("seed", seed);
         fragment.setArguments(bundle);
+        fragment.setRetainInstance(true);
 
         // Insert the fragment by replacing any existing fragment
         FragmentManager fragmentManager = getFragmentManager();
