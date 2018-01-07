@@ -109,7 +109,7 @@ public class MainActivity extends AppCompatActivity
         } else if (id == R.id.nav_fund) {
             startFundWalletFragment();
         } else if (id == R.id.nav_withdraw) {
-
+            startWithdrawWalletFragment();
         } else if (id == R.id.nav_conditions) {
 
         } else if (id == R.id.nav_settings) {
@@ -167,4 +167,18 @@ public class MainActivity extends AppCompatActivity
                 .commit();
     }
 
+    private void startWithdrawWalletFragment() {
+        Fragment fragment = new WithdrawWalletFragment();
+
+        Bundle bundle = new Bundle();
+        bundle.putString("seed", seed);
+        fragment.setArguments(bundle);
+        fragment.setRetainInstance(true);
+
+        // Insert the fragment by replacing any existing fragment
+        FragmentManager fragmentManager = getFragmentManager();
+        fragmentManager.beginTransaction()
+                .replace(R.id.content_frame, fragment)
+                .commit();
+    }
 }
