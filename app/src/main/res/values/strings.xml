@@ -47,4 +47,9 @@
     <string name="FundWalletBalanceLabel">ACCOUNT BLANCE: </string>
     <string name="FundWalletQRCodeLabel">QR CODE: </string>
 
+    <!-- Withdar Wallet Fragment -->
+    <string name="WithdarWalletBalanceLabel">ACCOUNT BLANCE: </string>
+    <string name="WithdrawWalletTransferLabel">NEW TRANSFER: </string>
+    <string name="QRScannerDescription">QR Code Scanner</string>
+
 </resources>
