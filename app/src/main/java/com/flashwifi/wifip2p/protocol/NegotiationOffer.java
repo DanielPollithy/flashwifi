@@ -13,4 +13,20 @@ public class NegotiationOffer {
         this.maxMinutes = maxMinutes;
         this.iotaPerMegabyte = iotaPerMegabyte;
     }
+
+    public String getType() {
+        return type;
+    }
+
+    public int getMinMinutes() {
+        return minMinutes;
+    }
+
+    public int getMaxMinutes() {
+        return maxMinutes;
+    }
+
+    public int getIotaPerMegabyte() {
+        return iotaPerMegabyte;
+    }
 }

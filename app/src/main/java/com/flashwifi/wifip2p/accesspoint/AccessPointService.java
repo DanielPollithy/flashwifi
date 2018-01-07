@@ -1,9 +1,7 @@
-package com.flashwifi.wifip2p;
+package com.flashwifi.wifip2p.accesspoint;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;

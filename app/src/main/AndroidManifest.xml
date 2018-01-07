@@ -34,12 +34,8 @@
             android:parentActivityName=".DesktopActivity" />
 
         <service
-            android:name=".WiFiDirectBroadcastService"
+            android:name=".broadcast.WiFiDirectBroadcastService"
             android:description="@string/wifi_direct" />
-        <service
-            android:name=".MessengerService"
-            android:process=":remote" />
-        <service android:name=".AccessPointService" />
 
         <activity android:name=".DesktopActivity" />
 

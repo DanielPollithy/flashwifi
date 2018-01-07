@@ -1,4 +1,4 @@
-package com.flashwifi.wifip2p;
+package com.flashwifi.wifip2p.accesspoint;
 
 import android.content.Context;
 import android.net.wifi.WifiConfiguration;

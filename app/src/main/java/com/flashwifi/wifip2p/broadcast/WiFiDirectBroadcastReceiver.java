@@ -1,4 +1,4 @@
-package com.flashwifi.wifip2p;
+package com.flashwifi.wifip2p.broadcast;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;

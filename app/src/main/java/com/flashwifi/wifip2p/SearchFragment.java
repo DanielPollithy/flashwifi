@@ -11,11 +11,7 @@ import android.net.NetworkInfo;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
-import android.os.Messenger;
-import android.os.RemoteException;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.widget.Toolbar;
@@ -32,6 +28,8 @@ import com.flashwifi.wifip2p.datastore.PeerStore;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
+
+import com.flashwifi.wifip2p.broadcast.WiFiDirectBroadcastService;
 
 /**
  * Fragment that appears in the "content_frame", shows a planet
@@ -222,10 +220,10 @@ public class SearchFragment extends Fragment {
         startNegotiationProtocol(address);
 
 
-        Intent intent = new Intent(getActivity(), ChatActivity.class);
+        /*Intent intent = new Intent(getActivity(), ChatActivity.class);
         intent.putExtra("address", address);
         intent.putExtra("name", name);
-        startActivity(intent);
+        startActivity(intent);*/
     }
 
     public void onRefreshButtonClick() {
