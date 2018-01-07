@@ -2,6 +2,7 @@ package com.flashwifi.wifip2p;
 
 import android.app.Fragment;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -10,8 +11,11 @@ import android.os.Message;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import net.glxn.qrgen.android.QRCode;
 
 import java.util.List;
 
@@ -29,6 +33,7 @@ public class FundWalletFragment extends Fragment {
 
     TextView balanceTextView = null;
     TextView addressTextView = null;
+    ImageView qrImageView = null;
 
     Handler mHandler;
 
@@ -66,6 +71,7 @@ public class FundWalletFragment extends Fragment {
                         if(returnStatus == "noError"){
                             balanceTextView.setText(balance + " i");
                             addressTextView.setText(address);
+                            createAddressQRCode(address);
                             Toast.makeText(getActivity(), "Balance and address updated",
                                     Toast.LENGTH_SHORT).show();
                         }
@@ -87,6 +93,11 @@ public class FundWalletFragment extends Fragment {
         };
     }
 
+    private void createAddressQRCode(String address) {
+        Bitmap myBitmap = QRCode.from(address).bitmap();
+        qrImageView.setImageBitmap(myBitmap);
+    }
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -95,6 +106,7 @@ public class FundWalletFragment extends Fragment {
 
         balanceTextView = (TextView) FundWalletFragmentView.findViewById(R.id.FundWalletBalanceValue);
         addressTextView = (TextView) FundWalletFragmentView.findViewById(R.id.AddressValue);
+        qrImageView = (ImageView) FundWalletFragmentView.findViewById(R.id.QRCode);
 
         // Set Listeners
         balanceTextView.setOnClickListener(new View.OnClickListener() {

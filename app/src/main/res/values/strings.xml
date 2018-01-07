@@ -43,7 +43,8 @@
     <string name="iotaNodeTestSuccess">Connection to Iota Node is possible.</string>
 
     <!-- Fund Wallet Fragment -->
-    <string name="FundWalletAddressTitle">DEPOSIT ADDRESS:</string>
-    <string name="FundWalletBalance">ACCOUNT BLANCE: </string>
+    <string name="FundWalletAddressLabel">DEPOSIT ADDRESS:</string>
+    <string name="FundWalletBalanceLabel">ACCOUNT BLANCE: </string>
+    <string name="FundWalletQRCodeLabel">QR CODE: </string>
 
 </resources>

@@ -1,4 +1,5 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -22,7 +23,7 @@
             android:paddingEnd="20dp"
             android:paddingStart="20dp"
             android:paddingTop="20dp"
-            android:text="@string/FundWalletBalance"
+            android:text="@string/FundWalletBalanceLabel"
             android:textColor="#ffffff"
             android:textStyle="bold" />
 
@@ -59,7 +60,7 @@
             android:paddingEnd="20dp"
             android:paddingStart="20dp"
             android:paddingTop="20dp"
-            android:text="@string/FundWalletAddressTitle"
+            android:text="@string/FundWalletAddressLabel"
             android:textColor="#ffffff"
             android:textStyle="bold" />
 
@@ -85,15 +86,25 @@
         android:orientation="vertical">
 
         <TextView
-            android:id="@+id/Temp"
+            android:id="@+id/QRCodeLabel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:paddingTop="20dp"
             android:paddingBottom="20dp"
-            android:text="QR CODE"
-            android:textColor="#ffffff" />
+            android:paddingEnd="20dp"
+            android:paddingStart="20dp"
+            android:paddingTop="20dp"
+            android:text="@string/FundWalletQRCodeLabel"
+            android:textColor="#ffffff"
+            android:textStyle="bold" />
+
+        <ImageView
+            android:id="@+id/QRCode"
+            android:paddingBottom="10dp"
+            android:paddingEnd="20dp"
+            android:paddingStart="20dp"
+            android:paddingTop="10dp"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
 
     </LinearLayout>
 
