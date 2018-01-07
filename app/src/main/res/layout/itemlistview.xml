@@ -39,5 +39,27 @@
             android:text="description"
             android:height="20sp" />
     </TableRow>
+    <TableRow android:layout_height="wrap_content"
+        android:layout_width="fill_parent">
+
+        <TextView android:textColor="#000000"
+            android:id="@+id/ipAddr"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="ipAddr"
+            android:layout_weight="1"
+            android:height="20sp" />
+
+        <TextView android:layout_height="wrap_content"
+            android:layout_width="fill_parent"
+            android:layout_weight="1"
+            android:textColor="#000000"
+            android:gravity="right"
+            android:id="@+id/iotaPrice"
+            android:text="iotaPrice"
+            android:height="20sp" />
+
+    </TableRow>
+
 
 </TableLayout>

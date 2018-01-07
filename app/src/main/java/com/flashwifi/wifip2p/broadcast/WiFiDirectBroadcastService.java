@@ -1,7 +1,4 @@
-package com.flashwifi.wifip2p;
-import android.app.Notification;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
+package com.flashwifi.wifip2p.broadcast;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -15,8 +12,8 @@ import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Binder;
 import android.os.IBinder;
-import android.support.design.widget.Snackbar;
 import android.util.Log;
+
 
 import java.lang.reflect.Method;
 import java.net.InetAddress;
@@ -28,8 +25,6 @@ public class WiFiDirectBroadcastService extends Service {
 
     // Binder given to clients
     private final IBinder mBinder = new LocalBinder();
-    // Random number generator
-    private final Random mGenerator = new Random();
 
     private boolean setup = false;
 
@@ -47,7 +42,6 @@ public class WiFiDirectBroadcastService extends Service {
     ArrayList<String> receivedMessages = new ArrayList<>();
 
     // socket stuff
-    NegotiationServerTask negotiationServerTask;
     boolean serverRuns;
 
     private String currentDeviceConnected = null;
@@ -60,18 +54,16 @@ public class WiFiDirectBroadcastService extends Service {
         //negotiationServerTask = new NegotiationServerTask();
         //negotiationServerTask.execute();
         String isClientString = (isClient) ? "True" : "False";
-        new NegotiationServerTask().execute(isClientString, macAddress);
+        // ToDo: rewire this
+        // new NegotiationServerTask().execute(isClientString, macAddress);
     }
 
     public void startNegotiationClient(InetAddress address, boolean isClient, String macAddress) {
         Log.d("", "startSocketClient: ");
         String isClientString = (isClient) ? "True" : "False";
         String ipaddr = address.getHostAddress();
-        new NegotiationClientTask().execute(isClientString, ipaddr, macAddress);
-    }
-
-    public void sendMessageToSocketServer(InetAddress address, String message) {
-        new ClientTask().execute(address.getHostAddress(), message);
+        // ToDo: use the Negotiator here
+        // new NegotiationClientTask().execute(isClientString, ipaddr, macAddress);
     }
 
     public WifiP2pInfo getP2p_info() {
@@ -136,7 +128,7 @@ public class WiFiDirectBroadcastService extends Service {
      * runs in the same process as its clients, we don't need to deal with IPC.
      */
     public class LocalBinder extends Binder {
-        WiFiDirectBroadcastService getService() {
+        public WiFiDirectBroadcastService getService() {
             // Return this instance of LocalService so clients can call public methods
             return WiFiDirectBroadcastService.this;
         }

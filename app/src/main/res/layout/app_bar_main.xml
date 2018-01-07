@@ -18,6 +18,17 @@
             android:background="?attr/colorPrimary"
             app:popupTheme="@style/AppTheme.NoActionBar.PopupOverlay" />
 
+<!--        <ToggleButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_gravity="right"
+            android:textOn="WiFi P2P"
+            android:textOff="WiFi P2P"
+            android:text="WiFi P2P"
+            android:visibility="invisible"
+            android:id="@+id/wifip2pToggle"/>-->
+
     </android.support.design.widget.AppBarLayout>
 
     <include layout="@layout/content_main" />

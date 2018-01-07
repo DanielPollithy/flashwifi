@@ -65,7 +65,15 @@ public class PeerInformation  {
         this.latestFinalization = latestFinalization;
     }
 
+    public String getIpAddress() {
+        return ipAddress;
+    }
+
     public NegotiationFinalization getLatestFinalization() {
         return latestFinalization;
+    }
+
+    public void setIPAddress(String IPAddress) {
+        this.ipAddress = IPAddress;
     }
 }

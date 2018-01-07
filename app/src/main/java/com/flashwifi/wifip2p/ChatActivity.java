@@ -12,10 +12,8 @@ import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -26,6 +24,8 @@ import android.widget.Toast;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
+
+import com.flashwifi.wifip2p.broadcast.WiFiDirectBroadcastService;
 
 
 public class ChatActivity  extends AppCompatActivity {
@@ -38,7 +38,7 @@ public class ChatActivity  extends AppCompatActivity {
     String address;
 
     WiFiDirectBroadcastService mService;
-    AccessPointService apService;
+    //AccessPointService apService;
     boolean mBound = false;
     InetAddress groupOwnerAddress;
 
@@ -65,8 +65,8 @@ public class ChatActivity  extends AppCompatActivity {
         bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
 
         // Bind to
-        Intent intent2 = new Intent(this, AccessPointService.class);
-        bindService(intent2, apConnection, Context.BIND_AUTO_CREATE);
+        //Intent intent2 = new Intent(this, AccessPointService.class);
+        //bindService(intent2, apConnection, Context.BIND_AUTO_CREATE);
     }
 
     private void updateUi(Intent intent) {
@@ -132,7 +132,7 @@ public class ChatActivity  extends AppCompatActivity {
             public void onClick(final View view) {
                 addMessageRight(name, input.getText().toString());
                 // send the message to the peer
-                mService.sendMessageToSocketServer(groupOwnerAddress, input.getText().toString());
+                //mService.sendMessageToSocketServer(groupOwnerAddress, input.getText().toString());
             }
         });
 
@@ -160,17 +160,17 @@ public class ChatActivity  extends AppCompatActivity {
     }
 
     private void startHotspot() {
-        apService.startAP();
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setImageResource(R.drawable.icon_tethering_on);
-        hotspot_running = true;
+        //apService.startAP();
+        //FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        //fab.setImageResource(R.drawable.icon_tethering_on);
+        //hotspot_running = true;
     }
 
     private void stopHotspot() {
-        apService.stopAP();
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setImageResource(R.drawable.icon_tethering_off);
-        hotspot_running = false;
+        //apService.stopAP();
+        //FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        //fab.setImageResource(R.drawable.icon_tethering_off);
+        //hotspot_running = false;
     }
 
     public void addMessageLeft(String name, String text) {
@@ -199,26 +199,6 @@ public class ChatActivity  extends AppCompatActivity {
             mBound = true;
             // start connection
             // connectToPeer(address);
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName arg0) {
-            mBound = false;
-        }
-    };
-
-    /** Defines callbacks for service binding, passed to bindService() */
-    private ServiceConnection apConnection = new ServiceConnection() {
-
-        @Override
-        public void onServiceConnected(ComponentName className,
-                                       IBinder service) {
-            // We've bound to LocalService, cast the IBinder and get LocalService instance
-            AccessPointService.LocalBinder binder = (AccessPointService.LocalBinder) service;
-            apService = binder.getService();
-            //apBound = true;
-            // start connection
-            connectToPeer(address);
         }
 
         @Override

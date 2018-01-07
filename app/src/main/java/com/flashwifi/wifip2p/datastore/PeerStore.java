@@ -91,4 +91,8 @@ public class PeerStore {
     public void setLatestFinalization(String macAddress, NegotiationFinalization finalization) {
         getOrCreatePeer(macAddress).setLatestFinalization(finalization);
     }
+
+    public void setIPAddress(String macAddress, InetAddress IPAddress) {
+        getOrCreatePeer(macAddress).setIPAddress(IPAddress.getHostAddress());
+    }
 }
