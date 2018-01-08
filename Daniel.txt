@@ -1,7 +1,0 @@
-- add toggle button to action bar
-- forget networks after discovery
-- stop discovery after successful negotiation
-- display states in frontend
-    - p2p discovery active -> stop button
-    - negotiation sockets active -> stop button
-- refactor NegotiationClientTask and NegotiationServerTask ( -> common code base)
