@@ -30,14 +30,12 @@
         </activity>
 
         <activity
-            android:name=".ChatActivity"
-            android:parentActivityName=".DesktopActivity" />
+            android:name=".RoamingActivity"
+            android:parentActivityName=".MainActivity" />
 
         <service
             android:name=".broadcast.WiFiDirectBroadcastService"
             android:description="@string/wifi_direct" />
-
-        <activity android:name=".DesktopActivity" />
 
         <activity android:name=".MainActivity"
             android:label="@string/title_activity_main"

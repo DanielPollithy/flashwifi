@@ -22,6 +22,7 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 
 import com.flashwifi.wifip2p.datastore.PeerInformation;
 import com.flashwifi.wifip2p.datastore.PeerListAdapter;
@@ -58,15 +59,6 @@ public class SearchFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_search, container, false);
-        //int i = getArguments().getInt(ARG_PLANET_NUMBER);
-        //String planet = getResources().getStringArray(R.array.planets_array)[i];
-
-        //int imageId = getResources().getIdentifier(planet.toLowerCase(Locale.getDefault()),
-        //        "drawable", getActivity().getPackageName());
-        //((ImageView) rootView.findViewById(R.id.image)).setImageResource(imageId);
-        //getActivity().setTitle(planet);
-
-        // initUI();
 
         return rootView;
     }
@@ -161,6 +153,7 @@ public class SearchFragment extends Fragment {
     public void onStop() {
         super.onStop();
         getActivity().unbindService(mConnection);
+        getActivity().unregisterReceiver(updateUIReceiver);
         mBound = false;
     }
 
@@ -184,7 +177,7 @@ public class SearchFragment extends Fragment {
         Intent intent = new Intent(getActivity(), WiFiDirectBroadcastService.class);
         getActivity().bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
 
-        view = getActivity().findViewById(R.id.main_view);
+        view = getActivity().findViewById(R.id.fragment_view);
 
         initUI();
     }
@@ -192,13 +185,25 @@ public class SearchFragment extends Fragment {
     private void initUI() {
         Toolbar toolbar = (Toolbar) getActivity().findViewById(R.id.toolbar);
         toolbar.setTitle("Discover Peers");
-        //setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) getActivity().findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
+        final ToggleButton toggle = (ToggleButton) getActivity().findViewById(R.id.startSearchButton);
+        //toggle.setChecked(mService.isInRoleConsumer());
+        toggle.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(final View view) {
-                onRefreshButtonClick();
+                if (toggle.isChecked()) {
+                    if (mBound) {
+                        mService.setInRoleHotspot(false);
+                        mService.setInRoleConsumer(true);
+                        startSearching();
+                    }
+                } else {
+                    if (mBound) {
+                        mService.setInRoleHotspot(false);
+                        mService.setInRoleConsumer(false);
+                        stopSearching();
+                    }
+                }
             }
         });
 
@@ -233,6 +238,8 @@ public class SearchFragment extends Fragment {
         });
     }
 
+
+
     public void startChat(final String address, String name) {
         mService.connect(address, new WifiP2pManager.ActionListener() {
             @Override
@@ -248,14 +255,25 @@ public class SearchFragment extends Fragment {
                 busy = false;
             }
         });
-
-        /*Intent intent = new Intent(getActivity(), ChatActivity.class);
-        intent.putExtra("address", address);
-        intent.putExtra("name", name);
-        startActivity(intent);*/
     }
 
-    public void onRefreshButtonClick() {
+    private void stopSearching() {
+        if (mBound) {
+            mService.stopDiscovery(new WifiP2pManager.ActionListener() {
+                @Override
+                public void onSuccess() {
+                    Snackbar.make(view, "Stopped search", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+                }
+
+                @Override
+                public void onFailure(int reasonCode) {
+                    Snackbar.make(view, "Aaaargh :( problem stopping search!", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+                }
+            });
+        }
+    }
+
+    public void startSearching() {
 
         if (mBound) {
             mService.getPeerList(new WifiP2pManager.ActionListener() {
@@ -282,6 +300,9 @@ public class SearchFragment extends Fragment {
             WiFiDirectBroadcastService.LocalBinder binder = (WiFiDirectBroadcastService.LocalBinder) service;
             mService = binder.getService();
             mBound = true;
+
+            final ToggleButton toggle = (ToggleButton) getActivity().findViewById(R.id.startSearchButton);
+            toggle.setChecked(mService.isInRoleConsumer());
         }
 
         @Override

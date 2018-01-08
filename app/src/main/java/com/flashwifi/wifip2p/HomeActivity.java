@@ -43,8 +43,10 @@ public class HomeActivity extends AppCompatActivity {
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(final View view) {
-                String password = field.getText().toString();
-                decryptSeed(password);
+                if (field.getText().length() > 0) {
+                    String password = field.getText().toString();
+                    decryptSeed(password);
+                }
             }
         });
     }

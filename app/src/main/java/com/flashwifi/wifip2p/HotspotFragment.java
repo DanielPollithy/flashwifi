@@ -77,14 +77,14 @@ public class HotspotFragment extends Fragment {
         text.setText(String.format("%s peers", numberAvailableDevices));
         final View activity_view = getActivity().findViewById(R.id.drawer_layout);
 
-        if (intent.hasExtra("what") && intent.getExtras().getString("what", "").equals("connectivity_changed")) {
+        //if (intent.hasExtra("what") && intent.getExtras().getString("what", "").equals("connectivity_changed")) {
 
             NetworkInfo network_info = mService.getNetwork_info();
             WifiP2pInfo p2p_info = mService.getP2p_info();
             WifiP2pGroup wifiP2pGroup = mService.getP2p_group();
 
-            if (intent.hasExtra("currentDeviceConnected")) {
-                String macAddress = intent.getExtras().getString("currentDeviceConnected");
+            //if (intent.hasExtra("currentDeviceConnected")) {
+                //String macAddress = intent.getExtras().getString("currentDeviceConnected");
                 if (network_info.getState() == NetworkInfo.State.CONNECTED) {
                     // ToDo: look for the other device and make sure we are only two
 
@@ -94,21 +94,23 @@ public class HotspotFragment extends Fragment {
                     } else {
                         InetAddress groupOwnerAddress = p2p_info.groupOwnerAddress;
                         Snackbar.make(activity_view, "You are only a member of the group", Snackbar.LENGTH_LONG).setAction("Action", null).show();
-                        mService.startNegotiationClient(groupOwnerAddress, false, macAddress);
+                        mService.startNegotiationClient(groupOwnerAddress, false, null);
                     }
 
                 }
-            }
+            //}
 
 
 
-        }
+        //}
+
     }
 
     @Override
     public void onStop() {
         super.onStop();
-        //getActivity().unbindService(mConnection);
+        getActivity().unbindService(mConnection);
+        getActivity().unregisterReceiver(updateUIReceiver);
         mBound = false;
     }
 
@@ -183,29 +185,57 @@ public class HotspotFragment extends Fragment {
     private void startDiscovery() {
         final View activity_view = getActivity().findViewById(R.id.drawer_layout);
         if (mBound) {
+            mService.setInRoleConsumer(false);
+            mService.setInRoleHotspot(true);
             mService.getPeerList(new WifiP2pManager.ActionListener() {
                 @Override
                 public void onSuccess() {
-                    Snackbar.make(activity_view, "Successfully searched for peers", Snackbar.LENGTH_LONG).setAction("Action", null).show();
                 }
 
                 @Override
                 public void onFailure(int reasonCode) {
-                    Snackbar.make(activity_view, "Aaaargh :( Peering problem!", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+                    Snackbar.make(activity_view, "Aaaargh :( Searching problem!", Snackbar.LENGTH_LONG).setAction("Action", null).show();
                 }
             });
         }
     }
 
+
+    private void stopDiscovery() {
+        final View activity_view = getActivity().findViewById(R.id.drawer_layout);
+        if (mBound) {
+            mService.stopDiscovery(new WifiP2pManager.ActionListener() {
+                @Override
+                public void onSuccess() {
+                    mService.setInRoleConsumer(false);
+                    mService.setInRoleHotspot(false);
+                    Snackbar.make(activity_view, "Stopped Hotspot mode", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+                }
+
+                @Override
+                public void onFailure(int reasonCode) {
+                    mService.setInRoleConsumer(false);
+                    mService.setInRoleHotspot(false);
+                    Snackbar.make(activity_view, "Aaaargh :( Problem stopping discovery", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+                }
+            });
+        }
+    }
+
+
     private void initUI() {
         final View activity_view = getActivity().findViewById(R.id.drawer_layout);
         final ToggleButton button = (ToggleButton) getActivity().findViewById(R.id.startAPButton);
+        //button.setChecked(mService.isInRoleHotspot());
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 if (button.isChecked()) {
                     startDiscovery();
                     Snackbar.make(activity_view, "Start Discovery Mode", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+                } else {
+                    stopDiscovery();
+                    Snackbar.make(activity_view, "Stop Discovery Mode", Snackbar.LENGTH_LONG).setAction("Action", null).show();
                 }
             }
         });
@@ -221,6 +251,9 @@ public class HotspotFragment extends Fragment {
             WiFiDirectBroadcastService.LocalBinder binder = (WiFiDirectBroadcastService.LocalBinder) service;
             mService = binder.getService();
             mBound = true;
+
+            final ToggleButton button = (ToggleButton) getActivity().findViewById(R.id.startAPButton);
+            button.setChecked(mService.isInRoleHotspot());
         }
 
         @Override

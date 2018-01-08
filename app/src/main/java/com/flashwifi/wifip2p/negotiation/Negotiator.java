@@ -19,8 +19,8 @@ import java.net.SocketTimeoutException;
 public class Negotiator {
     private static final String TAG = "Negotiator";
     private static final int PORT = 9898;
-    private static final int clientTimeoutMillis = 100000;
-    private static final int serverTimeoutMillis = 100000;
+    private static final int clientTimeoutMillis = 5000;
+    private static final int serverTimeoutMillis = 5000;
     private final String ownMacAddress;
 
     private SocketWrapper socketWrapper;
@@ -65,10 +65,10 @@ public class Negotiator {
         Log.d(TAG, "Negotiator: " + ownMacAddress);
     }
 
-    public boolean workAsClient(String serverIPAddress) {
+    public String workAsClient(String serverIPAddress) {
         this.isClient = true;
 
-        boolean success = false;
+        String success = null;
         Socket socket = null;
 
         try {
@@ -106,23 +106,23 @@ public class Negotiator {
         return success;
     }
 
-    public boolean workAsServer() {
+    public String workAsServer() {
         // this device is the socket server
         this.isClient = false;
 
-        boolean success = false;
+        String peer_mac_address = null;
         ServerSocket serverSocket = null;
         Socket socket = null;
 
         try {
             // use the port to start
             serverSocket = new ServerSocket(PORT);
-            //serverSocket.setSoTimeout(serverTimeoutMillis);
+            serverSocket.setSoTimeout(serverTimeoutMillis);
             Log.d(TAG, "doInBackground: Server is waiting for connection");
 
             // accept one connection
             socket = serverSocket.accept();
-            //socket.setSoTimeout(serverTimeoutMillis);
+            socket.setSoTimeout(serverTimeoutMillis);
 
             // wrap the socket
             socketWrapper = new SocketWrapper(socket);
@@ -132,21 +132,21 @@ public class Negotiator {
 
             if (hello == null) {
                 error(0, "no hello received");
-                return false;
+                return null;
             }
 
             // Check: Is the peer in the same role as we are
             // server and server or client and client MAKES NO SENSE
             if (hello.contains("SERVER") && !isClient || hello.contains("CLIENT") && isClient){
                 error(1, "Pairing roles are broken");
-                return false;
+                return null;
             }
 
             // Whether we want to provide a hotspot or use one
             if (isConsumer) {
-                success = runConsumerProtocol(socketWrapper.getClientAddress().getHostAddress());
+                peer_mac_address = runConsumerProtocol(socketWrapper.getClientAddress().getHostAddress());
             } else {
-                success = runHotspotProtocol(socketWrapper.getClientAddress().getHostAddress());
+                peer_mac_address = runHotspotProtocol(socketWrapper.getClientAddress().getHostAddress());
             }
         } catch (SocketTimeoutException ste) {
             Log.d(TAG, "workAsServer: ### Timed out after 1 seconds");
@@ -169,17 +169,17 @@ public class Negotiator {
             }
 
         }
-        return success;
+        return peer_mac_address;
     }
 
-    private boolean runConsumerProtocol(String ipAddress) throws IOException {
+    private String runConsumerProtocol(String ipAddress) throws IOException {
         consumer_state = ConsumerState.WAIT_FOR_OFFER;
 
         // RECEIVE OFFER
         String offerString = socketWrapper.getLine();
         if (offerString == null) {
             error(2, "No offer received");
-            return false;
+            return null;
         }
 
         // CHECK OFFER
@@ -192,7 +192,7 @@ public class Negotiator {
         // ToDo: implement accept or deny logic
         if (!true) {
             error(3, "Offer not acceptable");
-            return false;
+            return null;
         }
 
         // SEND NegotiationAnswer
@@ -207,7 +207,7 @@ public class Negotiator {
 
         if (finalizationString == null) {
             error(4, "No finalization received");
-            return false;
+            return null;
         }
 
         NegotiationFinalization finalization = gson.fromJson(finalizationString, NegotiationFinalization.class);
@@ -222,10 +222,10 @@ public class Negotiator {
         // End
         socketWrapper.close();
 
-        return true;
+        return otherMac;
     }
 
-    private boolean runHotspotProtocol(String ipAddress) throws IOException {
+    private String runHotspotProtocol(String ipAddress) throws IOException {
         // CHECK_CLIENT_REQUEST
         hotspot_state = HotspotState.CHECK_CLIENT_REQUEST;
 
@@ -241,7 +241,7 @@ public class Negotiator {
 
         if (answerString == null) {
             error(8, "No answer received");
-            return false;
+            return null;
         }
 
         // Parse the answer
@@ -254,7 +254,7 @@ public class Negotiator {
 
         if (!answer.isAgreeToConditions()) {
             error(5, "Client does not agree to conditions");
-            return false;
+            return null;
         }
 
         // CHECK_ITP
@@ -290,7 +290,7 @@ public class Negotiator {
 
         socketWrapper.close();
 
-        return true;
+        return otherMac;
     }
 
     // ------------------------
