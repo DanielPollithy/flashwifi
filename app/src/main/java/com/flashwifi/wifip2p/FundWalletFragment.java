@@ -102,24 +102,24 @@ public class FundWalletFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        View FundWalletFragmentView = inflater.inflate(R.layout.fragment_fund_wallet, container, false);
+        View fundWalletFragmentView = inflater.inflate(R.layout.fragment_fund_wallet, container, false);
 
-        balanceTextView = (TextView) FundWalletFragmentView.findViewById(R.id.FundWalletBalanceValue);
-        addressTextView = (TextView) FundWalletFragmentView.findViewById(R.id.AddressValue);
-        qrImageView = (ImageView) FundWalletFragmentView.findViewById(R.id.QRCode);
+        balanceTextView = (TextView) fundWalletFragmentView.findViewById(R.id.FundWalletBalanceValue);
+        addressTextView = (TextView) fundWalletFragmentView.findViewById(R.id.AddressValue);
+        qrImageView = (ImageView) fundWalletFragmentView.findViewById(R.id.QRCode);
 
         // Set Listeners
         balanceTextView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                textCopyBalanceClick(balanceTextView);
+                textCopyBalanceClick();
             }
         });
 
         addressTextView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                textCopyAddressClick(addressTextView);
+                textCopyAddressClick();
             }
         });
 
@@ -152,10 +152,10 @@ public class FundWalletFragment extends Fragment {
                 }
             }
         });
-        return FundWalletFragmentView;
+        return fundWalletFragmentView;
     }
 
-    public void textCopyBalanceClick(TextView balanceTextView)
+    public void textCopyBalanceClick()
     {
         String balanceValue = balanceTextView.getText().toString();
         setClipboardText(balanceValue);
@@ -163,7 +163,7 @@ public class FundWalletFragment extends Fragment {
                 Toast.LENGTH_SHORT).show();
     }
 
-    public void textCopyAddressClick(TextView addressTextView)
+    public void textCopyAddressClick()
     {
         String addressValue = addressTextView.getText().toString();
         setClipboardText(addressValue);
