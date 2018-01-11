@@ -1,20 +1,32 @@
 package com.flashwifi.wifip2p;
 
-import android.Manifest;
-import android.app.FragmentTransaction;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.app.Fragment;
-import android.os.Parcelable;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.TextView;
 import android.widget.Toast;
+
+import com.flashwifi.wifip2p.iotaAPI.Requests.WalletAddressAndBalanceChecker;
+import com.flashwifi.wifip2p.iotaAPI.Requests.WalletTransferRequest;
+
+import java.util.List;
+import jota.IotaAPI;
+
+import jota.error.ArgumentException;
+import jota.utils.Checksum;
 
 import static android.Manifest.permission.CAMERA;
 
@@ -22,12 +34,23 @@ import static android.Manifest.permission.CAMERA;
  * A simple {@link Fragment} subclass.
  * Use the {@link WithdrawWalletFragment#newInstance} factory method to
  * create an instance of this fragment.
+ * Sources: https://github.com/iotaledger/android-wallet-app
  */
 public class WithdrawWalletFragment extends Fragment {
 
-    private String seed;
-    ImageButton qrScannerButton;
-    EditText editTextAddress;
+    private static final int BALANCE_RETRIEVE_TASK_COMPLETE = 1;
+    private static final int TRANSFER_TASK_COMPLETE = 2;
+    private String appWalletSeed;
+    private String appWalletBalance;
+    private ImageButton qrScannerButton;
+    private EditText editTextAddress;
+    private EditText editTextAmount;
+    private EditText editTextMessage;
+    private EditText editTextTag;
+
+    private Button sendButton;
+    private TextView balanceTextView;
+    private Handler mHandler;
 
     public WithdrawWalletFragment() {
         // Required empty public constructor
@@ -50,8 +73,39 @@ public class WithdrawWalletFragment extends Fragment {
         super.onCreate(savedInstanceState);
         Bundle bundle = this.getArguments();
         if (bundle != null) {
-            seed = bundle.getString("seed");
+            appWalletSeed = bundle.getString("seed");
         }
+
+        //Handle post-asynctask activities of updating UI
+        mHandler = new Handler(Looper.getMainLooper()) {
+            @Override
+            public void handleMessage(Message inputMessage) {
+                switch (inputMessage.what) {
+                    case BALANCE_RETRIEVE_TASK_COMPLETE:
+                        String returnStatus = (String) inputMessage.obj;
+
+                        if(returnStatus == "noError"){
+                            balanceTextView.setText(appWalletBalance + " i");
+
+                            makeToastFundWalletFragment("Balance updated");
+                        }
+                        else if (returnStatus == "addressError"){
+                            makeToastFundWalletFragment("Error getting address");
+                        }
+                        else if (returnStatus == "balanceError"){
+                            makeToastFundWalletFragment("Error getting balance");
+                        }
+                        else{
+                            makeToastFundWalletFragment("Unknown error");
+                        }
+                        break;
+
+                    case TRANSFER_TASK_COMPLETE:
+                        String transferStatus = (String) inputMessage.obj;
+                        makeToastFundWalletFragment(transferStatus);
+                }
+            }
+        };
     }
 
     @Override
@@ -59,20 +113,16 @@ public class WithdrawWalletFragment extends Fragment {
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
 
-        if(savedInstanceState != null){
-            QRCodeResult qrResult = savedInstanceState.getParcelable("result");
-            if(qrResult != null){
-                String address = qrResult.getAddress();
-                Toast.makeText(getActivity(), "Address: "+address, Toast.LENGTH_SHORT).show();
-            }
-        }
-
-        Toast.makeText(getActivity(), "Make View", Toast.LENGTH_SHORT).show();
-
         View withdrawWalletFragmentView = inflater.inflate(R.layout.fragment_withdraw_wallet, container, false);
 
+        sendButton = (Button) withdrawWalletFragmentView.findViewById(R.id.WithdrawWalletSend);
         qrScannerButton = (ImageButton) withdrawWalletFragmentView.findViewById(R.id.WithdrawWalletQRScannerButton);
-        editTextAddress = (EditText) withdrawWalletFragmentView.findViewById(R.id.editTextAddress);
+        editTextAddress = (EditText) withdrawWalletFragmentView.findViewById(R.id.WithdrawWalletAddress);
+        editTextAmount = (EditText) withdrawWalletFragmentView.findViewById(R.id.WithdrawWalletAmount);
+        editTextMessage = (EditText) withdrawWalletFragmentView.findViewById(R.id.WithdrawWalletMessage);
+        editTextTag = (EditText) withdrawWalletFragmentView.findViewById(R.id.WithdrawWalletTag);
+
+        balanceTextView = (TextView) withdrawWalletFragmentView.findViewById(R.id.WithdrawWalletBalanceValue);
 
         // Set Listeners
         qrScannerButton.setOnClickListener(new View.OnClickListener() {
@@ -82,7 +132,56 @@ public class WithdrawWalletFragment extends Fragment {
             }
         });
 
+        sendButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                sendButtonClick();
+            }
+        });
+
+        Toast.makeText(getActivity(), "Retrieving balance...",
+                Toast.LENGTH_SHORT).show();
+
+        AsyncTask.execute(new Runnable() {
+            @Override
+            public void run() {
+                WalletAddressAndBalanceChecker addressAndBalanceChecker = new WalletAddressAndBalanceChecker();
+                List<String> addressList = addressAndBalanceChecker.getAddress(appWalletSeed);
+
+                System.out.println("==Start==");
+
+                for (String s : addressList) {
+                    System.out.println("Address");
+                    System.out.println(s);
+                }
+
+                if(addressList != null){
+                    appWalletBalance = addressAndBalanceChecker.getBalance(addressList);
+                    if(appWalletBalance != null){
+                        Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE, "noError");
+                        completeMessage.sendToTarget();
+                    }
+                    else{
+                        //Balance Retrieval Error
+                        Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE, "balanceError");
+                        completeMessage.sendToTarget();
+                    }
+                }
+                else{
+                    //Address Retrieval Error
+                    Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE, "addressError");
+                    completeMessage.sendToTarget();
+                }
+            }
+        });
+
         return withdrawWalletFragmentView;
+    }
+
+    private void makeToastFundWalletFragment(String s) {
+        if(getActivity() != null){
+            Toast.makeText(getActivity(), s, Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void qrScannerButtonClick() {
@@ -94,12 +193,68 @@ public class WithdrawWalletFragment extends Fragment {
         }
     }
 
+    private void sendButtonClick() {
+
+        final String sendAddress = editTextAddress.getText().toString();
+        final String sendAmount = editTextAmount.getText().toString();
+        final String message = editTextMessage.getText().toString();
+        final String tag = editTextTag.getText().toString();
+
+        if(appWalletBalance == null || appWalletBalance.isEmpty()){
+            Toast.makeText(getActivity(), "Please wait for balance to be retrieved", Toast.LENGTH_SHORT).show();
+        }
+        else if(isValidAddress() == false){
+            Toast.makeText(getActivity(), "Please enter a valid recipient address", Toast.LENGTH_SHORT).show();
+        }
+        else if (sendAmount.isEmpty() == false  && (Long.parseLong(appWalletBalance) < Long.parseLong(editTextAmount.getText().toString()))) {
+            Toast.makeText(getActivity(), "Not enough credit in wallet", Toast.LENGTH_SHORT).show();
+        }
+        else{
+            if (sendAmount.isEmpty() || sendAmount.equals("0")) {
+                Toast.makeText(getActivity(), "0 send amount will be used", Toast.LENGTH_SHORT).show();
+            }
+            AlertDialog alertDialog = new AlertDialog.Builder(getActivity())
+                    .setMessage("Are you sure you want to send the transfer?")
+                    .setCancelable(false)
+                    .setPositiveButton("OK",null)
+                    .setNegativeButton("Cancel",null)
+                    .create();
+
+            alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK",
+                    new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            //Send transfer
+                            AsyncTask.execute(new Runnable() {
+                                @Override
+                                public void run() {
+                                    if(sendAmount.isEmpty()){
+                                        String zeroSendAmount = "0";
+                                        WalletTransferRequest transferRequest = new WalletTransferRequest(sendAddress,appWalletSeed,zeroSendAmount,message,tag,getActivity());
+                                        String result = transferRequest.sendRequest();
+                                    }
+                                    else{
+                                        WalletTransferRequest transferRequest = new WalletTransferRequest(sendAddress,appWalletSeed,sendAmount,message,tag,getActivity());
+                                        String result = transferRequest.sendRequest();
+                                        Message completeMessage = mHandler.obtainMessage(TRANSFER_TASK_COMPLETE, result);
+                                        completeMessage.sendToTarget();
+                                    }
+                                }
+                            });
+                            //TODO: Empty all fields
+                        }
+            });
+            alertDialog.show();
+        }
+    }
+
     public static boolean hasCameraPermission(Context context) {
         int result = context.checkCallingOrSelfPermission(CAMERA);
         return result == PackageManager.PERMISSION_GRANTED;
     }
 
     private void launchQRScanner() {
+        /*
+        TODO:Uncomment to re-enable scanner
         Fragment fragment = new QRScannerFragment();
         Bundle bundle = new Bundle();
 
@@ -116,6 +271,10 @@ public class WithdrawWalletFragment extends Fragment {
                 .addToBackStack(null)
                 .commit();
         //fragment.setRetainInstance(true);
+        */
+
+        editTextAddress.setText("ULRSUDTQLEQLXUMXEOWPEUIHRZUJFPUZRHVBZC9XYIVZJWGFOJNLDHQNQAZPPVOSTVBUT9T9EJRNMGGO9");
+
     }
 
     @Override
@@ -130,6 +289,18 @@ public class WithdrawWalletFragment extends Fragment {
                 return;
             }
         }
+    }
+
+    private boolean isValidAddress() {
+        String address = editTextAddress.getText().toString();
+        try {
+            //noinspection StatementWithEmptyBody
+            if (Checksum.isAddressWithoutChecksum(address)) {
+            }
+        } catch (ArgumentException e) {
+            return false;
+        }
+        return true;
     }
 
 }

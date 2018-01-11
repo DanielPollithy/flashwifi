@@ -28,19 +28,7 @@ public class QRScannerFragment extends Fragment implements ZXingScannerView.Resu
 
         ViewGroup contentFrame = (ViewGroup) getActivity().findViewById(R.id.content_frame);
         contentFrame.addView(scannerView);
-
-        //getActivity().setContentView(scannerView);
     }
-
-    /*
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        scannerView = new ZXingScannerView(getActivity());
-        temp = getActivity().findViewById(android.R.id.content);
-        getActivity().setContentView(scannerView);
-        return scannerView;
-    }
-    */
 
     @Override
     public void onResume() {
@@ -53,10 +41,12 @@ public class QRScannerFragment extends Fragment implements ZXingScannerView.Resu
     public void onPause() {
         super.onPause();
         scannerView.stopCamera();
+        scannerView.stopCameraPreview();
     }
 
     @Override
     public void handleResult(Result result) {
+
         String resultText = result.getText();
 
         //Edit via reference (shallow copy)

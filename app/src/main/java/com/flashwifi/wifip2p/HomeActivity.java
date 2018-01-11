@@ -88,7 +88,10 @@ public class HomeActivity extends AppCompatActivity {
 
     private void generateNewSeed() {
         // generate the seed
-        final String seed = SeedRandomGenerator.generateNewSeed();
+
+        //final String seed = SeedRandomGenerator.generateNewSeed();
+        //Set Testnet seed here:
+        final String seed = "EJ9SPL9GIK9EFICFRPQU9LLSCPNESAWRPYVKQRBZQVACRBVKVZRIWOWUBRJKWJMXLPAXDXWI9IDMAOTOZ";
 
         TextView seedText = (TextView) findViewById(R.id.seedTextView);
         seedText.setVisibility(View.VISIBLE);

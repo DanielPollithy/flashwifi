@@ -38,7 +38,6 @@
             android:paddingEnd="20dp"
             android:paddingStart="40dp"
             android:paddingTop="20dp"
-            android:text="0 i"
             android:textColor="#ffffff"
             android:textStyle="bold" />
     </LinearLayout>

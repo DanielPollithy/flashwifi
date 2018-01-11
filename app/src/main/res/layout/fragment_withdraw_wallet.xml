@@ -42,7 +42,6 @@
                 android:paddingEnd="20dp"
                 android:paddingStart="40dp"
                 android:paddingTop="20dp"
-                android:text="0 i"
                 android:textColor="#ffffff"
                 android:textStyle="bold" />
 
@@ -98,7 +97,7 @@
             android:orientation="vertical">
 
             <EditText
-                android:id="@+id/editTextAddress"
+                android:id="@+id/WithdrawWalletAddress"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="20dp"
@@ -116,7 +115,7 @@
                 android:orientation="horizontal">
 
                 <EditText
-                    android:id="@+id/editText3"
+                    android:id="@+id/WithdrawWalletAmount"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="20dp"
@@ -129,7 +128,7 @@
                     android:textColor="#ffffff" />
 
                 <TextView
-                    android:id="@+id/FundWalletBalanceValue"
+                    android:id="@+id/WithdrawWalletUnitsLabel"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
@@ -146,27 +145,29 @@
             </LinearLayout>
 
             <EditText
-                android:id="@+id/editText4"
+                android:id="@+id/WithdrawWalletMessage"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="20dp"
                 android:layout_marginStart="20dp"
                 android:ems="10"
                 android:hint="Message (optional, A-Z and 9 only)"
-                android:inputType="textPersonName"
+                android:inputType="text"
+                android:digits="9ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                 android:paddingBottom="20dp"
                 android:paddingTop="20dp"
                 android:textColor="#ffffff" />
 
             <EditText
-                android:id="@+id/editText5"
+                android:id="@+id/WithdrawWalletTag"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="20dp"
                 android:layout_marginStart="20dp"
                 android:ems="10"
                 android:hint="Tag (optional, A-Z and 9 only)"
-                android:inputType="textPersonName"
+                android:inputType="text"
+                android:digits="9ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                 android:paddingBottom="20dp"
                 android:paddingTop="20dp"
                 android:textColor="#ffffff" />
@@ -180,7 +181,7 @@
             android:background="#1570FF">
 
             <Button
-                android:id="@+id/FloatingActionButton"
+                android:id="@+id/WithdrawWalletSend"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="bottom|left"

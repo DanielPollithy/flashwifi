@@ -3,6 +3,7 @@ package com.flashwifi.wifip2p;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.content.Intent;
+import android.hardware.Camera;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;

@@ -15,8 +15,11 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.flashwifi.wifip2p.iotaAPI.Requests.WalletAddressAndBalanceChecker;
+
 import net.glxn.qrgen.android.QRCode;
 
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -28,14 +31,14 @@ public class FundWalletFragment extends Fragment {
 
     private static final int TASK_COMPLETE = 1;
     private String seed;
-    private String address;
+    private String depositAddress;
     private String balance;
 
-    TextView balanceTextView = null;
-    TextView addressTextView = null;
-    ImageView qrImageView = null;
+    private TextView balanceTextView;
+    private TextView addressTextView;
+    private ImageView qrImageView;
 
-    Handler mHandler;
+    private Handler mHandler;
 
     public FundWalletFragment() {
         // Required empty public constructor
@@ -70,27 +73,29 @@ public class FundWalletFragment extends Fragment {
 
                         if(returnStatus == "noError"){
                             balanceTextView.setText(balance + " i");
-                            addressTextView.setText(address);
-                            createAddressQRCode(address);
-                            Toast.makeText(getActivity(), "Balance and address updated",
-                                    Toast.LENGTH_SHORT).show();
+                            addressTextView.setText(depositAddress);
+                            createAddressQRCode(depositAddress);
+                            makeToastFundWalletFragment("Balance and address updated");
                         }
                         else if (returnStatus == "addressError"){
-                            Toast.makeText(getActivity(), "Error getting address",
-                                    Toast.LENGTH_SHORT).show();
+                            makeToastFundWalletFragment("Error getting address");
                         }
                         else if (returnStatus == "balanceError"){
-                            Toast.makeText(getActivity(), "Error getting balance",
-                                    Toast.LENGTH_SHORT).show();
+                            makeToastFundWalletFragment("Error getting balance");
                         }
                         else{
-                            Toast.makeText(getActivity(), "Unknown error",
-                                    Toast.LENGTH_SHORT).show();
+                            makeToastFundWalletFragment("Unknown error");
                         }
                         break;
                 }
             }
         };
+    }
+
+    private void makeToastFundWalletFragment(String s) {
+        if(getActivity() != null){
+            Toast.makeText(getActivity(), s, Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void createAddressQRCode(String address) {
@@ -129,12 +134,17 @@ public class FundWalletFragment extends Fragment {
         AsyncTask.execute(new Runnable() {
             @Override
             public void run() {
-                WalletAddressAndBalanceChecker addressAndBalanceCheckerbalanceChecker = new WalletAddressAndBalanceChecker();
-                List<String> addressList = addressAndBalanceCheckerbalanceChecker.getAddress(seed);
+                WalletAddressAndBalanceChecker addressAndBalanceChecker = new WalletAddressAndBalanceChecker();
+                List<String> addressList = addressAndBalanceChecker.getAddress(seed);
                 if(addressList != null){
-                    address = addressList.get(0);
 
-                    balance = addressAndBalanceCheckerbalanceChecker.getBalance(addressList);
+                    System.out.println("|AddressListReturned:|");
+                    System.out.println(addressList.size());
+                    System.out.println(addressList.get(addressList.size()-1));
+
+                    depositAddress = addressList.get(addressList.size()-1);
+
+                    balance = addressAndBalanceChecker.getBalance(addressList);
                     if(balance != null){
                         Message completeMessage = mHandler.obtainMessage(TASK_COMPLETE, "noError");
                         completeMessage.sendToTarget();
