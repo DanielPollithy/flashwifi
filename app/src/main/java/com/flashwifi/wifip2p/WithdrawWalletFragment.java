@@ -86,8 +86,10 @@ public class WithdrawWalletFragment extends Fragment {
 
                         if(returnStatus == "noError"){
                             balanceTextView.setText(appWalletBalance + " i");
-
                             makeToastFundWalletFragment("Balance updated");
+                        }
+                        else if (returnStatus == "hostError"){
+                            makeToastFundWalletFragment("Unable to reach host (node)");
                         }
                         else if (returnStatus == "addressError"){
                             makeToastFundWalletFragment("Error getting address");
@@ -102,6 +104,7 @@ public class WithdrawWalletFragment extends Fragment {
 
                     case TRANSFER_TASK_COMPLETE:
                         String transferStatus = (String) inputMessage.obj;
+                        System.out.println("transferStatus: "+transferStatus);
                         makeToastFundWalletFragment(transferStatus);
                 }
             }
@@ -145,17 +148,14 @@ public class WithdrawWalletFragment extends Fragment {
         AsyncTask.execute(new Runnable() {
             @Override
             public void run() {
-                WalletAddressAndBalanceChecker addressAndBalanceChecker = new WalletAddressAndBalanceChecker();
+                WalletAddressAndBalanceChecker addressAndBalanceChecker = new WalletAddressAndBalanceChecker(getActivity(),getActivity().getString(R.string.preference_file_key));
                 List<String> addressList = addressAndBalanceChecker.getAddress(appWalletSeed);
 
-                System.out.println("==Start==");
-
-                for (String s : addressList) {
-                    System.out.println("Address");
-                    System.out.println(s);
+                if(addressList != null && addressList.get(0) == "Unable to resolve host"){
+                    Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE, "hostError");
+                    completeMessage.sendToTarget();
                 }
-
-                if(addressList != null){
+                else if(addressList != null){
                     appWalletBalance = addressAndBalanceChecker.getBalance(addressList);
                     if(appWalletBalance != null){
                         Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE, "noError");
@@ -180,6 +180,7 @@ public class WithdrawWalletFragment extends Fragment {
 
     private void makeToastFundWalletFragment(String s) {
         if(getActivity() != null){
+            System.out.println("makeToastFundWalletFragment: "+s);
             Toast.makeText(getActivity(), s, Toast.LENGTH_SHORT).show();
         }
     }
@@ -227,17 +228,20 @@ public class WithdrawWalletFragment extends Fragment {
                             AsyncTask.execute(new Runnable() {
                                 @Override
                                 public void run() {
+                                    String result;
                                     if(sendAmount.isEmpty()){
                                         String zeroSendAmount = "0";
                                         WalletTransferRequest transferRequest = new WalletTransferRequest(sendAddress,appWalletSeed,zeroSendAmount,message,tag,getActivity());
-                                        String result = transferRequest.sendRequest();
+                                        result = transferRequest.sendRequest();
+                                        System.out.println("sendButtonClick: "+result);
                                     }
                                     else{
                                         WalletTransferRequest transferRequest = new WalletTransferRequest(sendAddress,appWalletSeed,sendAmount,message,tag,getActivity());
-                                        String result = transferRequest.sendRequest();
-                                        Message completeMessage = mHandler.obtainMessage(TRANSFER_TASK_COMPLETE, result);
-                                        completeMessage.sendToTarget();
+                                        result = transferRequest.sendRequest();
+                                        System.out.println("sendButtonClick: "+result);
                                     }
+                                    Message completeMessage = mHandler.obtainMessage(TRANSFER_TASK_COMPLETE, result);
+                                    completeMessage.sendToTarget();
                                 }
                             });
                             //TODO: Empty all fields

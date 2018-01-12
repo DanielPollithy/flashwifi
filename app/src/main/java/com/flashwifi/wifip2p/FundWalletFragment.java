@@ -77,6 +77,9 @@ public class FundWalletFragment extends Fragment {
                             createAddressQRCode(depositAddress);
                             makeToastFundWalletFragment("Balance and address updated");
                         }
+                        else if (returnStatus == "hostError"){
+                            makeToastFundWalletFragment("Unable to reach host (node)");
+                        }
                         else if (returnStatus == "addressError"){
                             makeToastFundWalletFragment("Error getting address");
                         }
@@ -134,9 +137,14 @@ public class FundWalletFragment extends Fragment {
         AsyncTask.execute(new Runnable() {
             @Override
             public void run() {
-                WalletAddressAndBalanceChecker addressAndBalanceChecker = new WalletAddressAndBalanceChecker();
+                WalletAddressAndBalanceChecker addressAndBalanceChecker = new WalletAddressAndBalanceChecker(getActivity(),getActivity().getString(R.string.preference_file_key));
                 List<String> addressList = addressAndBalanceChecker.getAddress(seed);
-                if(addressList != null){
+
+                if(addressList != null && addressList.get(0) == "Unable to resolve host"){
+                    Message completeMessage = mHandler.obtainMessage(TASK_COMPLETE, "hostError");
+                    completeMessage.sendToTarget();
+                }
+                else if(addressList != null){
 
                     System.out.println("|AddressListReturned:|");
                     System.out.println(addressList.size());
