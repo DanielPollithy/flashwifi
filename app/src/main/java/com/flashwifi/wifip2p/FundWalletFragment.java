@@ -84,7 +84,7 @@ public class FundWalletFragment extends Fragment {
                             makeToastFundWalletFragment("Error getting address");
                         }
                         else if (returnStatus == "balanceError"){
-                            makeToastFundWalletFragment("Error getting balance");
+                            makeToastFundWalletFragment("Error getting balance. May not be able to resolve host/node");
                         }
                         else{
                             makeToastFundWalletFragment("Unknown error");

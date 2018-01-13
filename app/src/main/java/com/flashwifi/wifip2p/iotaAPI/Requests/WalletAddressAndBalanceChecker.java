@@ -28,10 +28,8 @@ public class WalletAddressAndBalanceChecker {
     public WalletAddressAndBalanceChecker(Context inActivity, String inPrefFile) {
         context = inActivity;
         prefFile = inPrefFile;
-        //Local node:
-        //api = new IotaAPI.Builder().build();
 
-        //Live node:
+        //Mainnet node:
         /*
         api = new IotaAPI.Builder()
                 .protocol("http")
@@ -50,18 +48,15 @@ public class WalletAddressAndBalanceChecker {
     }
 
     public String getBalance(List<String> inAddresses){
+        String[] balanceArray;
         try {
             GetBalancesResponse balanceResultResponse = api.getBalances(100, inAddresses);
-            String[] balanceArray = balanceResultResponse.getBalances();
-            return balanceArray[balanceArray.length-2];
+            balanceArray = balanceResultResponse.getBalances();
         } catch (ArgumentException | IllegalStateException e) {
             e.printStackTrace();
-            System.out.println("getBalance Error!");
-            if(e.getMessage().contains("Unable to resolve host")){
-                System.out.println("Unable to resolve host");
-            }
+            return null;
         }
-        return null;
+        return balanceArray[balanceArray.length-2];
     }
 
     public List<String> getAddress(String seed) {
@@ -70,11 +65,7 @@ public class WalletAddressAndBalanceChecker {
         List<String> addressList = new ArrayList<>();
         int keyIndex = getKeyIndex();
 
-        System.out.println("GetAddress");
-
         while(foundAddress == false){
-
-            System.out.println(keyIndex);
 
             GetNewAddressResponse addressResponse = null;
             try {
@@ -85,9 +76,6 @@ public class WalletAddressAndBalanceChecker {
 
             if(addressResponse != null) {
                 addressList.add(addressResponse.getAddresses().get(0));
-
-                System.out.println("CurAddress");
-                System.out.println(addressList.get(0));
 
                 String[] addressesCheckArray = new String[1];
                 addressesCheckArray[0] = addressResponse.getAddresses().get(0);
@@ -107,12 +95,10 @@ public class WalletAddressAndBalanceChecker {
                 if(transactionsForAddress.isEmpty() || (transactionsForAddress.size() == 0 || transactionsForAddress.equals(null))){
                     //Transactions not found, use this address
                     foundAddress = true;
-                    System.out.println("No transactions found");
                 }
                 else{
                     //Found transactions, increment for new address
                     keyIndex+=1;
-                    System.out.println("Found transactions");
                 }
             }
         }

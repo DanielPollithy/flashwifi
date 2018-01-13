@@ -20,6 +20,7 @@
     <string name="seed_stored">The new seed is stored.</string>
     <string name="decryptTheSeed">Decrypt the Seed</string>
     <string name="seed_decrypted">The seed got decrypted.</string>
+    <string name="password_empty">Please enter a password</string>
     <string name="wrong_password">Password was wrong.</string>
     <string name="startAP">Start Wifiota Access Point</string>
     <string name="findAP">Search for Wifiota Access Point</string>

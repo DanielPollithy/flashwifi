@@ -88,6 +88,9 @@ public class WithdrawWalletFragment extends Fragment {
                             balanceTextView.setText(appWalletBalance + " i");
                             makeToastFundWalletFragment("Balance updated");
                         }
+                        else if (returnStatus == "noErrorNoUpdateMessage"){
+                            balanceTextView.setText(appWalletBalance + " i");
+                        }
                         else if (returnStatus == "hostError"){
                             makeToastFundWalletFragment("Unable to reach host (node)");
                         }
@@ -104,7 +107,6 @@ public class WithdrawWalletFragment extends Fragment {
 
                     case TRANSFER_TASK_COMPLETE:
                         String transferStatus = (String) inputMessage.obj;
-                        System.out.println("transferStatus: "+transferStatus);
                         makeToastFundWalletFragment(transferStatus);
                 }
             }
@@ -145,37 +147,85 @@ public class WithdrawWalletFragment extends Fragment {
         Toast.makeText(getActivity(), "Retrieving balance...",
                 Toast.LENGTH_SHORT).show();
 
-        AsyncTask.execute(new Runnable() {
-            @Override
-            public void run() {
-                WalletAddressAndBalanceChecker addressAndBalanceChecker = new WalletAddressAndBalanceChecker(getActivity(),getActivity().getString(R.string.preference_file_key));
-                List<String> addressList = addressAndBalanceChecker.getAddress(appWalletSeed);
+        getBalance(true,false);
+        return withdrawWalletFragmentView;
+    }
 
-                if(addressList != null && addressList.get(0) == "Unable to resolve host"){
-                    Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE, "hostError");
-                    completeMessage.sendToTarget();
+    private void getBalance(Boolean async, Boolean inNoUpdateMessage) {
+
+        final Boolean noUpdateMessageFinal = inNoUpdateMessage;
+
+        if(async){
+            //Get balance with new async call
+            AsyncTask.execute(new Runnable() {
+                @Override
+                public void run() {
+                    WalletAddressAndBalanceChecker addressAndBalanceChecker = new WalletAddressAndBalanceChecker(getActivity(),getActivity().getString(R.string.preference_file_key));
+                    List<String> addressList = addressAndBalanceChecker.getAddress(appWalletSeed);
+
+                    if(addressList != null && addressList.get(0) == "Unable to resolve host"){
+                        Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE, "hostError");
+                        completeMessage.sendToTarget();
+                    }
+                    else if(addressList != null){
+                        appWalletBalance = addressAndBalanceChecker.getBalance(addressList);
+                        if(appWalletBalance != null){
+                            if(noUpdateMessageFinal){
+                                Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE, "noErrorNoUpdateMessage");
+                                completeMessage.sendToTarget();
+                            }
+                            else{
+                                Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE, "noError");
+                                completeMessage.sendToTarget();
+                            }
+                        }
+                        else{
+                            //Balance Retrieval Error
+                            Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE, "balanceError");
+                            completeMessage.sendToTarget();
+                        }
+                    }
+                    else{
+                        //Address Retrieval Error
+                        Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE, "addressError");
+                        completeMessage.sendToTarget();
+                    }
                 }
-                else if(addressList != null){
-                    appWalletBalance = addressAndBalanceChecker.getBalance(addressList);
-                    if(appWalletBalance != null){
-                        Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE, "noError");
+            });
+        }
+        else{
+            //Get balance without async call (perform on called thread)
+            WalletAddressAndBalanceChecker addressAndBalanceChecker = new WalletAddressAndBalanceChecker(getActivity(),getActivity().getString(R.string.preference_file_key));
+            List<String> addressList = addressAndBalanceChecker.getAddress(appWalletSeed);
+
+            if(addressList != null && addressList.get(0) == "Unable to resolve host"){
+                Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE, "hostError");
+                completeMessage.sendToTarget();
+            }
+            else if(addressList != null){
+                appWalletBalance = addressAndBalanceChecker.getBalance(addressList);
+                if(appWalletBalance != null){
+                    if(noUpdateMessageFinal){
+                        Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE, "noErrorNoUpdateMessage");
                         completeMessage.sendToTarget();
                     }
                     else{
-                        //Balance Retrieval Error
-                        Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE, "balanceError");
+                        Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE, "noError");
                         completeMessage.sendToTarget();
                     }
                 }
                 else{
-                    //Address Retrieval Error
-                    Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE, "addressError");
+                    //Balance Retrieval Error
+                    Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE, "balanceError");
                     completeMessage.sendToTarget();
                 }
             }
-        });
-
-        return withdrawWalletFragmentView;
+            else{
+                //Address Retrieval Error
+                Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE, "addressError");
+                completeMessage.sendToTarget();
+            }
+        }
     }
 
     private void makeToastFundWalletFragment(String s) {
@@ -240,6 +290,7 @@ public class WithdrawWalletFragment extends Fragment {
                                         result = transferRequest.sendRequest();
                                         System.out.println("sendButtonClick: "+result);
                                     }
+                                    getBalance(false,true);
                                     Message completeMessage = mHandler.obtainMessage(TRANSFER_TASK_COMPLETE, result);
                                     completeMessage.sendToTarget();
                                 }

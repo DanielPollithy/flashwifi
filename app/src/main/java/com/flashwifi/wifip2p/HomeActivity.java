@@ -60,9 +60,15 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void decryptSeed(String password) {
+        View view = findViewById(R.id.home_view);
+
+        if(password.equals("")){
+            Snackbar.make(view, getString(R.string.password_empty), Snackbar.LENGTH_LONG).setAction("Action", null).show();
+            return;
+        }
+
         EncryptedPreferences encryptedPreferences = new EncryptedPreferences.Builder(this).withEncryptionPassword(password).build();
         String seed = encryptedPreferences.getString(getString(R.string.encrypted_seed), null);
-        View view = findViewById(R.id.home_view);
 
         if (seed != null) {
             Snackbar.make(view, getString(R.string.seed_decrypted), Snackbar.LENGTH_LONG).setAction("Action", null).show();
