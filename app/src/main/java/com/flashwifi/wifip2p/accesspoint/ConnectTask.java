@@ -23,7 +23,7 @@ public class ConnectTask extends AsyncTask<Context, Void, String> {
 
     @Override
     protected String doInBackground(Context... params) {
-        context = params[0];
+        Context context = params[0];
         WifiManager wifiManager = (WifiManager) context.getSystemService(WIFI_SERVICE);
 
         WifiConfiguration wifiConfig = new WifiConfiguration();
