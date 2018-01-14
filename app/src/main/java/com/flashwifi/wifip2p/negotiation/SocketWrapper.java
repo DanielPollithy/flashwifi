@@ -33,6 +33,13 @@ public class SocketWrapper {
         return response;
     }
 
+    public String getLineThrowing() throws IOException {
+        String response;
+        response = in.readLine();
+        Log.d(TAG, "getLine: " + response);
+        return response;
+    }
+
     public void sendLine(String line) {
         out.println(line);
         Log.d(TAG, "sendLine: " + line);

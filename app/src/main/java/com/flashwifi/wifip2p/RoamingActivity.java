@@ -171,28 +171,6 @@ public class RoamingActivity extends AppCompatActivity {
         listView.setAdapter(listAdapter);*/
     }
 
-    public void toggleHotspot() {
-        if (hotspot_running) {
-            stopHotspot();
-        } else {
-            startHotspot();
-        }
-    }
-
-    private void startHotspot() {
-        //apService.startAP();
-        //FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        //fab.setImageResource(R.drawable.icon_tethering_on);
-        //hotspot_running = true;
-    }
-
-    private void stopHotspot() {
-        //apService.stopAP();
-        //FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        //fab.setImageResource(R.drawable.icon_tethering_off);
-        //hotspot_running = false;
-    }
-
     /** Defines callbacks for service binding, passed to bindService() */
     private ServiceConnection mConnection = new ServiceConnection() {
 
@@ -203,8 +181,12 @@ public class RoamingActivity extends AppCompatActivity {
             WiFiDirectBroadcastService.LocalBinder binder = (WiFiDirectBroadcastService.LocalBinder) service;
             mService = binder.getService();
             mBound = true;
-            // start connection
-            // connectToPeer(address);
+            // start hotspot
+            if (mService.isInRoleHotspot()) {
+                mService.startAP();
+            } else {
+                mService.connect2AP("Iotify", "1234567890");
+            }
         }
 
         @Override

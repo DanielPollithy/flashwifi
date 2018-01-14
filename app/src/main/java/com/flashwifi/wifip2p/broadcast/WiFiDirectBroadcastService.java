@@ -5,7 +5,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.NetworkInfo;
+import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
@@ -19,6 +21,8 @@ import android.widget.Toast;
 
 
 import com.flashwifi.wifip2p.WalletAddressAndBalanceChecker;
+import com.flashwifi.wifip2p.accesspoint.AccessPointTask;
+import com.flashwifi.wifip2p.accesspoint.ConnectTask;
 import com.flashwifi.wifip2p.negotiation.Negotiator;
 
 import java.lang.reflect.Method;
@@ -62,6 +66,57 @@ public class WiFiDirectBroadcastService extends Service {
 
     // discovery mode
     private boolean discoveryModeActive = false;
+
+    // HOTSPOT
+    // socket stuff
+    AccessPointTask apTask;
+    boolean apRuns = false;
+    ConnectTask connectTask;
+
+    public void enableWiFi() {
+        WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+
+        if (!wifiManager.isWifiEnabled())
+        {
+            wifiManager.setWifiEnabled(true);
+        }
+    }
+
+    public void disableWiFi() {
+        WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+
+        if (wifiManager.isWifiEnabled())
+        {
+            wifiManager.setWifiEnabled(false);
+        }
+    }
+
+    public void connect2AP(String ssid, String key) {
+        connectTask = new ConnectTask();
+        Log.d("xxxxxxxxxxxxxx", "CONNECT TO THE HOTSPOT");
+        connectTask.execute(getApplicationContext());
+    }
+
+    public void startAP() {
+        Log.d("xxxxxxxxxxxxxx", "start AP");
+        if (!apRuns) {
+            apRuns = true;
+            apTask = new AccessPointTask();
+            apTask.execute(getApplicationContext());
+        } else {
+            Log.d("", "startSocketServer: ALREADY RUNNING");
+        }
+    }
+
+    public void stopAP() {
+        Log.d("xxxxxxxxxxxxxx", "stop AP");
+        if (apRuns) {
+            apRuns = false;
+            apTask.cancel(true);
+        } else {
+            Log.d("", "startSocketServer: ALREADY RUNNING");
+        }
+    }
 
     public String getWFDMacAddress(){
         try {
@@ -196,6 +251,7 @@ public class WiFiDirectBroadcastService extends Service {
         if (!enabled) {
             enabled = true;
             setupService();
+            enableWiFi();
         }
     }
 
