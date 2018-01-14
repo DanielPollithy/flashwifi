@@ -3,11 +3,11 @@ package com.flashwifi.wifip2p;
 import android.app.Fragment;
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,8 +19,7 @@ import com.flashwifi.wifip2p.iotaAPI.Requests.WalletAddressAndBalanceChecker;
 
 import net.glxn.qrgen.android.QRCode;
 
-import java.util.Iterator;
-import java.util.List;
+import pl.droidsonroids.gif.GifImageView;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -29,7 +28,8 @@ import java.util.List;
  */
 public class FundWalletFragment extends Fragment {
 
-    private static final int TASK_COMPLETE = 1;
+    private static final int FUND_WALLET = 0;
+    private static final int BALANCE_RETRIEVE_TASK_COMPLETE = 1;
     private String seed;
     private String depositAddress;
     private String balance;
@@ -38,7 +38,14 @@ public class FundWalletFragment extends Fragment {
     private TextView addressTextView;
     private ImageView qrImageView;
 
+    private GifImageView loadingGifImageView;
+
+    private SwipeRefreshLayout mSwipeRefreshLayout;
+
     private Handler mHandler;
+
+    private static Boolean transactionInProgress = false;
+    private WalletAddressAndBalanceChecker addressAndBalanceChecker;
 
     public FundWalletFragment() {
         // Required empty public constructor
@@ -68,8 +75,14 @@ public class FundWalletFragment extends Fragment {
             @Override
             public void handleMessage(Message inputMessage) {
                 switch (inputMessage.what) {
-                    case TASK_COMPLETE:
-                        String returnStatus = (String) inputMessage.obj;
+                    case BALANCE_RETRIEVE_TASK_COMPLETE:
+                        AddressBalanceTransfer addressBalanceTransfer = (AddressBalanceTransfer) inputMessage.obj;
+                        balance = addressBalanceTransfer.getBalance();
+                        depositAddress = addressBalanceTransfer.getDepositAddress();
+                        String returnStatus = addressBalanceTransfer.getMessage();
+
+                        hideLoadingGIF();
+                        transactionInProgress = false;
 
                         if(returnStatus == "noError"){
                             balanceTextView.setText(balance + " i");
@@ -95,6 +108,23 @@ public class FundWalletFragment extends Fragment {
         };
     }
 
+    @Override
+    public void onDestroy() {
+        addressAndBalanceChecker.cancel(true);
+        transactionInProgress = false;
+        super.onDestroy();
+    }
+
+    private void hideLoadingGIF() {
+        loadingGifImageView.setVisibility(View.GONE);
+        qrImageView.setVisibility(View.VISIBLE);
+    }
+
+    private void showLoadingGIF() {
+        loadingGifImageView.setVisibility(View.VISIBLE);
+        qrImageView.setVisibility(View.GONE);
+    }
+
     private void makeToastFundWalletFragment(String s) {
         if(getActivity() != null){
             Toast.makeText(getActivity(), s, Toast.LENGTH_SHORT).show();
@@ -115,6 +145,8 @@ public class FundWalletFragment extends Fragment {
         balanceTextView = (TextView) fundWalletFragmentView.findViewById(R.id.FundWalletBalanceValue);
         addressTextView = (TextView) fundWalletFragmentView.findViewById(R.id.AddressValue);
         qrImageView = (ImageView) fundWalletFragmentView.findViewById(R.id.QRCode);
+        loadingGifImageView = (GifImageView) fundWalletFragmentView.findViewById(R.id.FundWalletLoadingGIF);
+        mSwipeRefreshLayout = (SwipeRefreshLayout) fundWalletFragmentView.findViewById(R.id.FundWalletSwipeRefresh);
 
         // Set Listeners
         balanceTextView.setOnClickListener(new View.OnClickListener() {
@@ -131,46 +163,36 @@ public class FundWalletFragment extends Fragment {
             }
         });
 
-        Toast.makeText(getActivity(), "Retrieving balance and address...",
-                Toast.LENGTH_SHORT).show();
-
-        AsyncTask.execute(new Runnable() {
+        mSwipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
-            public void run() {
-                WalletAddressAndBalanceChecker addressAndBalanceChecker = new WalletAddressAndBalanceChecker(getActivity(),getActivity().getString(R.string.preference_file_key));
-                List<String> addressList = addressAndBalanceChecker.getAddress(seed);
-
-                if(addressList != null && addressList.get(0) == "Unable to resolve host"){
-                    Message completeMessage = mHandler.obtainMessage(TASK_COMPLETE, "hostError");
-                    completeMessage.sendToTarget();
-                }
-                else if(addressList != null){
-
-                    System.out.println("|AddressListReturned:|");
-                    System.out.println(addressList.size());
-                    System.out.println(addressList.get(addressList.size()-1));
-
-                    depositAddress = addressList.get(addressList.size()-1);
-
-                    balance = addressAndBalanceChecker.getBalance(addressList);
-                    if(balance != null){
-                        Message completeMessage = mHandler.obtainMessage(TASK_COMPLETE, "noError");
-                        completeMessage.sendToTarget();
-                    }
-                    else{
-                        //Balance Retrieval Error
-                        Message completeMessage = mHandler.obtainMessage(TASK_COMPLETE, "balanceError");
-                        completeMessage.sendToTarget();
-                    }
-                }
-                else{
-                    //Address Retrieval Error
-                    Message completeMessage = mHandler.obtainMessage(TASK_COMPLETE, "addressError");
-                    completeMessage.sendToTarget();
-                }
+            public void onRefresh() {
+                initiateRefresh();
             }
         });
+
+        showLoadingGIF();
+        Toast.makeText(getActivity(), "Retrieving balance and address...", Toast.LENGTH_SHORT).show();
+        getBalance();
+
         return fundWalletFragmentView;
+    }
+
+    private void initiateRefresh() {
+        mSwipeRefreshLayout.setRefreshing(false);
+
+        if(transactionInProgress == false){
+            balanceTextView.setText("");
+            addressTextView.setText("");
+            showLoadingGIF();
+            Toast.makeText(getActivity(), "Retrieving balance and address...", Toast.LENGTH_SHORT).show();
+            getBalance();
+        }
+    }
+
+    private void getBalance(){
+        transactionInProgress = true;
+        addressAndBalanceChecker = new WalletAddressAndBalanceChecker(getActivity(),getActivity().getString(R.string.preference_file_key),seed, mHandler,FUND_WALLET,true);
+        addressAndBalanceChecker.execute();
     }
 
     public void textCopyBalanceClick()

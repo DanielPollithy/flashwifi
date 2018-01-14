@@ -1,7 +1,11 @@
 package com.flashwifi.wifip2p.iotaAPI.Requests;
 
-import android.app.Activity;
-import android.widget.Toast;
+import android.content.Context;
+import android.os.AsyncTask;
+import android.os.Handler;
+import android.os.Message;
+
+import com.flashwifi.wifip2p.AddressBalanceTransfer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,29 +13,31 @@ import java.util.List;
 import jota.IotaAPI;
 import jota.dto.response.SendTransferResponse;
 import jota.error.ArgumentException;
-import jota.model.Transaction;
 import jota.model.Transfer;
 
-public class WalletTransferRequest {
+public class WalletTransferRequest extends AsyncTask<Void, Void, Void> {
+
+    private static final int TRANSFER_TASK_COMPLETE = 2;
 
     private static IotaAPI api;
-    private static Activity activity;
+    private static Context context;
     private String appWalletSeed;
     private String sendAddress;
     private String sendAmount;
     private String message;
     private String tag;
     private String transferResult;
+    private Handler mHandler;
 
-
-    public WalletTransferRequest(String inSendAddress, String inAppWalletSeed, String inSendAmount, String inMessage, String inTag, Activity inActivity) {
+    public WalletTransferRequest(String inSendAddress, String inAppWalletSeed, String inSendAmount, String inMessage, String inTag, Context inContext, Handler inMHandler) {
 
         sendAddress = inSendAddress;
         appWalletSeed = inAppWalletSeed;
         sendAmount = inSendAmount;
         message = inMessage;
         tag = inTag;
-        activity = inActivity;
+        context = inContext;
+        mHandler = inMHandler;
 
         //Mainnet node:
         /*
@@ -49,6 +55,24 @@ public class WalletTransferRequest {
                 .port("443")
                 .build();
 
+    }
+
+    @Override
+    protected Void doInBackground(Void... voids) {
+        sendRequest();
+
+        String result = null;
+
+        if(context != null){
+            result = sendRequest();
+        }
+
+        AddressBalanceTransfer addressBalanceTransfer = new AddressBalanceTransfer(null,null,null);
+        addressBalanceTransfer.setMessage(result);
+
+        Message completeMessage = mHandler.obtainMessage(TRANSFER_TASK_COMPLETE, addressBalanceTransfer);
+        completeMessage.sendToTarget();
+        return null;
     }
 
     public String sendRequest(){
@@ -106,5 +130,4 @@ public class WalletTransferRequest {
         }
         return transferResult;
     }
-
 }

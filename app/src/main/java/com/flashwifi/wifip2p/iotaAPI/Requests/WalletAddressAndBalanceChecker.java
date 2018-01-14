@@ -6,8 +6,11 @@ package com.flashwifi.wifip2p.iotaAPI.Requests;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.AsyncTask;
+import android.os.Handler;
+import android.os.Message;
 
-import com.flashwifi.wifip2p.R;
+import com.flashwifi.wifip2p.AddressBalanceTransfer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,16 +21,30 @@ import jota.dto.response.GetNewAddressResponse;
 import jota.error.ArgumentException;
 import jota.model.Transaction;
 
-public class WalletAddressAndBalanceChecker {
+public class WalletAddressAndBalanceChecker extends AsyncTask<Void, Void, Void> {
+
+    private static final int BALANCE_RETRIEVE_TASK_COMPLETE = 1;
+
+    private static final int FUND_WALLET = 0;
+    private static final int WITHDRAW_WALLET = 1;
 
     private static IotaAPI api;
     private static Context context;
     private String prefFile;
+    private String seed;
+    private Handler mHandler;
+    private int type;
+    private Boolean updateMessage;
+
     //GetNodeInfoResponse response = api.getNodeInfo();
 
-    public WalletAddressAndBalanceChecker(Context inActivity, String inPrefFile) {
+    public WalletAddressAndBalanceChecker(Context inActivity, String inPrefFile, String inSeed, Handler inMHandler, int inType, Boolean inUpdateMessage) {
         context = inActivity;
         prefFile = inPrefFile;
+        seed = inSeed;
+        mHandler = inMHandler;
+        type = inType;
+        updateMessage = inUpdateMessage;
 
         //Mainnet node:
         /*
@@ -47,6 +64,50 @@ public class WalletAddressAndBalanceChecker {
 
     }
 
+    @Override
+    protected Void doInBackground(Void... voids) {
+        if(context != null){
+            List<String> addressList = getAddress(seed);
+
+            if(addressList != null && addressList.get(0) == "Unable to resolve host"){
+                AddressBalanceTransfer addressBalanceTransfer = new AddressBalanceTransfer(null,null,"hostError");
+                Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE, addressBalanceTransfer);
+                completeMessage.sendToTarget();
+            }
+            else if(addressList != null){
+
+                String depositAddress = addressList.get(addressList.size()-1);
+                String balance = getBalance(addressList);
+
+                if(balance != null){
+                    if(type == WITHDRAW_WALLET && updateMessage == false){
+                        AddressBalanceTransfer addressBalanceTransfer = new AddressBalanceTransfer(depositAddress,balance,"noErrorNoUpdateMessage");
+                        Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE,addressBalanceTransfer);
+                        completeMessage.sendToTarget();
+                    }
+                    else{
+                        AddressBalanceTransfer addressBalanceTransfer = new AddressBalanceTransfer(depositAddress,balance,"noError");
+                        Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE,addressBalanceTransfer);
+                        completeMessage.sendToTarget();
+                    }
+                }
+                else{
+                    //Balance Retrieval Error
+                    AddressBalanceTransfer addressBalanceTransfer = new AddressBalanceTransfer(null,null,"balanceError");
+                    Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE, addressBalanceTransfer);
+                    completeMessage.sendToTarget();
+                }
+            }
+            else{
+                //Address Retrieval Error
+                AddressBalanceTransfer addressBalanceTransfer = new AddressBalanceTransfer(null,null,"addressError");
+                Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE, addressBalanceTransfer);
+                completeMessage.sendToTarget();
+            }
+        }
+        return null;
+    }
+
     public String getBalance(List<String> inAddresses){
         String[] balanceArray;
         try {
@@ -56,7 +117,14 @@ public class WalletAddressAndBalanceChecker {
             e.printStackTrace();
             return null;
         }
-        return balanceArray[balanceArray.length-2];
+
+        if(balanceArray.length>1){
+            return balanceArray[balanceArray.length-2];
+        }
+        else{
+            return balanceArray[balanceArray.length-1];
+        }
+
     }
 
     public List<String> getAddress(String seed) {
@@ -98,12 +166,19 @@ public class WalletAddressAndBalanceChecker {
                 }
                 else{
                     //Found transactions, increment for new address
-                    keyIndex+=1;
+                    keyIndex = keyIndex + 1;
                 }
             }
         }
-        //Put the second last address to search
-        putKeyIndex(keyIndex-1);
+
+        if(keyIndex == 0){
+            //Put the initial address to search. No transactions for the seed yet.
+            putKeyIndex(keyIndex);
+        }
+        else{
+            //Put the second last address to search
+            putKeyIndex(keyIndex-1);
+        }
         return addressList;
     }
 

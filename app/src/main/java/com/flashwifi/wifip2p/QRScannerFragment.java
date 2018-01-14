@@ -1,6 +1,7 @@
 package com.flashwifi.wifip2p;
 
 import android.app.Fragment;
+import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.view.ViewGroup;
 import android.widget.EditText;
@@ -24,10 +25,15 @@ public class QRScannerFragment extends Fragment implements ZXingScannerView.Resu
             editTextAddress = addressEditTextTransfer.getEditTextAddress();
         }
 
-        scannerView = new ZXingScannerView(getActivity());
+        if(getActivity() != null){
+            getActivity().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+            scannerView = new ZXingScannerView(getActivity());
 
-        ViewGroup contentFrame = (ViewGroup) getActivity().findViewById(R.id.content_frame);
-        contentFrame.addView(scannerView);
+            ViewGroup contentFrame = (ViewGroup) getActivity().findViewById(R.id.content_frame);
+            if(contentFrame != null && scannerView != null){
+                contentFrame.addView(scannerView);
+            }
+        }
     }
 
     @Override
@@ -42,6 +48,12 @@ public class QRScannerFragment extends Fragment implements ZXingScannerView.Resu
         super.onPause();
         scannerView.stopCamera();
         scannerView.stopCameraPreview();
+    }
+
+    public void onDestroy() {
+        scannerView.stopCamera();
+        scannerView.stopCameraPreview();
+        super.onDestroy();
     }
 
     @Override
