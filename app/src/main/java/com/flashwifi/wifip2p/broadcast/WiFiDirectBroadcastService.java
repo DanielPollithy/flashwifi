@@ -43,7 +43,7 @@ public class WiFiDirectBroadcastService extends Service {
     // broadcast stuff
     WifiP2pManager mManager;
     WifiP2pManager.Channel mChannel;
-    BroadcastReceiver mReceiver;
+    BroadcastReceiver mReceiver = null;
     IntentFilter mIntentFilter;
 
     // content attributes
@@ -332,7 +332,7 @@ public class WiFiDirectBroadcastService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        unregisterReceiver(mReceiver);
+        stopService_();
     }
 
     @Override

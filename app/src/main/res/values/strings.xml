@@ -39,7 +39,7 @@
 
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
-    <string name="hotspotIntroduction">Do you want to start a new Wifiota hotspot? Find conditions in the menu to adjust things.</string>
+    <string name="hotspotIntroduction">Do you want to start a new Wifiota hotspot?</string>
     <string name="internetTestSuccess">Your device has access to the internet</string>
     <string name="iotaNodeTestSuccess">Connection to Iota Node is possible.</string>
 

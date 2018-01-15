@@ -1,9 +1,8 @@
-
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/hotspot_fragment"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
-    android:orientation="vertical" >
+    android:orientation="vertical">
 
 
         <TextView
@@ -13,43 +12,27 @@
             android:text="@string/hotspotIntroduction"
             android:textSize="20sp" />
 
-        <TextView
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:text="@string/internetTestSuccess"
-            android:textSize="20sp"
-            android:id="@+id/internetTest"
-            android:visibility="invisible" />
-
-        <TextView
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:text="@string/iotaNodeTestSuccess"
-            android:textSize="20sp"
-            android:id="@+id/iotaNodeTest"
-            android:visibility="invisible" />
 
         <ToggleButton
+            android:id="@+id/startAPButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/startAP"
-            android:id="@+id/startAPButton"
-            />
+            android:layout_gravity="center"
+            android:text="@string/startAP" />
 
         <ProgressBar
+            android:id="@+id/progressbarAP"
             style="?android:attr/progressBarStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:visibility="invisible"
-            android:id="@+id/progressbarAP"/>
+            android:visibility="invisible" />
 
         <TextView
+            android:id="@+id/numberPeers"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:gravity="center"
             android:text="0 peers"
-            android:id="@+id/numberPeers"
-            android:textSize="30sp"/>
+            android:textSize="30sp" />
 
 </LinearLayout>

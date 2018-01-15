@@ -150,20 +150,12 @@ public class HotspotFragment extends Fragment {
 
         String latestMilestone = response.getLatestMilestone(); */
 
-        TextView text = (TextView) getActivity().findViewById(R.id.iotaNodeTest);
-        text.setVisibility(View.VISIBLE);
-
 
     }
 
     private void testInternetConnection() {
         // ToDo: Move this to a async task
         //boolean status = (isNetworkConnected() && isInternetAvailable());
-        boolean status = true;
-        TextView text = (TextView) getActivity().findViewById(R.id.internetTest);
-        if (status) {
-            text.setVisibility(View.VISIBLE);
-        }
     }
 
     private boolean isNetworkConnected() {

@@ -59,6 +59,10 @@ public class HomeActivity extends AppCompatActivity {
         intent.putExtra("password", password);
         startActivity(intent);
 
+        // disable back navigation by calling finish
+        // https://stackoverflow.com/questions/6376708/how-can-i-disable-go-back-to-some-activity
+        finish();
+
     }
 
     private void decryptSeed(String password) {
