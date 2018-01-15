@@ -13,26 +13,78 @@ import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import com.flashwifi.wifip2p.iotaFlashWrapper.IotaFlashBridge;
+import com.flashwifi.wifip2p.iotaFlashWrapper.Main;
+import com.google.common.base.Charsets;
+import com.google.common.io.CharStreams;
 import com.pddstudio.preferences.encrypted.EncryptedPreferences;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
-import iotaFlashWrapper.IotaFlashBridge;
 import jota.utils.SeedRandomGenerator;
 
 public class HomeActivity extends AppCompatActivity {
 
     private static final String TAG = "Home";
 
+    public String convertStreamToString(InputStream p_is) throws IOException {
+    /*
+     * To convert the InputStream to String we use the
+     * BufferedReader.readLine() method. We iterate until the BufferedReader
+     * return null which means there's no more data to read. Each line will
+     * appended to a StringBuilder and returned as String.
+     */
+        if (p_is != null) {
+            StringBuilder m_sb = new StringBuilder();
+            String m_line;
+            try {
+                BufferedReader m_reader = new BufferedReader(
+                        new InputStreamReader(p_is));
+                while ((m_line = m_reader.readLine()) != null) {
+                    m_sb.append(m_line).append("\n");
+                }
+            } finally {
+                p_is.close();
+            }
+            Log.e("TAG", m_sb.toString());
+            return m_sb.toString();
+        } else {
+            return "";
+        }
+    }
+
+    private String readFile(String name) {
+        InputStream ins = getResources().openRawResource(
+                getResources().getIdentifier(name,
+                        "raw", getPackageName()));
+        try {
+            return convertStreamToString(ins);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
+        // iotalibflash
+        String iotaflash = readFile("iotaflash");
+        String iotaflashhelper = readFile("iotaflashhelper");
+
         try {
-            IotaFlashBridge.boot();
+            IotaFlashBridge.boot(iotaflash, iotaflashhelper);
+            Main.runExample();
         } catch (IOException e) {
-            Log.d(TAG, "onCreate: failed to init lib");
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+        int i = 0;
     }
 
     private void setProgressBar(int percentage) {
