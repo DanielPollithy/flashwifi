@@ -1,203 +1,227 @@
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<android.support.v4.widget.SwipeRefreshLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.flashwifi.wifip2p.WithdrawWalletFragment"
+    android:id="@+id/WithdrawWalletSwipeRefresh"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:fillViewport="true"
-    tools:context="com.flashwifi.wifip2p.WithdrawWalletFragment">
+    android:layout_height="match_parent">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="#0D47A1"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/WithdrawWalletBalanceLabel"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:background="#0D47A1"
-                android:orientation="vertical"
-                android:paddingBottom="20dp"
-                android:paddingEnd="20dp"
-                android:paddingStart="20dp"
-                android:paddingTop="20dp"
-                android:text="@string/WithdarWalletBalanceLabel"
-                android:textColor="#ffffff"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/WithdrawWalletBalanceValue"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:background="#0D47A1"
-                android:orientation="vertical"
-                android:paddingBottom="20dp"
-                android:paddingEnd="20dp"
-                android:paddingStart="40dp"
-                android:paddingTop="20dp"
-                android:text="0 i"
-                android:textColor="#ffffff"
-                android:textStyle="bold" />
-
-        </LinearLayout>
+    <ScrollView android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#1570FF"
+        android:fillViewport="true"
+        android:animateLayoutChanges="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="#1365E5"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/WithdrawWalletTransferLabel"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:background="#1365E5"
-                android:orientation="vertical"
-                android:paddingBottom="20dp"
-                android:paddingEnd="20dp"
-                android:paddingStart="20dp"
-                android:paddingTop="20dp"
-                android:text="@string/WithdrawWalletTransferLabel"
-                android:textColor="#ffffff"
-                android:textStyle="bold" />
-
-            <ImageButton
-                android:id="@+id/WithdrawWalletQRScannerButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal|center_vertical"
-                android:background="#1365E5"
-                android:clickable="true"
-                android:contentDescription="@string/QRScannerDescription"
-                android:focusable="true"
-                android:paddingBottom="5dp"
-                android:paddingEnd="20dp"
-                android:paddingStart="5dp"
-                android:paddingTop="5dp"
-                android:src="@drawable/qrcode_scan"
-                android:textAlignment="center"
-                android:textColor="#ffffff"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:tint="#ffffff" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="#1570FF"
             android:orientation="vertical">
-
-            <EditText
-                android:id="@+id/editText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="20dp"
-                android:layout_marginStart="20dp"
-                android:ems="10"
-                android:hint="Address"
-                android:inputType="textPersonName"
-                android:paddingBottom="20dp"
-                android:paddingTop="20dp"
-                android:textColor="#ffffff" />
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#0D47A1"
                 android:orientation="horizontal">
 
-                <EditText
-                    android:id="@+id/editText3"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="20dp"
-                    android:layout_weight="1"
-                    android:ems="10"
-                    android:hint="Amount"
-                    android:inputType="number"
-                    android:paddingBottom="20dp"
-                    android:paddingTop="20dp"
-                    android:textColor="#ffffff" />
-
                 <TextView
-                    android:id="@+id/FundWalletBalanceValue"
+                    android:id="@+id/WithdrawWalletBalanceLabel"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    android:background="#0D47A1"
                     android:orientation="vertical"
                     android:paddingBottom="20dp"
                     android:paddingEnd="20dp"
-                    android:paddingStart="10dp"
+                    android:paddingStart="20dp"
                     android:paddingTop="20dp"
-                    android:text="i"
+                    android:text="@string/WithdrawWalletBalanceLabel"
                     android:textColor="#ffffff"
-                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/WithdrawWalletBalanceValue"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="#0D47A1"
+                    android:orientation="vertical"
+                    android:paddingBottom="20dp"
+                    android:paddingEnd="20dp"
+                    android:paddingStart="40dp"
+                    android:paddingTop="20dp"
+                    android:textColor="#ffffff"
                     android:textStyle="bold" />
 
             </LinearLayout>
 
-            <EditText
-                android:id="@+id/editText4"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="20dp"
-                android:layout_marginStart="20dp"
-                android:ems="10"
-                android:hint="Message (optional, A-Z and 9 only)"
-                android:inputType="textPersonName"
-                android:paddingBottom="20dp"
-                android:paddingTop="20dp"
-                android:textColor="#ffffff" />
+                android:background="#1365E5"
+                android:orientation="horizontal">
 
-            <EditText
-                android:id="@+id/editText5"
+                <TextView
+                    android:id="@+id/WithdrawWalletTransferLabel"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="#1365E5"
+                    android:orientation="vertical"
+                    android:paddingBottom="20dp"
+                    android:paddingEnd="20dp"
+                    android:paddingStart="20dp"
+                    android:paddingTop="20dp"
+                    android:text="@string/WithdrawWalletTransferLabel"
+                    android:textColor="#ffffff"
+                    android:textStyle="bold" />
+
+                <ImageButton
+                    android:id="@+id/WithdrawWalletQRScannerButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal|center_vertical"
+                    android:background="#1365E5"
+                    android:clickable="true"
+                    android:contentDescription="@string/QRScannerDescription"
+                    android:focusable="true"
+                    android:paddingBottom="5dp"
+                    android:paddingEnd="20dp"
+                    android:paddingStart="5dp"
+                    android:paddingTop="5dp"
+                    android:src="@drawable/qrcode_scan"
+                    android:textAlignment="center"
+                    android:textColor="#ffffff"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:tint="#ffffff" />
+
+            </LinearLayout>
+
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="20dp"
-                android:layout_marginStart="20dp"
-                android:ems="10"
-                android:hint="Tag (optional, A-Z and 9 only)"
-                android:inputType="textPersonName"
-                android:paddingBottom="20dp"
-                android:paddingTop="20dp"
-                android:textColor="#ffffff" />
+                android:background="#1570FF"
+                android:animateLayoutChanges="true"
+                android:orientation="vertical">
+
+                <EditText
+                    android:id="@+id/WithdrawWalletAddress"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="20dp"
+                    android:layout_marginStart="20dp"
+                    android:ems="10"
+                    android:hint="Address"
+                    android:inputType="textPersonName"
+                    android:paddingBottom="20dp"
+                    android:paddingTop="20dp"
+                    android:textColor="#ffffff" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="#1570FF"
+                    android:orientation="horizontal">
+
+                    <EditText
+                        android:id="@+id/WithdrawWalletAmount"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="20dp"
+                        android:layout_weight="1"
+                        android:ems="10"
+                        android:hint="Amount"
+                        android:inputType="number"
+                        android:paddingBottom="20dp"
+                        android:paddingTop="20dp"
+                        android:textColor="#ffffff" />
+
+                    <TextView
+                        android:id="@+id/WithdrawWalletUnitsLabel"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:paddingBottom="20dp"
+                        android:paddingEnd="20dp"
+                        android:paddingStart="10dp"
+                        android:paddingTop="20dp"
+                        android:text="i"
+                        android:textColor="#ffffff"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+                <EditText
+                    android:id="@+id/WithdrawWalletMessage"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="20dp"
+                    android:layout_marginStart="20dp"
+                    android:ems="10"
+                    android:hint="Message (optional, A-Z and 9 only)"
+                    android:inputType="text"
+                    android:digits="9ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                    android:paddingBottom="20dp"
+                    android:paddingTop="20dp"
+                    android:textColor="#ffffff" />
+
+                <EditText
+                    android:id="@+id/WithdrawWalletTag"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="20dp"
+                    android:layout_marginStart="20dp"
+                    android:ems="10"
+                    android:hint="Tag (optional, A-Z and 9 only)"
+                    android:inputType="text"
+                    android:digits="9ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                    android:paddingBottom="20dp"
+                    android:paddingTop="20dp"
+                    android:textColor="#ffffff" />
+
+                <pl.droidsonroids.gif.GifImageView
+                    android:id="@+id/WithdrawWalletLoadingGIF"
+                    android:layout_width="50dp"
+                    android:layout_height="50dp"
+                    android:layout_marginTop="20dp"
+                    android:layout_marginBottom="8dp"
+                    android:layout_gravity="center_horizontal|center_vertical"
+                    android:background="#1570FF"
+                    android:src="@drawable/iota_progress"
+                    />
+
+            </LinearLayout>
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:background="#1570FF">
+
+                <Button
+                    android:id="@+id/WithdrawWalletSend"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|left"
+                    android:layout_marginBottom="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:layout_marginStart="10dp"
+                    android:background="#051c40"
+                    android:clickable="true"
+                    android:elevation="10dp"
+                    android:focusable="true"
+                    android:text=">"
+                    android:textAlignment="center"
+                    android:textColor="#ffffff"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+            </FrameLayout>
 
         </LinearLayout>
 
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:background="#1570FF">
+    </ScrollView>
 
-            <Button
-                android:id="@+id/FloatingActionButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom|left"
-                android:layout_marginBottom="10dp"
-                android:layout_marginEnd="10dp"
-                android:layout_marginStart="10dp"
-                android:background="#051c40"
-                android:clickable="true"
-                android:elevation="10dp"
-                android:focusable="true"
-                android:text=">"
-                android:textAlignment="center"
-                android:textColor="#ffffff"
-                android:textSize="20sp"
-                android:textStyle="bold" />
-        </FrameLayout>
-
-    </LinearLayout>
-
-</ScrollView>
+</android.support.v4.widget.SwipeRefreshLayout>
