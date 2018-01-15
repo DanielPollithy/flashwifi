@@ -10,7 +10,7 @@ Iota stuff: 2.5d
 - [ ] Address storage TOBY
 - [x] Withdrawal and deposit for the internal wallet 0.75d TOBY
 - [ ] Attach/close flash channel to tangle (deposit to root of tree) -> "api.sendTransfer" 0.75d DANIEL
-- [ ] UI 1.0d TOBY
+- [x] UI 1.0d TOBY
 
 Flash channel: 1d WLAD
 - [x] J2V8 interfaces… 1d WLAD
@@ -39,7 +39,7 @@ Frontends: 6.5d
 - [ ] Search hotspot: 0.5d DANIEL
 - [x] Start hotspot: 0.5d DANIEL
 - [x] Fund wallet: 1d TOBY
-- [ ] Withdraw from wallet (+QR code) 0.5 d TOBY
+- [x] Withdraw from wallet (+QR code) 0.5 d TOBY
 - [ ] Tethering status (-> fixed Notification with stop button) 1d WLAD
 - [ ] UI bugs (back button) 1d
 
