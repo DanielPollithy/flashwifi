@@ -62,5 +62,7 @@
     <string name="roamingTitle">Roaming</string>
     <string name="searchIntroduction">Do you want to search for a hotspot?</string>
     <string name="startSearch">Start Search</string>
+    <string name="roaming_title">Roaming (This is your hotspot)</string>
+    <string name="roaming_title_client">Roaming (You are consuming)</string>
 
 </resources>

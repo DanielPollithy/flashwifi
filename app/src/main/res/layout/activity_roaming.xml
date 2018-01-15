@@ -39,23 +39,24 @@
                 android:text="@string/roamingTitle"
                 android:textSize="20sp" />
 
-            <CheckedTextView
+            <CheckBox
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="15dp"
                 android:layout_marginRight="15dp"
-                android:checkMark="@android:drawable/checkbox_on_background"
-                android:checked="true"
+                android:checked="false"
+                android:clickable="false"
+                android:id="@+id/accessPointActive"
                 android:text="Access point connection" />
 
-            <CheckedTextView
+            <CheckBox
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="15dp"
                 android:layout_marginRight="15dp"
                 android:layout_marginBottom="10dp"
-                android:checkMark="@android:drawable/checkbox_on_background"
-                android:checked="true"
+                android:checked="false"
+                android:clickable="false"
                 android:text="Flash channel" />
 
             <Button

@@ -269,7 +269,7 @@ public class Negotiator {
         // ToDo: Don't mock this
         hotspot_state = HotspotState.GENERATE_PASSWORD;
         String password = "123456789";
-        String hotspotName = "Iotify-123";
+        String hotspotName = "Iotify";
 
         // send password and hotspot name
         NegotiationFinalization finalization = new NegotiationFinalization(hotspotName, password,

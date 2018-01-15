@@ -1,6 +1,7 @@
 package com.flashwifi.wifip2p.accesspoint;
 
 import android.content.Context;
+import android.content.Intent;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
@@ -21,9 +22,18 @@ public class ConnectTask extends AsyncTask<Context, Void, String> {
     WifiManager wifi;
     WifiInfo w;
 
+    Context context;
+
+    private void sendUpdateUIBroadcastWithMessage(String message){
+        Intent local = new Intent();
+        local.putExtra("message", message);
+        local.setAction("com.flashwifi.wifip2p.update_roaming");
+        context.sendBroadcast(local);
+    }
+
     @Override
     protected String doInBackground(Context... params) {
-        Context context = params[0];
+        context = params[0];
         WifiManager wifiManager = (WifiManager) context.getSystemService(WIFI_SERVICE);
 
         WifiInfo info = wifiManager.getConnectionInfo(); //get WifiInfo
@@ -35,11 +45,6 @@ public class ConnectTask extends AsyncTask<Context, Void, String> {
         wifiConfig.preSharedKey = String.format("\"%s\"", key);
 
         Log.d(TAG, "doInBackground: GO to sleep");
-        try {
-            Thread.sleep(30 * 1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
         Log.d(TAG, "doInBackground: disconnect");
         int netId = wifiManager.addNetwork(wifiConfig);
         
@@ -56,8 +61,10 @@ public class ConnectTask extends AsyncTask<Context, Void, String> {
                     boolean worked = wifiManager.enableNetwork(i.networkId, true);
                     if (worked) {
                         Log.d(TAG, "doInBackground: WORKED enableNetwork");
+                        sendUpdateUIBroadcastWithMessage("AP SUCCESS");
                     } else {
-                        Log.d(TAG, "doInBackground: ERROROROROROROROORORORORORO------x error");
+                        Log.d(TAG, "doInBackground: Error connecting to the network");
+                        sendUpdateUIBroadcastWithMessage("AP FAILED");
                     }
                     wifiManager.reconnect();
 
@@ -67,7 +74,7 @@ public class ConnectTask extends AsyncTask<Context, Void, String> {
             }
         }
 
-        Log.d(TAG, "doInBackground: now wait");
+        /*Log.d(TAG, "doInBackground: now wait");
 
         int number_minutes = 60;
         for (int i=0; i<number_minutes; i++) {
@@ -76,7 +83,7 @@ public class ConnectTask extends AsyncTask<Context, Void, String> {
             } catch (InterruptedException e) {
                 break;
             }
-        }
+        }*/
 
         return null;
     }

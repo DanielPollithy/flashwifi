@@ -13,16 +13,20 @@ import android.net.wifi.p2p.WifiP2pInfo;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.TaskStackBuilder;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -31,7 +35,7 @@ import com.flashwifi.wifip2p.broadcast.WiFiDirectBroadcastService;
 
 
 public class RoamingActivity extends AppCompatActivity {
-
+    private static final String TAG = "RoamingActivity";
     ArrayList<String> arrayList;
     ArrayAdapter<String> listAdapter;
     ListView listView;
@@ -55,6 +59,7 @@ public class RoamingActivity extends AppCompatActivity {
 
         IntentFilter filter = new IntentFilter();
         filter.addAction("com.flashwifi.wifip2p.update_ui");
+        filter.addAction("com.flashwifi.wifip2p.update_roaming");
 
         updateUIReceiver = new BroadcastReceiver() {
             @Override
@@ -74,8 +79,25 @@ public class RoamingActivity extends AppCompatActivity {
     }
 
     private void updateUi(Intent intent) {
-        NetworkInfo network_info = mService.getNetwork_info();
-        WifiP2pInfo p2p_info = mService.getP2p_info();
+        if (intent.getAction().equals("com.flashwifi.wifip2p.update_roaming")) {
+            Log.d(TAG, "updateUi: Received change from AsyncTask");
+            String message = intent.getStringExtra("message");
+            if (message != null) {
+                Log.d(TAG, "updateUi: message=" + message);
+                CheckBox apConnected = (CheckBox)findViewById(R.id.accessPointActive);
+                if (message.equals("AP SUCCESS")) {
+                    apConnected.setChecked(true);
+                    // when the AP is setup we can start the server
+                    startBillingProtocol();
+                } else if (message.equals("AP FAILED")) {
+                    apConnected.setChecked(false);
+                    Toast.makeText(getApplicationContext(), "Could not create Access point", Toast.LENGTH_LONG).show();
+                } else if (message.equals("AP STOPPED")) {
+                    apConnected.setChecked(false);
+                }
+            }
+
+        }
 
         //TextView connection_status = (TextView) findViewById(R.id.connection_status);
         //final View activity_view = findViewById(R.id.chatView);
@@ -84,9 +106,19 @@ public class RoamingActivity extends AppCompatActivity {
 
     }
 
+    private void startBillingProtocol() {
+        // setup the flash channel etc...
+        if (mService.isInRoleHotspot()) {
+            mService.startBillingServer();
+        } else {
+            mService.startBillingClient();
+        }
+    }
+
     @Override
     protected void onStop() {
         super.onStop();
+        unregisterReceiver(updateUIReceiver);
         unbindService(mConnection);
         mBound = false;
     }
@@ -102,8 +134,14 @@ public class RoamingActivity extends AppCompatActivity {
         address = intent.getStringExtra("address");
 
         initUI();
-        showNotification();
 
+    }
+
+    private void cancelNotification() {
+        NotificationManager mNotificationManager =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+
+        mNotificationManager.cancel(1);
     }
 
 
@@ -111,12 +149,14 @@ public class RoamingActivity extends AppCompatActivity {
         // The id of the channel.
         String CHANNEL_ID = "com.flashwifi.wifip2p.roaming_1";
 
+        String contentText = mService.isInRoleHotspot() ? "You are providing" : "You are consuming";
+
         // ToDo: make this work on high API version
         NotificationCompat.Builder mBuilder =
                 new NotificationCompat.Builder(this)
                         .setSmallIcon(R.drawable.icon_tethering_on)
-                        .setContentTitle("My notification")
-                        .setContentText("Hello World!");
+                        .setContentTitle("IOTA HOTSPOT")
+                        .setContentText(contentText);
         // Creates an explicit intent for an Activity in your app
         Intent resultIntent = new Intent(this, RoamingActivity.class);
 
@@ -146,7 +186,6 @@ public class RoamingActivity extends AppCompatActivity {
 
 
     private void initUI() {
-
         //final EditText input = (EditText) findViewById(R.id.chat_input);
         //Button button = (Button) findViewById(R.id.btn_send);
         /*button.setOnClickListener(new View.OnClickListener() {
@@ -199,13 +238,40 @@ public class RoamingActivity extends AppCompatActivity {
     };
 
     private void initUIWithService() {
+
+        TextView info_text = (TextView) findViewById(R.id.info_text);
+        if (mService.isInRoleHotspot()) {
+            info_text.setText(R.string.roaming_title);
+        } else {
+            info_text.setText(R.string.roaming_title_client);
+        }
+
         stopButton = (Button) findViewById(R.id.stopRoamingButton);
         stopButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                // ToDo: stop the roaming here
+                cancelNotification();
+                if (mService.isInRoleHotspot()){
+                    mService.stopAP();
+                } else {
+                    mService.disconnectAP();
+                }
+                mService.setRoaming(false);
+                Toast.makeText(getApplicationContext(), "Press BACK now", Toast.LENGTH_LONG).show();
             }
         });
-        // ToDo: change the status text
+
+        showNotification();
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (mBound) {
+            if (mService.isRoaming()) {
+                Toast.makeText(getApplicationContext(), "stop roaming before leaving", Toast.LENGTH_LONG).show();
+            } else {
+                super.onBackPressed();
+            }
+        }
     }
 
 }

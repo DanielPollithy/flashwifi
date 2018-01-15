@@ -1,6 +1,7 @@
 package com.flashwifi.wifip2p.accesspoint;
 
 import android.content.Context;
+import android.content.Intent;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
@@ -15,11 +16,18 @@ import static android.content.Context.WIFI_SERVICE;
 public class AccessPointTask extends AsyncTask<Context, Void, String> {
 
     private final static String TAG = "AccessPointTask";
-    private  Context context;
+    private Context context;
     String ssid = "Iotify";
     String key = "1234567890";
     WifiManager wifi;
     WifiInfo w;
+
+    private void sendUpdateUIBroadcastWithMessage(String message){
+        Intent local = new Intent();
+        local.putExtra("message", message);
+        local.setAction("com.flashwifi.wifip2p.update_roaming");
+        context.sendBroadcast(local);
+    }
 
     @Override
     protected String doInBackground(Context... params) {
@@ -67,17 +75,11 @@ public class AccessPointTask extends AsyncTask<Context, Void, String> {
 
                     if(apstatus)
                     {
-                        System.out.println("SUCCESS");
-                        //statusView.append("\nAccess Point Created!");
-                        //finish();
-                        //Intent searchSensorsIntent = new Intent(this,SearchSensors.class);
-                        //startActivity(searchSensorsIntent);
+                        sendUpdateUIBroadcastWithMessage("AP SUCCESS");
                     }
                     else
                     {
-                        System.out.println("FAILED");
-
-                        //statusView.append("\nAccess Point Creation failed!");
+                        sendUpdateUIBroadcastWithMessage("AP FAILED");
                     }
                 }
                 catch (IllegalArgumentException e) {

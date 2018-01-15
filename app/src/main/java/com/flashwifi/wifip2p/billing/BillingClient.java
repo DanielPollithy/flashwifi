@@ -92,6 +92,7 @@ public class BillingClient {
                         // ToDo: mark bill accepted
                         // ToDo: flash object -> diff()
                         // ToDo: sign flash transaction
+                        // ToDo: update UI
                         latestBillAnswer = new BillMessageAnswer("id", true, "", false);
                         latestBillAnswerString = gson.toJson(latestBillAnswer);
                         socketWrapper.sendLine(latestBillAnswerString);

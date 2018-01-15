@@ -19,8 +19,11 @@ import android.util.Log;
 import com.flashwifi.wifip2p.accesspoint.AccessPointTask;
 import com.flashwifi.wifip2p.accesspoint.ConnectTask;
 import com.flashwifi.wifip2p.accesspoint.StopAccessPointTask;
+import com.flashwifi.wifip2p.billing.BillingClient;
+import com.flashwifi.wifip2p.billing.BillingServer;
 import com.flashwifi.wifip2p.negotiation.Negotiator;
 
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -37,6 +40,9 @@ public class WiFiDirectBroadcastService extends Service {
     private boolean setup = false;
     private boolean inRoleHotspot = false;
     private boolean inRoleConsumer = false;
+    private boolean isRoaming = false;
+    private boolean billingServerIsRunning = false;
+    private boolean billingClientIsRunning = false;
 
     private boolean enabled = false;
 
@@ -87,28 +93,76 @@ public class WiFiDirectBroadcastService extends Service {
     }
 
     public void startBillingServer(){
+        if (!billingServerIsRunning) {
+            billingServerIsRunning = true;
 
+            Runnable task = new Runnable() {
+                @Override
+                public void run() {
+                    // ToDo: remove magic numbers
+                    BillingServer billingServer = new BillingServer(100, 20);
+
+                    try {
+                        billingServer.start();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    // ToDo: handle billingServer EXIT CODES
+                    // -> close the roaming etc.
+                }
+            };
+            Thread thread = new Thread(task);
+            threads.add(thread);
+            AsyncTask.execute(thread);
+        }
+    }
+
+
+    public void startBillingClient() {
+        if (!billingClientIsRunning) {
+            billingClientIsRunning = true;
+
+            Runnable task = new Runnable() {
+                @Override
+                public void run() {
+                    // ToDo: remove magic numbers
+                    BillingClient billingClient = new BillingClient();
+                    // ToDo: get the AP gateway ip address
+                    // https://stackoverflow.com/questions/9035784/how-to-know-ip-address-of-the-router-from-code-in-android
+                    billingClient.start("192.168.43.1");
+                    // ToDo: handle billingServer EXIT CODES
+                    // -> close the roaming etc.
+                }
+            };
+            Thread thread = new Thread(task);
+            threads.add(thread);
+            AsyncTask.execute(thread);
+        }
     }
 
     public void connect2AP(String ssid, String key) {
         connectTask = new ConnectTask();
-        Log.d("xxxxxxxxxxxxxx", "CONNECT TO THE HOTSPOT");
+        Log.d(TAG, "connect2AP: CONNECT TO THE HOTSPOT");
         connectTask.execute(getApplicationContext());
     }
 
+
+    public void disconnectAP() {
+    }
+
     public void startAP() {
-        Log.d("xxxxxxxxxxxxxx", "start AP");
         if (!apRuns) {
+            Log.d(TAG, "start Access point");
             apRuns = true;
             apTask = new AccessPointTask();
             apTask.execute(getApplicationContext());
         } else {
-            Log.d("", "startSocketServer: ALREADY RUNNING");
+            Log.d(TAG, "Access point ALREADY RUNNING");
         }
     }
 
     public void stopAP() {
-        Log.d("xxxxxxxxxxxxxx", "stop AP");
+        Log.d(TAG, "stop AP");
         if (apRuns) {
             apRuns = false;
             new StopAccessPointTask().execute(getApplicationContext());
@@ -160,10 +214,9 @@ public class WiFiDirectBroadcastService extends Service {
             public void run() {
                 Negotiator negotiator = new Negotiator(isClient, getWFDMacAddress());
                 String peer_mac_address = null;
-                while (enabled && peer_mac_address == null) {
+                while (!isRoaming && enabled && peer_mac_address == null) {
                     Log.d(TAG, "run: " + enabled);
                     peer_mac_address = negotiator.workAsServer();
-                    deletePersistentGroups();
                     // ToDo: use other broadcast for this
                     // sendUpdateUIBroadcast();
                     try {
@@ -171,17 +224,27 @@ public class WiFiDirectBroadcastService extends Service {
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
+                    if (peer_mac_address == null) {
+                        deletePersistentGroups();
+                    }
                 }
                 if (peer_mac_address != null) {
+                    // block the discovery mode due to switch to roaming state
+                    setRoaming(true);
+                    // tell the UI
                     sendStartRoamingBroadcast(peer_mac_address);
                 }
             }
 
 
         };
-        Thread thread = new Thread(task);
-        threads.add(thread);
-        AsyncTask.execute(thread);
+        if (!isRoaming()) {
+            Thread thread = new Thread(task);
+            threads.add(thread);
+            AsyncTask.execute(thread);
+        } else {
+            Log.d(TAG, "startNegServer: BLOCKED due to roaming state");
+        }
     }
 
     private void sendStartRoamingBroadcast(String peer_mac_address) {
@@ -197,25 +260,35 @@ public class WiFiDirectBroadcastService extends Service {
             public void run() {
                 Negotiator negotiator = new Negotiator(isClient, getWFDMacAddress());
                 String peer_mac_address = null;
-                while (enabled && peer_mac_address == null) {
+                while (!isRoaming && enabled && peer_mac_address == null) {
                     Log.d(TAG, "run: " + enabled);
                     System.out.println(" *******+ work as client *******");
                     peer_mac_address = negotiator.workAsClient(address.getHostAddress());
-                    deletePersistentGroups();
                     try {
                         Thread.sleep(2000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
+                    if (peer_mac_address == null) {
+                        deletePersistentGroups();
+                    }
                 }
                 if (peer_mac_address != null) {
+                    // block the discovery mode due to switch to roaming state
+                    setRoaming(true);
+                    // tell the UI
                     sendStartRoamingBroadcast(peer_mac_address);
                 }
             }
         };
-        Thread thread = new Thread(task);
-        threads.add(thread);
-        AsyncTask.execute(thread);
+        if (!isRoaming()) {
+            Thread thread = new Thread(task);
+            threads.add(thread);
+            AsyncTask.execute(thread);
+        } else {
+            Log.d(TAG, "startNegotiationClient: BLOCKED due to roaming state");
+        }
+
 
     }
 
@@ -313,6 +386,18 @@ public class WiFiDirectBroadcastService extends Service {
         this.inRoleConsumer = inRoleConsumer;
     }
 
+    public boolean isRoaming() {
+        return isRoaming;
+    }
+
+    public void setRoaming(boolean roaming) {
+        if (roaming) {
+            stopAllTasks();
+        }
+        isRoaming = roaming;
+    }
+
+
     /**
      * Class used for the client Binder.  Because we know this service always
      * runs in the same process as its clients, we don't need to deal with IPC.
@@ -388,7 +473,7 @@ public class WiFiDirectBroadcastService extends Service {
     }
 
     private void sendUpdateUIBroadcastNewConnection(){
-        Log.d(TAG, "sendUpdateUIBroadcastNewConnection: SEND THEEM SHIIIIIIIT");
+        Log.d(TAG, "sendUpdateUIBroadcastNewConnection: NOTIFY UI ABOUT NEW CONNECTION");
         Intent local = new Intent();
         local.setAction("com.flashwifi.wifip2p.update_ui");
         local.putExtra("what", "connectivity_changed");

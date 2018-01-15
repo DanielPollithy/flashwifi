@@ -102,9 +102,9 @@ public class SearchFragment extends Fragment {
             what = "";
         }
 
-        // ToDo: do we need this???
         if (what.equals("connectivity_changed")) {
-            // startNegotiationProtocol();
+            String currentDeviceConnected = intent.getStringExtra("currentDeviceConnected");
+            startNegotiationProtocol(currentDeviceConnected);
         }
     }
 
@@ -191,6 +191,7 @@ public class SearchFragment extends Fragment {
         toggle.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(final View view) {
+                updateList();
                 if (toggle.isChecked()) {
                     if (mBound) {
                         mService.setInRoleHotspot(false);

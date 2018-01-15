@@ -43,15 +43,7 @@ public class PeerListAdapter extends ArrayAdapter<PeerInformation> {
             TextView tt3 = (TextView) v.findViewById(R.id.description);
             TextView tt4 = (TextView) v.findViewById(R.id.ipAddr);
             TextView tt5 = (TextView) v.findViewById(R.id.iotaPrice);
-            TableRow row = (TableRow) v.findViewById(R.id.talkingRow);
 
-            if (row != null) {
-                if (p.isSelected()) {
-                    row.setVisibility(View.VISIBLE);
-                } else {
-                    row.setVisibility(View.INVISIBLE);
-                }
-            }
 
             WifiP2pDevice device = p.getWifiP2pDevice();
             if (device != null) {

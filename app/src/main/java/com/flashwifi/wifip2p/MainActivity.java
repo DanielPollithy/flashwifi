@@ -59,11 +59,16 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void initUi() {
-        Switch switch_ = (Switch) findViewById(R.id.wifiSwitch);
+        final Switch switch_ = (Switch) findViewById(R.id.wifiSwitch);
         switch_.setOnCheckedChangeListener(new Switch.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
-                    mService.enableService();
+                    if (!mBound) {
+                        switch_.setChecked(false);
+                        Toast.makeText(getApplicationContext(), "Wifi Broadcast not bound", Toast.LENGTH_SHORT).show();
+                    } else {
+                        mService.enableService();
+                    }
                 } else {
                     mService.disableService();
                 }

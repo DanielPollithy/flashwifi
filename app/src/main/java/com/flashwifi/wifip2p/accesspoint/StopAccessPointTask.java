@@ -1,6 +1,7 @@
 package com.flashwifi.wifip2p.accesspoint;
 
 import android.content.Context;
+import android.content.Intent;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
@@ -19,6 +20,13 @@ public class StopAccessPointTask extends AsyncTask<Context, Void, String> {
     String ssid = "iota-wifi-121431";
     WifiManager wifi;
     WifiInfo w;
+
+    private void sendUpdateUIBroadcastWithMessage(String message){
+        Intent local = new Intent();
+        local.putExtra("message", message);
+        local.setAction("com.flashwifi.wifip2p.update_roaming");
+        context.sendBroadcast(local);
+    }
 
     @Override
     protected String doInBackground(Context... params) {
@@ -50,6 +58,8 @@ public class StopAccessPointTask extends AsyncTask<Context, Void, String> {
         {
             wifi.setWifiEnabled(true);
         }
+
+        sendUpdateUIBroadcastWithMessage("AP STOPPED");
 
 
         return null;
