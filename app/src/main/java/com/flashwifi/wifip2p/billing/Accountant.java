@@ -18,7 +18,7 @@ public class Accountant {
 
     private boolean closed = true;
 
-    static Accountant getInstance() {
+    public static Accountant getInstance() {
         return ourInstance;
     }
 
@@ -47,7 +47,20 @@ public class Accountant {
     }
 
     private void applyTransferToFlashChannel(int iota) {
+    }
 
+    public boolean includeBillFromPeer(Bill b) {
+        appendBill(b);
+
+        // ToDo: check bill
+
+        totalMegabytes += b.getMegabytesUsed();
+        totalIotaPrice += b.getPriceInIota();
+        totalDurance += b.getDuranceInMinutes();
+
+        // ToDo: apply transfer to flash channel
+
+        return true;
     }
 
     public Bill createBill(int megaByte, int priceInIota, int duranceMinutes){
@@ -84,5 +97,21 @@ public class Accountant {
             }
         }
         return false;
+    }
+
+    public int getTotalMegabytes() {
+        return totalMegabytes;
+    }
+
+    public int getTotalIotaPrice() {
+        return totalIotaPrice;
+    }
+
+    public int getTotalDurance() {
+        return totalDurance;
+    }
+
+    public int getBookedMegabytes() {
+        return bookedMegabytes;
     }
 }

@@ -36,10 +36,6 @@ public class StopAccessPointTask extends AsyncTask<Context, Void, String> {
         w = wifi.getConnectionInfo();
         Log.d("dsd", w.toString());
 
-        if (wifi.isWifiEnabled())
-        {
-            wifi.setWifiEnabled(false);
-        }
         Log.d(TAG, "stopAP: THIS IS STOPPING THE AP");
         WifiManager wifiManager = (WifiManager) context.getApplicationContext().getSystemService(WIFI_SERVICE);
 

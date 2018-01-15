@@ -25,4 +25,24 @@ public class Bill {
     public void setAcceptedByPeer(boolean acceptedByPeer) {
         this.acceptedByPeer = acceptedByPeer;
     }
+
+    public int getIndex() {
+        return index;
+    }
+
+    public int getMinuteStart() {
+        return minuteStart;
+    }
+
+    public int getDuranceInMinutes() {
+        return duranceInMinutes;
+    }
+
+    public int getMegabytesUsed() {
+        return megabytesUsed;
+    }
+
+    public int getPriceInIota() {
+        return priceInIota;
+    }
 }

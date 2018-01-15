@@ -98,14 +98,14 @@ public class AccessPointTask extends AsyncTask<Context, Void, String> {
             //statusView.setText("Your phone's API does not contain setWifiApEnabled method to configure an access point");
         }
 
-        /*int number_minutes = 60;
+        int number_minutes = 60*24;
         for (int i=0; i<number_minutes; i++) {
             try {
                 Thread.sleep(1000*60);
             } catch (InterruptedException e) {
                 break;
             }
-        }*/
+        }
 
 
         return null;
@@ -115,7 +115,7 @@ public class AccessPointTask extends AsyncTask<Context, Void, String> {
     @Override
     protected void onCancelled() {
         super.onCancelled();
-        //stopAP();
+        stopAP();
     }
 
     private void stopAP() {

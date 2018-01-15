@@ -100,7 +100,7 @@ public class WiFiDirectBroadcastService extends Service {
                 @Override
                 public void run() {
                     // ToDo: remove magic numbers
-                    BillingServer billingServer = new BillingServer(100, 20);
+                    BillingServer billingServer = new BillingServer(100, 20, getApplicationContext());
 
                     try {
                         billingServer.start();
@@ -111,6 +111,7 @@ public class WiFiDirectBroadcastService extends Service {
                     // -> close the roaming etc.
                 }
             };
+            Log.d(TAG, "startBillingServer");
             Thread thread = new Thread(task);
             threads.add(thread);
             AsyncTask.execute(thread);
@@ -122,11 +123,13 @@ public class WiFiDirectBroadcastService extends Service {
         if (!billingClientIsRunning) {
             billingClientIsRunning = true;
 
+            Log.d(TAG, "startBillingClient");
+
             Runnable task = new Runnable() {
                 @Override
                 public void run() {
                     // ToDo: remove magic numbers
-                    BillingClient billingClient = new BillingClient();
+                    BillingClient billingClient = new BillingClient(getApplicationContext());
                     // ToDo: get the AP gateway ip address
                     // https://stackoverflow.com/questions/9035784/how-to-know-ip-address-of-the-router-from-code-in-android
                     billingClient.start("192.168.43.1");
@@ -165,8 +168,8 @@ public class WiFiDirectBroadcastService extends Service {
         Log.d(TAG, "stop AP");
         if (apRuns) {
             apRuns = false;
-            new StopAccessPointTask().execute(getApplicationContext());
-            //apTask.cancel(true);
+            //new StopAccessPointTask().execute(getApplicationContext());
+            apTask.cancel(true);
         } else {
             Log.d("", "startSocketServer: ALREADY RUNNING");
         }

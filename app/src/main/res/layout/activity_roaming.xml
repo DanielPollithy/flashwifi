@@ -50,6 +50,7 @@
                 android:text="Access point connection" />
 
             <CheckBox
+                android:id="@+id/flashEstablished"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="15dp"
@@ -81,6 +82,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="15dp"
         android:layout_gravity="center"
+        android:visibility="gone"
         card_view:cardCornerRadius="4dp">
 
         <LinearLayout
@@ -92,7 +94,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_margin="15dp"
-                android:text="Overview of your hotspot"
+                android:text="Summary of the flash channel"
                 android:textSize="20sp" />
 
 
@@ -101,23 +103,26 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="15dp"
                 android:layout_marginEnd="15dp"
-                android:text="10 Minutes left of 50 Minutes"
+                android:id="@+id/summaryMinutes"
+                android:text="0 minutes open"
                 android:textSize="15sp" />
 
             <TextView
+                android:id="@+id/summaryMegabytes"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="15dp"
                 android:layout_marginEnd="15dp"
-                android:text="30 Megabytes used of max. 1 Gigabyte"
+                android:text="0/0 Megabytes"
                 android:textSize="15sp" />
 
             <TextView
+                android:id="@+id/summaryIota"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="15dp"
                 android:layout_marginEnd="15dp"
-                android:text="1.3 Miota earned"
+                android:text="0 Iota transferred"
                 android:textSize="15sp" />
 
             <TextView

@@ -17,6 +17,7 @@ import android.support.design.widget.Snackbar;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.TaskStackBuilder;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.CardView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
@@ -31,6 +32,7 @@ import android.widget.Toast;
 import java.net.InetAddress;
 import java.util.ArrayList;
 
+import com.flashwifi.wifip2p.billing.Accountant;
 import com.flashwifi.wifip2p.broadcast.WiFiDirectBroadcastService;
 
 
@@ -52,6 +54,7 @@ public class RoamingActivity extends AppCompatActivity {
     private boolean hotspot_running = false;
 
     private Button stopButton;
+    private boolean endRoamingFlag = false;
 
     @Override
     protected void onStart() {
@@ -85,6 +88,7 @@ public class RoamingActivity extends AppCompatActivity {
             if (message != null) {
                 Log.d(TAG, "updateUi: message=" + message);
                 CheckBox apConnected = (CheckBox)findViewById(R.id.accessPointActive);
+                CheckBox flashEstablished = (CheckBox)findViewById(R.id.flashEstablished);
                 if (message.equals("AP SUCCESS")) {
                     apConnected.setChecked(true);
                     // when the AP is setup we can start the server
@@ -94,6 +98,10 @@ public class RoamingActivity extends AppCompatActivity {
                     Toast.makeText(getApplicationContext(), "Could not create Access point", Toast.LENGTH_LONG).show();
                 } else if (message.equals("AP STOPPED")) {
                     apConnected.setChecked(false);
+                } else if (message.equals("Channel established")) {
+                    flashEstablished.setChecked(true);
+                } else if (message.equals("Billing")) {
+                    updateBillingCard();
                 }
             }
 
@@ -103,6 +111,29 @@ public class RoamingActivity extends AppCompatActivity {
         //final View activity_view = findViewById(R.id.chatView);
 
         //connection_status.setText(network_info.toString());
+
+    }
+
+    private void updateBillingCard() {
+        CardView summaryView = (CardView) findViewById(R.id.card_view_overview);
+        if (summaryView.getVisibility() != View.VISIBLE) {
+            summaryView.setVisibility(View.VISIBLE);
+        }
+        String minutes = Integer.toString(Accountant.getInstance().getTotalDurance());
+        String megabytes_max = Integer.toString(Accountant.getInstance().getBookedMegabytes());
+        String megabytes_used = Integer.toString(Accountant.getInstance().getTotalMegabytes());
+        String iotas_transferred = Integer.toString(Accountant.getInstance().getTotalIotaPrice());
+
+        TextView summaryMinutes = (TextView) findViewById(R.id.summaryMinutes);
+        summaryMinutes.setText(String.format("%s minutes active", minutes));
+
+        TextView summaryMegabytes = (TextView) findViewById(R.id.summaryMegabytes);
+        summaryMegabytes.setText(String.format("%s/%s Megabytes roamed", megabytes_used, megabytes_max));
+
+
+        TextView summaryIota = (TextView) findViewById(R.id.summaryIota);
+        summaryMegabytes.setText(String.format("%s Iota transferred", iotas_transferred));
+
 
     }
 
@@ -117,6 +148,9 @@ public class RoamingActivity extends AppCompatActivity {
 
     @Override
     protected void onStop() {
+       /* if (!endRoamingFlag) {
+            endRoaming();
+        }*/
         super.onStop();
         unregisterReceiver(updateUIReceiver);
         unbindService(mConnection);
@@ -249,18 +283,23 @@ public class RoamingActivity extends AppCompatActivity {
         stopButton = (Button) findViewById(R.id.stopRoamingButton);
         stopButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                cancelNotification();
-                if (mService.isInRoleHotspot()){
-                    mService.stopAP();
-                } else {
-                    mService.disconnectAP();
-                }
-                mService.setRoaming(false);
-                Toast.makeText(getApplicationContext(), "Press BACK now", Toast.LENGTH_LONG).show();
+                endRoaming();
             }
         });
 
         showNotification();
+    }
+
+    private void endRoaming() {
+        endRoamingFlag = true;
+        cancelNotification();
+        if (mService.isInRoleHotspot()){
+            mService.stopAP();
+        } else {
+            mService.disconnectAP();
+        }
+        mService.setRoaming(false);
+        Toast.makeText(getApplicationContext(), "Press BACK now", Toast.LENGTH_LONG).show();
     }
 
     @Override

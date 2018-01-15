@@ -1,5 +1,7 @@
 package com.flashwifi.wifip2p.billing;
 
+import android.content.Context;
+import android.content.Intent;
 import android.util.Log;
 
 import com.flashwifi.wifip2p.negotiation.SocketWrapper;
@@ -38,9 +40,21 @@ public class BillingClient {
     private BillingOpenChannelAnswer billingOpenChannelAnswer;
     private BillMessage[] billMessages;
 
-    public BillingClient(){
+    Context context;
+
+    private void sendUpdateUIBroadcastWithMessage(String message){
+        Intent local = new Intent();
+        local.putExtra("message", message);
+        local.setAction("com.flashwifi.wifip2p.update_roaming");
+        context.sendBroadcast(local);
+    }
+
+    public BillingClient(Context context){
+        this.context = context;
         gson = new GsonBuilder().create();
     }
+
+
 
     public void start(String serverIPAddress) {
         while (state != State.CLOSED) {
@@ -69,6 +83,7 @@ public class BillingClient {
                         billingOpenChannelAnswer = gson.fromJson(billingOpenChannelAnswerString, BillingOpenChannelAnswer.class);
                         // now create the flash channel on our side
                         Accountant.getInstance().start(billingOpenChannel.getTotalMegabytes(), billingOpenChannel.getTimeoutMinutesClient());
+                        sendUpdateUIBroadcastWithMessage("Channel established");
                         state = State.ROAMING;
                     } else {
                         // what to do if the hotspot already created stuff and was in roaming mode
@@ -86,13 +101,11 @@ public class BillingClient {
                     while (state == State.ROAMING) {
                         latestBillString = socketWrapper.getLineThrowing();
                         latestBill = gson.fromJson(latestBillString, BillMessage.class);
-                        // ToDo: check if this bill is okay
-                        // ToDo: add this bill to the Accountant
-                        // ToDo: rewrite the account to manage client and server bills
-                        // ToDo: mark bill accepted
+                        // add this bill to the Accountant
+                        Accountant.getInstance().includeBillFromPeer(latestBill.getBill());
                         // ToDo: flash object -> diff()
                         // ToDo: sign flash transaction
-                        // ToDo: update UI
+                        sendUpdateUIBroadcastWithMessage("Billing");
                         latestBillAnswer = new BillMessageAnswer("id", true, "", false);
                         latestBillAnswerString = gson.toJson(latestBillAnswer);
                         socketWrapper.sendLine(latestBillAnswerString);

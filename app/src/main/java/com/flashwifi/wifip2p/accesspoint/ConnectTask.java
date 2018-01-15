@@ -45,6 +45,11 @@ public class ConnectTask extends AsyncTask<Context, Void, String> {
         wifiConfig.preSharedKey = String.format("\"%s\"", key);
 
         Log.d(TAG, "doInBackground: GO to sleep");
+        try {
+            Thread.sleep(15 * 1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         Log.d(TAG, "doInBackground: disconnect");
         int netId = wifiManager.addNetwork(wifiConfig);
         

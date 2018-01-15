@@ -1,5 +1,7 @@
 package com.flashwifi.wifip2p.billing;
 
+import android.content.Context;
+import android.content.Intent;
 import android.util.Log;
 
 import com.flashwifi.wifip2p.negotiation.SocketWrapper;
@@ -37,7 +39,17 @@ public class BillingServer {
     private int PORT = 9199;
     private static final int serverTimeoutMillis = 2 * 60 * 1000;
 
-    public BillingServer(int bookedMegabytes, int timeoutMinutes){
+    Context context;
+
+    private void sendUpdateUIBroadcastWithMessage(String message){
+        Intent local = new Intent();
+        local.putExtra("message", message);
+        local.setAction("com.flashwifi.wifip2p.update_roaming");
+        context.sendBroadcast(local);
+    }
+
+    public BillingServer(int bookedMegabytes, int timeoutMinutes, Context context){
+        this.context = context;
         Accountant.getInstance().start(bookedMegabytes,timeoutMinutes);
         gson = new GsonBuilder().create();
     }
@@ -81,6 +93,8 @@ public class BillingServer {
                     BillingOpenChannelAnswer billingOpenChannelAnswer = new BillingOpenChannelAnswer(0, 0, "", "", myDigests);
                     String billingOpenChannelAnswerString = gson.toJson(billingOpenChannelAnswer);
                     socketWrapper.sendLine(billingOpenChannelAnswerString);
+
+                    sendUpdateUIBroadcastWithMessage("Channel established");
 
                     // OK
                     state = State.ROAMING;
