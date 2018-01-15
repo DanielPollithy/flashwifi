@@ -16,6 +16,7 @@ public class PeerInformation  {
     private WifiP2pInfo p2pInfo;
     private WifiP2pDevice wifiP2pDevice;
     private Date lastUpdate;
+    private boolean selected;
 
     // age stores how long it has been since the last signal from this peer
     // it is not stored in seconds but in update cycles
@@ -26,6 +27,7 @@ public class PeerInformation  {
     private NegotiationFinalization latestFinalization;
 
     public PeerInformation() {
+        selected = false;
         age = 0;
     }
 
@@ -75,5 +77,13 @@ public class PeerInformation  {
 
     public void setIPAddress(String IPAddress) {
         this.ipAddress = IPAddress;
+    }
+
+    public boolean isSelected() {
+        return selected;
+    }
+
+    public void setSelected(boolean selected) {
+        this.selected = selected;
     }
 }

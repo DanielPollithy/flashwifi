@@ -37,16 +37,18 @@ public class PeerStore {
      */
     public boolean updateOrCreate(PeerInformation peer) {
         String macAddress = peer.getWifiP2pDevice().deviceAddress;
-        boolean created = peers.containsKey(macAddress);
+        boolean exists = peers.containsKey(macAddress);
 
-        if (!created) {
+        if (exists) {
             // Temp store for the important values
+            peer.setSelected(peers.get(macAddress).isSelected());
         }
         // overwrite or insert
         peers.put(macAddress, peer);
 
 
-        return created;
+
+        return !exists;
     }
 
     public ArrayList<PeerInformation> getPeerArrayList() {
@@ -71,6 +73,7 @@ public class PeerStore {
     }
 
     private PeerInformation getOrCreatePeer(String address_) {
+        address_ = address_.toLowerCase();
         if (peers.containsKey(address_)) {
             return peers.get(address_);
         }

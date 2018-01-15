@@ -5,19 +5,32 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.NetworkInfo;
+import android.net.wifi.WifiConfiguration;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
+import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
+import android.widget.Toast;
 
+
+import com.flashwifi.wifip2p.WalletAddressAndBalanceChecker;
+import com.flashwifi.wifip2p.accesspoint.AccessPointTask;
+import com.flashwifi.wifip2p.accesspoint.ConnectTask;
+import com.flashwifi.wifip2p.negotiation.Negotiator;
 
 import java.lang.reflect.Method;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 
 public class WiFiDirectBroadcastService extends Service {
@@ -27,6 +40,10 @@ public class WiFiDirectBroadcastService extends Service {
     private final IBinder mBinder = new LocalBinder();
 
     private boolean setup = false;
+    private boolean inRoleHotspot = false;
+    private boolean inRoleConsumer = false;
+
+    private boolean enabled = false;
 
     // broadcast stuff
     WifiP2pManager mManager;
@@ -41,29 +58,165 @@ public class WiFiDirectBroadcastService extends Service {
     WifiP2pGroup p2p_group;
     ArrayList<String> receivedMessages = new ArrayList<>();
 
-    // socket stuff
-    boolean serverRuns;
+    // async task store
+    ArrayList<Thread> threads = new ArrayList<Thread>();
+
 
     private String currentDeviceConnected = null;
 
     // discovery mode
     private boolean discoveryModeActive = false;
 
-    public void startNegotiationServer(boolean isClient, String macAddress) {
-        Log.d("", "startSocketServer: ");
-        //negotiationServerTask = new NegotiationServerTask();
-        //negotiationServerTask.execute();
-        String isClientString = (isClient) ? "True" : "False";
-        // ToDo: rewire this
-        // new NegotiationServerTask().execute(isClientString, macAddress);
+    // HOTSPOT
+    // socket stuff
+    AccessPointTask apTask;
+    boolean apRuns = false;
+    ConnectTask connectTask;
+
+    public void enableWiFi() {
+        WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+
+        if (!wifiManager.isWifiEnabled())
+        {
+            wifiManager.setWifiEnabled(true);
+        }
     }
 
-    public void startNegotiationClient(InetAddress address, boolean isClient, String macAddress) {
-        Log.d("", "startSocketClient: ");
-        String isClientString = (isClient) ? "True" : "False";
-        String ipaddr = address.getHostAddress();
-        // ToDo: use the Negotiator here
-        // new NegotiationClientTask().execute(isClientString, ipaddr, macAddress);
+    public void disableWiFi() {
+        WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+
+        if (wifiManager.isWifiEnabled())
+        {
+            wifiManager.setWifiEnabled(false);
+        }
+    }
+
+    public void connect2AP(String ssid, String key) {
+        connectTask = new ConnectTask();
+        Log.d("xxxxxxxxxxxxxx", "CONNECT TO THE HOTSPOT");
+        connectTask.execute(getApplicationContext());
+    }
+
+    public void startAP() {
+        Log.d("xxxxxxxxxxxxxx", "start AP");
+        if (!apRuns) {
+            apRuns = true;
+            apTask = new AccessPointTask();
+            apTask.execute(getApplicationContext());
+        } else {
+            Log.d("", "startSocketServer: ALREADY RUNNING");
+        }
+    }
+
+    public void stopAP() {
+        Log.d("xxxxxxxxxxxxxx", "stop AP");
+        if (apRuns) {
+            apRuns = false;
+            apTask.cancel(true);
+        } else {
+            Log.d("", "startSocketServer: ALREADY RUNNING");
+        }
+    }
+
+    public String getWFDMacAddress(){
+        try {
+            List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
+            for (NetworkInterface ntwInterface : interfaces) {
+
+                if (ntwInterface.getName().equalsIgnoreCase("p2p0")) {
+                    byte[] byteMac = ntwInterface.getHardwareAddress();
+                    if (byteMac==null){
+                        return null;
+                    }
+                    StringBuilder strBuilder = new StringBuilder();
+                    for (int i=0; i<byteMac.length; i++) {
+                        strBuilder.append(String.format("%02X:", byteMac[i]));
+                    }
+
+                    if (strBuilder.length()>0){
+                        strBuilder.deleteCharAt(strBuilder.length()-1);
+                    }
+
+                    return strBuilder.toString();
+                }
+
+            }
+        } catch (Exception e) {
+            Log.d(TAG, e.getMessage());
+        }
+        return null;
+    }
+
+    private void stopAllTasks() {
+        for (Thread thread:threads) {
+            Log.d(TAG, "stopAllTasks: stop thread");
+            thread.interrupt();
+        }
+    }
+
+    public void startNegotiationServer(final boolean isClient, String macAddress) {
+        Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                Negotiator negotiator = new Negotiator(isClient, getWFDMacAddress());
+                String peer_mac_address = null;
+                while (enabled && peer_mac_address == null) {
+                    Log.d(TAG, "run: " + enabled);
+                    peer_mac_address = negotiator.workAsServer();
+                    deletePersistentGroups();
+                    // ToDo: use other broadcast for this
+                    // sendUpdateUIBroadcast();
+                    try {
+                        Thread.sleep(2000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                if (peer_mac_address != null) {
+                    sendStartRoamingBroadcast(peer_mac_address);
+                }
+            }
+
+
+        };
+        Thread thread = new Thread(task);
+        threads.add(thread);
+        AsyncTask.execute(thread);
+    }
+
+    private void sendStartRoamingBroadcast(String peer_mac_address) {
+        Intent local = new Intent();
+        local.putExtra("peer_mac_address", peer_mac_address);
+        local.setAction("com.flashwifi.wifip2p.start_roaming");
+        this.sendBroadcast(local);
+    }
+
+    public void startNegotiationClient(final InetAddress address, final boolean isClient, String macAddress) {
+        Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                Negotiator negotiator = new Negotiator(isClient, getWFDMacAddress());
+                String peer_mac_address = null;
+                while (enabled && peer_mac_address == null) {
+                    Log.d(TAG, "run: " + enabled);
+                    System.out.println(" *******+ work as client *******");
+                    peer_mac_address = negotiator.workAsClient(address.getHostAddress());
+                    deletePersistentGroups();
+                    try {
+                        Thread.sleep(2000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                if (peer_mac_address != null) {
+                    sendStartRoamingBroadcast(peer_mac_address);
+                }
+            }
+        };
+        Thread thread = new Thread(task);
+        threads.add(thread);
+        AsyncTask.execute(thread);
+
     }
 
     public WifiP2pInfo getP2p_info() {
@@ -94,6 +247,28 @@ public class WiFiDirectBroadcastService extends Service {
         }
     }
 
+    public void enableService() {
+        if (!enabled) {
+            enabled = true;
+            setupService();
+            enableWiFi();
+        }
+    }
+
+    public void disableService(){
+        if (enabled) {
+            enabled = false;
+            stopAllTasks();
+            stopService_();
+        }
+    }
+
+    private void stopService_() {
+        if (setup) {
+            unregisterReceiver(mReceiver);
+        }
+    }
+
     private void setupService() {
         if (!setup) {
             mManager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
@@ -111,16 +286,31 @@ public class WiFiDirectBroadcastService extends Service {
 
             registerReceiver(mReceiver, mIntentFilter);
 
-            serverRuns = false;
-
-
             setup = true;
+        } else {
+            registerReceiver(mReceiver, mIntentFilter);
         }
     }
 
     public void startDiscoveryMode(WifiP2pManager.ActionListener action_listener) {
         mManager.discoverPeers(mChannel, action_listener);
         discoveryModeActive = true;
+    }
+
+    public boolean isInRoleHotspot() {
+        return inRoleHotspot;
+    }
+
+    public void setInRoleHotspot(boolean inRoleHotspot) {
+        this.inRoleHotspot = inRoleHotspot;
+    }
+
+    public boolean isInRoleConsumer() {
+        return inRoleConsumer;
+    }
+
+    public void setInRoleConsumer(boolean inRoleConsumer) {
+        this.inRoleConsumer = inRoleConsumer;
     }
 
     /**
@@ -148,7 +338,6 @@ public class WiFiDirectBroadcastService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        setupService();
     }
 
     public ArrayList<String> getReceivedMessages() {
@@ -162,6 +351,10 @@ public class WiFiDirectBroadcastService extends Service {
 
     public void getPeerList(WifiP2pManager.ActionListener action_listener) {
         mManager.discoverPeers(mChannel, action_listener);
+    }
+
+    public void stopDiscovery(WifiP2pManager.ActionListener action_listener) {
+        mManager.stopPeerDiscovery(mChannel, action_listener);
     }
 
     public ArrayList<String> getArrayList() {

@@ -21,6 +21,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.Toast;
+import android.widget.ToggleButton;
 
 import com.flashwifi.wifip2p.datastore.PeerInformation;
 import com.flashwifi.wifip2p.datastore.PeerListAdapter;
@@ -45,6 +47,9 @@ public class SearchFragment extends Fragment {
     ArrayList<String> arrayList;
     PeerListAdapter peerListAdapter;
 
+    View view;
+    private boolean busy = false;
+
 
     public SearchFragment() {
         // Empty constructor required for fragment subclasses
@@ -54,15 +59,6 @@ public class SearchFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_search, container, false);
-        //int i = getArguments().getInt(ARG_PLANET_NUMBER);
-        //String planet = getResources().getStringArray(R.array.planets_array)[i];
-
-        //int imageId = getResources().getIdentifier(planet.toLowerCase(Locale.getDefault()),
-        //        "drawable", getActivity().getPackageName());
-        //((ImageView) rootView.findViewById(R.id.image)).setImageResource(imageId);
-        //getActivity().setTitle(planet);
-
-        // initUI();
 
         return rootView;
     }
@@ -89,11 +85,15 @@ public class SearchFragment extends Fragment {
         return f;
     }
 
-    private void updateUi(Intent intent) {
+    private void updateList() {
         peerListAdapter.notifyDataSetInvalidated();
         peerListAdapter.clear();
         peerListAdapter.addAll(PeerStore.getInstance().getPeerArrayList());
         peerListAdapter.notifyDataSetChanged();
+    }
+
+    private void updateUi(Intent intent) {
+        updateList();
 
         String what = intent.getStringExtra("what");
         Log.d(">>>>>>>>>>>>", "updateUi: " + what);
@@ -153,6 +153,7 @@ public class SearchFragment extends Fragment {
     public void onStop() {
         super.onStop();
         getActivity().unbindService(mConnection);
+        getActivity().unregisterReceiver(updateUIReceiver);
         mBound = false;
     }
 
@@ -176,19 +177,33 @@ public class SearchFragment extends Fragment {
         Intent intent = new Intent(getActivity(), WiFiDirectBroadcastService.class);
         getActivity().bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
 
+        view = getActivity().findViewById(R.id.fragment_view);
+
         initUI();
     }
 
     private void initUI() {
         Toolbar toolbar = (Toolbar) getActivity().findViewById(R.id.toolbar);
         toolbar.setTitle("Discover Peers");
-        //setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) getActivity().findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
+        final ToggleButton toggle = (ToggleButton) getActivity().findViewById(R.id.startSearchButton);
+        //toggle.setChecked(mService.isInRoleConsumer());
+        toggle.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(final View view) {
-                onRefreshButtonClick();
+                if (toggle.isChecked()) {
+                    if (mBound) {
+                        mService.setInRoleHotspot(false);
+                        mService.setInRoleConsumer(true);
+                        startSearching();
+                    }
+                } else {
+                    if (mBound) {
+                        mService.setInRoleHotspot(false);
+                        mService.setInRoleConsumer(false);
+                        stopSearching();
+                    }
+                }
             }
         });
 
@@ -205,29 +220,61 @@ public class SearchFragment extends Fragment {
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                PeerInformation peer = PeerStore.getInstance().getPeerArrayList().get(i);
+                if (!busy) {
+                    busy = true;
+                    PeerInformation peer = PeerStore.getInstance().getPeerArrayList().get(i);
 
-                String address = peer.getWifiP2pDevice().deviceAddress;
-                String name = peer.getWifiP2pDevice().deviceName;
+                    peer.setSelected(true);
+                    updateList();
 
-                startChat(address, name);
+                    String address = peer.getWifiP2pDevice().deviceAddress;
+                    String name = peer.getWifiP2pDevice().deviceName;
+
+                    startChat(address, name);
+                } else {
+                    Toast.makeText(view.getContext(), "Busy", Toast.LENGTH_SHORT).show();
+                }
             }
         });
     }
 
-    public void startChat(String address, String name) {
-        // start the socket for the negotiation
-        startNegotiationProtocol(address);
 
 
-        /*Intent intent = new Intent(getActivity(), ChatActivity.class);
-        intent.putExtra("address", address);
-        intent.putExtra("name", name);
-        startActivity(intent);*/
+    public void startChat(final String address, String name) {
+        mService.connect(address, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+                Toast.makeText(view.getContext(), "Connected to peer", Toast.LENGTH_SHORT).show();
+                // start the protocol
+                startNegotiationProtocol(address);
+                busy = false;
+            }
+            @Override
+            public void onFailure(int reason) {
+                Toast.makeText(view.getContext(), "Error connecting to peer", Toast.LENGTH_SHORT).show();
+                busy = false;
+            }
+        });
     }
 
-    public void onRefreshButtonClick() {
-        final View view = getActivity().findViewById(R.id.main_view);
+    private void stopSearching() {
+        if (mBound) {
+            mService.stopDiscovery(new WifiP2pManager.ActionListener() {
+                @Override
+                public void onSuccess() {
+                    Snackbar.make(view, "Stopped search", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+                }
+
+                @Override
+                public void onFailure(int reasonCode) {
+                    Snackbar.make(view, "Aaaargh :( problem stopping search!", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+                }
+            });
+        }
+    }
+
+    public void startSearching() {
+
         if (mBound) {
             mService.getPeerList(new WifiP2pManager.ActionListener() {
                 @Override
@@ -253,6 +300,9 @@ public class SearchFragment extends Fragment {
             WiFiDirectBroadcastService.LocalBinder binder = (WiFiDirectBroadcastService.LocalBinder) service;
             mService = binder.getService();
             mBound = true;
+
+            final ToggleButton toggle = (ToggleButton) getActivity().findViewById(R.id.startSearchButton);
+            toggle.setChecked(mService.isInRoleConsumer());
         }
 
         @Override

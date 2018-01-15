@@ -54,5 +54,13 @@
     <string name="WithdrawWalletBalanceLabel">ACCOUNT BALANCE: </string>
     <string name="WithdrawWalletTransferLabel">NEW TRANSFER: </string>
     <string name="QRScannerDescription">QR Code Scanner</string>
+    <string name="startWifiP2P">Start WiFi P2P</string>
+    <string name="searching">Searching</string>
+    <string name="off">Off</string>
+    <string name="wifi_p2p_discovery">WiFi P2P</string>
+    <string name="on">On</string>
+    <string name="roamingTitle">Roaming</string>
+    <string name="searchIntroduction">Do you want to search for a hotspot?</string>
+    <string name="startSearch">Start Search</string>
 
 </resources>

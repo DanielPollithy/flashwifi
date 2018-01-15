@@ -6,6 +6,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.TableRow;
 import android.widget.TextView;
 
 import com.flashwifi.wifip2p.R;
@@ -42,6 +43,15 @@ public class PeerListAdapter extends ArrayAdapter<PeerInformation> {
             TextView tt3 = (TextView) v.findViewById(R.id.description);
             TextView tt4 = (TextView) v.findViewById(R.id.ipAddr);
             TextView tt5 = (TextView) v.findViewById(R.id.iotaPrice);
+            TableRow row = (TableRow) v.findViewById(R.id.talkingRow);
+
+            if (row != null) {
+                if (p.isSelected()) {
+                    row.setVisibility(View.VISIBLE);
+                } else {
+                    row.setVisibility(View.INVISIBLE);
+                }
+            }
 
             WifiP2pDevice device = p.getWifiP2pDevice();
             if (device != null) {
@@ -67,6 +77,8 @@ public class PeerListAdapter extends ArrayAdapter<PeerInformation> {
             if (tt3 != null)
                 tt3.setText(String.format("%s", Integer.toString(p.getAge())));
             }
+
+
 
 
         return v;
