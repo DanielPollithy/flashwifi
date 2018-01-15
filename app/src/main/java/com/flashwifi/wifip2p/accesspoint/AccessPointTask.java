@@ -16,7 +16,8 @@ public class AccessPointTask extends AsyncTask<Context, Void, String> {
 
     private final static String TAG = "AccessPointTask";
     private  Context context;
-    String ssid = "iota-wifi-121431";
+    String ssid = "Iotify";
+    String key = "1234567890";
     WifiManager wifi;
     WifiInfo w;
 
@@ -38,8 +39,8 @@ public class AccessPointTask extends AsyncTask<Context, Void, String> {
             if (method.getName().equals("setWifiApEnabled")){
                 methodFound = true;
                 WifiConfiguration netConfig = new WifiConfiguration();
-                netConfig.SSID = "Iotify";
-                netConfig.preSharedKey = "1234567890";
+                netConfig.SSID = String.format("%s", ssid);
+                netConfig.preSharedKey = String.format("%s", key);
                 netConfig.allowedAuthAlgorithms.set(WifiConfiguration.AuthAlgorithm.SHARED);
                 netConfig.allowedProtocols.set(WifiConfiguration.Protocol.RSN);
                 netConfig.allowedProtocols.set(WifiConfiguration.Protocol.WPA);
@@ -91,17 +92,18 @@ public class AccessPointTask extends AsyncTask<Context, Void, String> {
             }
         }
         if (!methodFound){
+            // ToDo: implement this
             //statusView.setText("Your phone's API does not contain setWifiApEnabled method to configure an access point");
         }
 
-        int number_minutes = 60;
+        /*int number_minutes = 60;
         for (int i=0; i<number_minutes; i++) {
             try {
                 Thread.sleep(1000*60);
             } catch (InterruptedException e) {
                 break;
             }
-        }
+        }*/
 
 
         return null;
@@ -111,7 +113,7 @@ public class AccessPointTask extends AsyncTask<Context, Void, String> {
     @Override
     protected void onCancelled() {
         super.onCancelled();
-        stopAP();
+        //stopAP();
     }
 
     private void stopAP() {

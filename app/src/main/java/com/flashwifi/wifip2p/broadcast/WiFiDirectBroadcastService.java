@@ -23,6 +23,7 @@ import android.widget.Toast;
 import com.flashwifi.wifip2p.WalletAddressAndBalanceChecker;
 import com.flashwifi.wifip2p.accesspoint.AccessPointTask;
 import com.flashwifi.wifip2p.accesspoint.ConnectTask;
+import com.flashwifi.wifip2p.accesspoint.StopAccessPointTask;
 import com.flashwifi.wifip2p.negotiation.Negotiator;
 
 import java.lang.reflect.Method;
@@ -91,6 +92,10 @@ public class WiFiDirectBroadcastService extends Service {
         }
     }
 
+    public void startBillingServer(){
+
+    }
+
     public void connect2AP(String ssid, String key) {
         connectTask = new ConnectTask();
         Log.d("xxxxxxxxxxxxxx", "CONNECT TO THE HOTSPOT");
@@ -112,7 +117,8 @@ public class WiFiDirectBroadcastService extends Service {
         Log.d("xxxxxxxxxxxxxx", "stop AP");
         if (apRuns) {
             apRuns = false;
-            apTask.cancel(true);
+            new StopAccessPointTask().execute(getApplicationContext());
+            //apTask.cancel(true);
         } else {
             Log.d("", "startSocketServer: ALREADY RUNNING");
         }

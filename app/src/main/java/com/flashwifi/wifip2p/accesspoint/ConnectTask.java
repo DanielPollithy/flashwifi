@@ -26,7 +26,11 @@ public class ConnectTask extends AsyncTask<Context, Void, String> {
         Context context = params[0];
         WifiManager wifiManager = (WifiManager) context.getSystemService(WIFI_SERVICE);
 
+        WifiInfo info = wifiManager.getConnectionInfo(); //get WifiInfo
+        int old_network_id = info.getNetworkId(); //get id of currently connected network
+
         WifiConfiguration wifiConfig = new WifiConfiguration();
+        wifiConfig.status = WifiConfiguration.Status.ENABLED;
         wifiConfig.SSID = String.format("\"%s\"", ssid);
         wifiConfig.preSharedKey = String.format("\"%s\"", key);
 
@@ -48,7 +52,13 @@ public class ConnectTask extends AsyncTask<Context, Void, String> {
                 if(i.SSID != null && i.SSID.equals("\"" + ssid + "\"")) {
                     Log.d(TAG, "doInBackground: found it!!!");
                     wifiManager.disconnect();
-                    wifiManager.enableNetwork(i.networkId, true);
+                    wifiManager.disableNetwork(old_network_id);
+                    boolean worked = wifiManager.enableNetwork(i.networkId, true);
+                    if (worked) {
+                        Log.d(TAG, "doInBackground: WORKED enableNetwork");
+                    } else {
+                        Log.d(TAG, "doInBackground: ERROROROROROROROORORORORORO------x error");
+                    }
                     wifiManager.reconnect();
 
                     connected = true;

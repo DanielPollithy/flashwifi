@@ -59,6 +59,7 @@
                 android:text="Flash channel" />
 
             <Button
+                android:id="@+id/stopRoamingButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="STOP"

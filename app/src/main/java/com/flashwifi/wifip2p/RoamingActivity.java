@@ -47,6 +47,8 @@ public class RoamingActivity extends AppCompatActivity {
     BroadcastReceiver updateUIReceiver;
     private boolean hotspot_running = false;
 
+    private Button stopButton;
+
     @Override
     protected void onStart() {
         super.onStart();
@@ -187,6 +189,7 @@ public class RoamingActivity extends AppCompatActivity {
             } else {
                 mService.connect2AP("Iotify", "1234567890");
             }
+            initUIWithService();
         }
 
         @Override
@@ -194,5 +197,15 @@ public class RoamingActivity extends AppCompatActivity {
             mBound = false;
         }
     };
+
+    private void initUIWithService() {
+        stopButton = (Button) findViewById(R.id.stopRoamingButton);
+        stopButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                // ToDo: stop the roaming here
+            }
+        });
+        // ToDo: change the status text
+    }
 
 }
