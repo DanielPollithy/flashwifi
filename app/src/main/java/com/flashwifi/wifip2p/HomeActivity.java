@@ -15,6 +15,9 @@ import android.widget.TextView;
 
 import com.pddstudio.preferences.encrypted.EncryptedPreferences;
 
+import java.io.IOException;
+
+import iotaFlashWrapper.IotaFlashBridge;
 import jota.utils.SeedRandomGenerator;
 
 public class HomeActivity extends AppCompatActivity {
@@ -25,6 +28,11 @@ public class HomeActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
+        try {
+            IotaFlashBridge.boot();
+        } catch (IOException e) {
+            Log.d(TAG, "onCreate: failed to init lib");
+        }
     }
 
     private void setProgressBar(int percentage) {
