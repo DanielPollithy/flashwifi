@@ -33,5 +33,7 @@ dependencies {
     compile 'com.github.iotaledger:iota~lib~java:0.9.10'
     compile 'com.google.code.gson:gson:2.8.1'
     compile 'com.github.kenglxn.QRGen:android:2.4.0'
+    compile 'me.dm7.barcodescanner:zxing:1.9.8'
+    compile 'pl.droidsonroids.gif:android-gif-drawable:1.2.10'
     testCompile 'junit:junit:4.12'
 }
