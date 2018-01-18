@@ -101,8 +101,9 @@ public class WiFiDirectBroadcastService extends Service {
             Runnable task = new Runnable() {
                 @Override
                 public void run() {
+                    Log.d(TAG, "run: instantiate billing server");
                     // ToDo: remove magic numbers
-                    BillingServer billingServer = new BillingServer(100, 20, getApplicationContext());
+                    BillingServer billingServer = new BillingServer(100, 20, 60, 100, getApplicationContext());
 
                     try {
                         billingServer.start();
@@ -115,8 +116,10 @@ public class WiFiDirectBroadcastService extends Service {
             };
             Log.d(TAG, "startBillingServer");
             Thread thread = new Thread(task);
+            //asyncTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, params);
+            //AsyncTask.execute(thread);
             threads.add(thread);
-            AsyncTask.execute(thread);
+            thread.start();
         }
     }
 

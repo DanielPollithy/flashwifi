@@ -1,5 +1,6 @@
 package com.flashwifi.wifip2p;
 
+import android.annotation.SuppressLint;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
@@ -26,6 +27,7 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -36,6 +38,8 @@ import com.flashwifi.wifip2p.billing.Accountant;
 import com.flashwifi.wifip2p.broadcast.WiFiDirectBroadcastService;
 import com.flashwifi.wifip2p.datastore.PeerStore;
 import com.flashwifi.wifip2p.protocol.NegotiationFinalization;
+
+import org.w3c.dom.Text;
 
 
 public class RoamingActivity extends AppCompatActivity {
@@ -59,6 +63,7 @@ public class RoamingActivity extends AppCompatActivity {
 
     private Button stopButton;
     private boolean endRoamingFlag = false;
+    private boolean initiatedEnd;
 
     @Override
     protected void onStart() {
@@ -106,6 +111,11 @@ public class RoamingActivity extends AppCompatActivity {
                     flashEstablished.setChecked(true);
                 } else if (message.equals("Billing")) {
                     updateBillingCard();
+                } else if (message.equals("Channel closed")) {
+                    exitRoaming();
+                    if (mService.isInRoleHotspot()) {
+                        showRetransferCard();
+                    }
                 }
             }
 
@@ -118,25 +128,44 @@ public class RoamingActivity extends AppCompatActivity {
 
     }
 
+    private void showRetransferCard() {
+        CardView cardView = (CardView) findViewById(R.id.card_view_tangle_attachment);
+        cardView.setVisibility(View.VISIBLE);
+    }
+
+    @SuppressLint("DefaultLocale")
     private void updateBillingCard() {
         CardView summaryView = (CardView) findViewById(R.id.card_view_overview);
         if (summaryView.getVisibility() != View.VISIBLE) {
             summaryView.setVisibility(View.VISIBLE);
         }
-        String minutes = Integer.toString(Accountant.getInstance().getTotalDurance());
-        String megabytes_max = Integer.toString(Accountant.getInstance().getBookedMegabytes());
-        String megabytes_used = Integer.toString(Accountant.getInstance().getTotalMegabytes());
-        String iotas_transferred = Integer.toString(Accountant.getInstance().getTotalIotaPrice());
+        int minutes = Accountant.getInstance().getTotalDurance() / 60;
+        int minutes_max = Accountant.getInstance().getBookedMinutes();
+        int megabytes_max = Accountant.getInstance().getBookedMegabytes();
+        int megabytes_used = Accountant.getInstance().getTotalMegabytes();
+        int iotas_transferred = Accountant.getInstance().getTotalIotaPrice();
+        int iotas_max = Accountant.getInstance().getTotalIotaDeposit();
 
         TextView summaryMinutes = (TextView) findViewById(R.id.summaryMinutes);
-        summaryMinutes.setText(String.format("%s minutes active", minutes));
+        summaryMinutes.setText(String.format("%d/%d minutes active", minutes, minutes_max));
 
         TextView summaryMegabytes = (TextView) findViewById(R.id.summaryMegabytes);
-        summaryMegabytes.setText(String.format("%s/%s Megabytes roamed", megabytes_used, megabytes_max));
-
+        summaryMegabytes.setText(String.format("%d/%d Megabytes roamed", megabytes_used, megabytes_max));
 
         TextView summaryIota = (TextView) findViewById(R.id.summaryIota);
-        summaryMegabytes.setText(String.format("%s Iota transferred", iotas_transferred));
+        summaryIota.setText(String.format("%d/%d Iota transferred", iotas_transferred, iotas_max));
+
+        ProgressBar progressMinutes = (ProgressBar) findViewById(R.id.progressbarDurance);
+        progressMinutes.setMax(minutes_max);
+        progressMinutes.setProgress(minutes);
+
+        ProgressBar progressMegabytes = (ProgressBar) findViewById(R.id.progressbarMegabytes);
+        progressMegabytes.setMax(megabytes_max);
+        progressMegabytes.setProgress(megabytes_used);
+
+        ProgressBar progressIota = (ProgressBar) findViewById(R.id.progressbarIota);
+        progressIota.setProgress(iotas_transferred);
+        progressIota.setMax(iotas_max);
 
 
     }
@@ -227,30 +256,7 @@ public class RoamingActivity extends AppCompatActivity {
 
 
     private void initUI() {
-        //final EditText input = (EditText) findViewById(R.id.chat_input);
-        //Button button = (Button) findViewById(R.id.btn_send);
-        /*button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(final View view) {
-                addMessageRight(name, input.getText().toString());
-                // send the message to the peer
-                //mService.sendMessageToSocketServer(groupOwnerAddress, input.getText().toString());
-            }
-        });*/
-
-        /*FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(final View view) {
-                toggleHotspot();
-            }
-        });
-
-        listView = (ListView) findViewById(R.id.peer_list);
-        arrayList = new ArrayList<>();
-
-        listAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, arrayList);
-        listView.setAdapter(listAdapter);*/
+        updateBillingCard();
     }
 
     /** Defines callbacks for service binding, passed to bindService() */
@@ -298,6 +304,17 @@ public class RoamingActivity extends AppCompatActivity {
     }
 
     private void endRoaming() {
+        if (!initiatedEnd) {
+            initiatedEnd = true;
+            Accountant.getInstance().setCloseAfterwards(true);
+            // the next bill will send the close request
+            // meanwhile show a loading icon
+            ProgressBar stopProgressBar = (ProgressBar) findViewById(R.id.stopProgressBar);
+            stopProgressBar.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void exitRoaming() {
         endRoamingFlag = true;
         cancelNotification();
         if (mService.isInRoleHotspot()){
@@ -306,6 +323,16 @@ public class RoamingActivity extends AppCompatActivity {
             mService.disconnectAP();
         }
         mService.setRoaming(false);
+        // hide the spinner and the stop button
+        ProgressBar stopProgressBar = (ProgressBar) findViewById(R.id.stopProgressBar);
+        stopProgressBar.setVisibility(View.GONE);
+        Button stopButton = (Button) findViewById(R.id.stopRoamingButton);
+        stopButton.setVisibility(View.GONE);
+
+        TextView stopText = (TextView) findViewById(R.id.stopText);
+        stopText.setVisibility(View.VISIBLE);
+
+
         Toast.makeText(getApplicationContext(), "Press BACK now", Toast.LENGTH_LONG).show();
     }
 

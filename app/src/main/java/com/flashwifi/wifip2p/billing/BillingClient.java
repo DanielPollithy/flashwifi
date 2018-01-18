@@ -1,5 +1,6 @@
 package com.flashwifi.wifip2p.billing;
 
+import android.accounts.Account;
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
@@ -74,15 +75,17 @@ public class BillingClient {
                     String hotspotStateLine = socketWrapper.getLineThrowing();
                     if (hotspotStateLine.contains("INITIAL") || hotspotStateLine.contains("NOT_PAIRED")) {
                         // ask the hotspot to open the flash channel
+                        // ToDo: get real digests
                         String[] digests = new String[]{"1234", "2345", "3456"};
-                        billingOpenChannel = new BillingOpenChannel(100, 100, "clientAddress", 8, digests, 20 * 60 * 1000);
+                        // ToDo: replace magic numbers
+                        billingOpenChannel = new BillingOpenChannel(100, 100, "clientAddress", 8, digests, 20 * 60 * 1000, 60);
                         String billingOpenChannelString = gson.toJson(billingOpenChannel);
                         socketWrapper.sendLine(billingOpenChannelString);
                         // receive the hotspot details for the flash channel
                         String billingOpenChannelAnswerString = socketWrapper.getLineThrowing();
                         billingOpenChannelAnswer = gson.fromJson(billingOpenChannelAnswerString, BillingOpenChannelAnswer.class);
                         // now create the flash channel on our side
-                        Accountant.getInstance().start(billingOpenChannel.getTotalMegabytes(), billingOpenChannel.getTimeoutMinutesClient());
+                        Accountant.getInstance().start(billingOpenChannel.getTotalMegabytes(), billingOpenChannel.getTimeoutMinutesClient(), billingOpenChannel.getTotalMinutes(), billingOpenChannelAnswer.getClientDepositIota());
                         sendUpdateUIBroadcastWithMessage("Channel established");
                         state = State.ROAMING;
                     } else {
@@ -106,7 +109,7 @@ public class BillingClient {
                         // ToDo: flash object -> diff()
                         // ToDo: sign flash transaction
                         sendUpdateUIBroadcastWithMessage("Billing");
-                        latestBillAnswer = new BillMessageAnswer("id", true, "", false);
+                        latestBillAnswer = new BillMessageAnswer("id", true, "", Accountant.getInstance().isCloseAfterwards());
                         latestBillAnswerString = gson.toJson(latestBillAnswer);
                         socketWrapper.sendLine(latestBillAnswerString);
 
@@ -127,6 +130,8 @@ public class BillingClient {
                     BillingCloseChannelAnswer billingCloseChannelAnswer = new BillingCloseChannelAnswer("");
                     String billingCloseChannelAnswerString = gson.toJson(billingCloseChannelAnswer);
                     socketWrapper.sendLine(billingCloseChannelAnswerString);
+
+                    sendUpdateUIBroadcastWithMessage("Channel closed");
 
                     state = State.CLOSED;
                 }

@@ -12,7 +12,11 @@ public class Accountant {
     private int totalIotaPrice;
     private int totalDurance;
     private int bookedMegabytes;
+    private int bookedMinutes;
+    private int totalIotaDeposit;
     private int timeoutMinutes;
+    private boolean closeAfterwards;
+    private long startTime;
 
     private FlashChannelHelper flashChannelHelper;
 
@@ -25,17 +29,37 @@ public class Accountant {
     private Accountant() {
     }
 
-    public void start(int bookedMegabytes, int timeoutMinutes){
+    public void start(int bookedMegabytes, int timeoutMinutes, int bookedMinutes, int totalIotaDeposit){
         if (closed) {
             bills = new ArrayList<Bill>();
             this.bookedMegabytes = bookedMegabytes;
             this.timeoutMinutes = timeoutMinutes;
+            this.totalIotaDeposit = totalIotaDeposit;
             totalMegabytes = 0;
             totalIotaPrice = 0;
             totalDurance = 0;
             flashChannelHelper = new FlashChannelHelper();
+            closeAfterwards = false;
+            startTime = System.currentTimeMillis() / 1000L;
+            this.bookedMinutes = bookedMinutes;
             closed = false;
         }
+    }
+
+    private long getLastTime() {
+        if (bills.isEmpty()) {
+            return startTime;
+        } else {
+            return bills.get(bills.size()-1).getTime();
+        }
+    }
+
+    public boolean isCloseAfterwards() {
+        return closeAfterwards;
+    }
+
+    public void setCloseAfterwards(boolean closeAfterwards) {
+        this.closeAfterwards = closeAfterwards;
     }
 
     public int getNextBillNumber() {
@@ -56,20 +80,22 @@ public class Accountant {
 
         totalMegabytes += b.getMegabytesUsed();
         totalIotaPrice += b.getPriceInIota();
-        totalDurance += b.getDuranceInMinutes();
+        totalDurance += b.getDuranceInSeconds();
 
         // ToDo: apply transfer to flash channel
 
         return true;
     }
 
-    public Bill createBill(int megaByte, int priceInIota, int duranceMinutes){
+    public Bill createBill(int megaByte, int priceInIota){
         if (!closed) {
-            Bill b = new Bill(getNextBillNumber(), totalDurance, duranceMinutes, megaByte, priceInIota);
+            long now = System.currentTimeMillis() / 1000L;
+            long duranceInSeconds = now - getLastTime();
+            Bill b = new Bill(getNextBillNumber(), now, duranceInSeconds, megaByte, priceInIota);
 
             totalMegabytes += megaByte;
             totalIotaPrice += priceInIota;
-            totalDurance += duranceMinutes;
+            totalDurance += duranceInSeconds;
 
             // 1) modify flash channel
             applyTransferToFlashChannel(priceInIota);
@@ -113,5 +139,17 @@ public class Accountant {
 
     public int getBookedMegabytes() {
         return bookedMegabytes;
+    }
+
+    public int getTimeoutMinutes() {
+        return timeoutMinutes;
+    }
+
+    public int getBookedMinutes() {
+        return bookedMinutes;
+    }
+
+    public int getTotalIotaDeposit() {
+        return totalIotaDeposit;
     }
 }

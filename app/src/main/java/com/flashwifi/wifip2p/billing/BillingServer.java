@@ -2,6 +2,8 @@ package com.flashwifi.wifip2p.billing;
 
 import android.content.Context;
 import android.content.Intent;
+import android.net.wifi.WifiManager;
+import android.text.format.Formatter;
 import android.util.Log;
 
 import com.flashwifi.wifip2p.negotiation.SocketWrapper;
@@ -19,6 +21,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+
+import static android.content.Context.WIFI_SERVICE;
 
 /**
  * 1) This class keeps the socket connection alive.
@@ -48,9 +52,9 @@ public class BillingServer {
         context.sendBroadcast(local);
     }
 
-    public BillingServer(int bookedMegabytes, int timeoutMinutes, Context context){
+    public BillingServer(int bookedMegabytes, int timeoutMinutes, int maxMinutes, int iotaDepositClient, Context context){
         this.context = context;
-        Accountant.getInstance().start(bookedMegabytes,timeoutMinutes);
+        Accountant.getInstance().start(bookedMegabytes, timeoutMinutes, maxMinutes, iotaDepositClient);
         gson = new GsonBuilder().create();
     }
 
@@ -58,6 +62,10 @@ public class BillingServer {
         // 0) create deadline guard
         createDeadlineGuard();
         // 1) create a socket
+
+        Log.d(TAG, "start: Billing server has been started");
+
+        // ToDo: receive end of roaming broadcast
 
         while (state != State.CLOSED) {
             try {
@@ -117,10 +125,9 @@ public class BillingServer {
                         Log.d(TAG, "start: Good morning!");
                         // create new bill
                         // ToDo: integrate real network data
-                        // ToDo: calculate time correctly
-                        b = Accountant.getInstance().createBill(0,0,1);
+                        b = Accountant.getInstance().createBill(3,9);
                         // ToDo: integrate real flash channel
-                        latestBill = new BillMessage(b, "", false);
+                        latestBill = new BillMessage(b, "<flash obj>", Accountant.getInstance().isCloseAfterwards());
                         latestBillString = gson.toJson(latestBill);
                         socketWrapper.sendLine(latestBillString);
 
@@ -136,11 +143,14 @@ public class BillingServer {
                         if (latestBill.isCloseAfterwards() || latestBillAnswer.isCloseAfterwards()) {
                             state = State.CLOSE;
                         }
+
+                        sendUpdateUIBroadcastWithMessage("Billing");
                     }
 
                 }
 
                 if (state == State.CLOSE) {
+                    Log.d(TAG, "start: state is CLOSE now");
                     // ToDo: handle the final deposit of the flash channel
                     // ToDo: sign the transaction
                     BillingCloseChannel billingCloseChannel = new BillingCloseChannel(0,0,0,0,"", "", "");
@@ -150,6 +160,9 @@ public class BillingServer {
                     String billingCloseChannelAnswerString = socketWrapper.getLineThrowing();
                     BillingCloseChannelAnswer billingCloseChannelAnswer = gson.fromJson(billingCloseChannelAnswerString, BillingCloseChannelAnswer.class);
                     // ToDo: validate the signature
+
+                    // change the ui
+                    sendUpdateUIBroadcastWithMessage("Channel closed");
                     state = State.CLOSED;
                 }
 
@@ -162,7 +175,7 @@ public class BillingServer {
                     state = State.FULLY_ATTACHED;
                 }
             } catch (IOException e) {
-
+                e.printStackTrace();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

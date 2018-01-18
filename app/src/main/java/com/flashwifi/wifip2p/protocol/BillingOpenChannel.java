@@ -3,6 +3,7 @@ package com.flashwifi.wifip2p.protocol;
 
 public class BillingOpenChannel {
     private int totalMegabytes;
+    private int totalMinutes;
     private int iotaPerMegabyte;
     private int timeoutMinutesClient;
     private String clientRefundAddress;
@@ -10,8 +11,10 @@ public class BillingOpenChannel {
     private String[] clientDigests;
 
     public BillingOpenChannel(int totalMegabytes, int iotaPerMegabyte, String clientRefundAddress,
-                              int treeDepth, String[] clientDigests, int timeoutMinutesClient) {
+                              int treeDepth, String[] clientDigests, int timeoutMinutesClient,
+                              int totalMinutes) {
         this.totalMegabytes = totalMegabytes;
+        this.totalMinutes = totalMinutes;
         this.iotaPerMegabyte = iotaPerMegabyte;
         this.clientRefundAddress = clientRefundAddress;
         this.treeDepth = treeDepth;
@@ -41,5 +44,9 @@ public class BillingOpenChannel {
 
     public String[] getClientDigests() {
         return clientDigests;
+    }
+
+    public int getTotalMinutes() {
+        return totalMinutes;
     }
 }
