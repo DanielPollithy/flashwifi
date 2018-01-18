@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <PreferenceCategory
+        android:title="WiFi"
+        android:key="pref_key_wifi_settings"
+        android:elevation="10dp">
+
+        <ListPreference
+            android:key="pref_key_security"
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:title="Security" />
+
+        <Preference
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:key="pref_key_reset_data_usage"
+            android:title="Reset Data Usage"/>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="IOTA"
+        android:elevation="10dp"
+        android:key="pref_key_IOTA_settings">
+
+
+        <ListPreference
+            android:key="pref_key_network_timeout"
+            android:title="Network Timeout" />
+
+        <ListPreference
+            android:key="pref_key_units"
+            android:title="Units" />
+
+
+        <PreferenceScreen
+            android:key="button_testnet_category_key"
+            android:title="Testnet"
+            android:persistent="false">
+
+            <SwitchPreference
+                android:defaultValue="false"
+                android:key="switch_preference_testnet"
+                android:title="Testnet" />
+
+            <Preference
+                android:key="pref_key_reset_password"
+                android:title="Reset Password"/>
+
+        </PreferenceScreen>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="Payment"
+        android:elevation="10dp"
+        android:key="pref_key_payment_settings">
+
+        <EditTextPreference
+            android:defaultValue="Default value"
+            android:key="edit_text_buy_price"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="Buy Price" />
+
+        <EditTextPreference
+            android:defaultValue="Default value"
+            android:key="edit_text_sell_price"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="Sell Price" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="Wallet"
+        android:elevation="10dp"
+        android:key="pref_key_wallet_settings">
+
+        <Preference
+            android:key="pref_key_reset_password"
+            android:title="Reset Password"/>
+
+        <Preference
+            android:key="pref_key_reset_wallet"
+            android:title="Reset Wallet"/>
+
+    </PreferenceCategory>
+
+</PreferenceScreen>

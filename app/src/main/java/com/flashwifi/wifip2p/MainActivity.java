@@ -11,6 +11,7 @@ import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.preference.PreferenceManager;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
@@ -101,9 +102,10 @@ public class MainActivity extends AppCompatActivity
         Intent intent2 = new Intent(this, WiFiDirectBroadcastService.class);
         bindService(intent2, mConnection, Context.BIND_AUTO_CREATE);
 
+        PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
+
         subscribeToBroadcasts();
         initUi();
-
     }
 
     @Override
@@ -155,7 +157,7 @@ public class MainActivity extends AppCompatActivity
         } else if (id == R.id.nav_conditions) {
 
         } else if (id == R.id.nav_settings) {
-
+            startSettingsFragment();
         }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -222,6 +224,17 @@ public class MainActivity extends AppCompatActivity
         Bundle bundle = new Bundle();
         bundle.putString("seed", seed);
         fragment.setArguments(bundle);
+        fragment.setRetainInstance(true);
+
+        // Insert the fragment by replacing any existing fragment
+        FragmentManager fragmentManager = getFragmentManager();
+        fragmentManager.beginTransaction()
+                .replace(R.id.content_frame, fragment)
+                .commit();
+    }
+
+    private void startSettingsFragment() {
+        Fragment fragment = new WithdrawWalletFragment();
         fragment.setRetainInstance(true);
 
         // Insert the fragment by replacing any existing fragment
