@@ -72,19 +72,19 @@ public class HomeActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
+
         // iotalibflash
         String iotaflash = readFile("iotaflash");
         String iotaflashhelper = readFile("iotaflashhelper");
 
-        try {
+        /*try {
             IotaFlashBridge.boot(iotaflash, iotaflashhelper);
             Main.runExample();
         } catch (IOException e) {
             e.printStackTrace();
         } catch (Exception e) {
             e.printStackTrace();
-        }
-        int i = 0;
+        }*/
     }
 
     private void setProgressBar(int percentage) {

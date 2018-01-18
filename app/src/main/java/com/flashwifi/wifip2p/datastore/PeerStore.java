@@ -84,18 +84,25 @@ public class PeerStore {
     }
 
     public void setLatestOffer(String macAddress, NegotiationOffer offer) {
-        getOrCreatePeer(macAddress).setLatestOffer(offer);
+        getOrCreatePeer(macAddress.toLowerCase()).setLatestOffer(offer);
     }
 
     public void setLatestOfferAnswer(String macAddress, NegotiationOfferAnswer answer) {
-        getOrCreatePeer(macAddress).setLatestOfferAnswer(answer);
+        getOrCreatePeer(macAddress.toLowerCase()).setLatestOfferAnswer(answer);
     }
 
     public void setLatestFinalization(String macAddress, NegotiationFinalization finalization) {
-        getOrCreatePeer(macAddress).setLatestFinalization(finalization);
+        getOrCreatePeer(macAddress.toLowerCase()).setLatestFinalization(finalization);
+    }
+
+    public NegotiationFinalization getLatestFinalization(String macAddress) {
+        if (peers.containsKey(macAddress.toLowerCase())) {
+            return peers.get(macAddress.toLowerCase()).getLatestFinalization();
+        }
+        return null;
     }
 
     public void setIPAddress(String macAddress, InetAddress IPAddress) {
-        getOrCreatePeer(macAddress).setIPAddress(IPAddress.getHostAddress());
+        getOrCreatePeer(macAddress.toLowerCase()).setIPAddress(IPAddress.getHostAddress());
     }
 }

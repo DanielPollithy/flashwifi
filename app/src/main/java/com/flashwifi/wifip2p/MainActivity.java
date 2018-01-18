@@ -51,7 +51,9 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onReceive(Context context, Intent intent) {
                 if (intent.getAction().equals("com.flashwifi.wifip2p.start_roaming")) {
-                    startRoamingView(intent.getStringExtra("peer_mac_address"));
+                    startRoamingView(intent.getStringExtra("peer_mac_address"),
+                            intent.getStringExtra("ssid"),
+                            intent.getStringExtra("key"));
                 }
             }
         };
@@ -178,9 +180,11 @@ public class MainActivity extends AppCompatActivity
 
     }
 
-    private void startRoamingView(String macAddress){
+    private void startRoamingView(String macAddress, String ssid, String key){
         Intent intent = new Intent(this, RoamingActivity.class);
         intent.putExtra("address", macAddress);
+        intent.putExtra("key", key);
+        intent.putExtra("ssid", ssid);
         startActivity(intent);
     }
 

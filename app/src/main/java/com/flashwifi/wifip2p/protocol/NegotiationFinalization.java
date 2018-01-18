@@ -19,4 +19,12 @@ public class NegotiationFinalization {
         this.depositClientFlashChannelInIota = depositClientFlashChannelInIota;
         this.flashObject = flashObject;
     }
+
+    public String getHotspotName() {
+        return hotspotName;
+    }
+
+    public String getHotspotPassword() {
+        return hotspotPassword;
+    }
 }

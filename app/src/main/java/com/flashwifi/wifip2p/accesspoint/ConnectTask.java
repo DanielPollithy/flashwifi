@@ -8,17 +8,19 @@ import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.util.Log;
 
+import com.flashwifi.wifip2p.protocol.NegotiationFinalization;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 
 import static android.content.Context.WIFI_SERVICE;
 
-public class ConnectTask extends AsyncTask<Context, Void, String> {
+public class ConnectTask extends AsyncTask<Object, Void, String> {
 
     private final static String TAG = "AccessPointTask";
-    String ssid = "Iotify";
-    String key = "1234567890";
+    String ssid;
+    String key;
     WifiManager wifi;
     WifiInfo w;
 
@@ -32,8 +34,10 @@ public class ConnectTask extends AsyncTask<Context, Void, String> {
     }
 
     @Override
-    protected String doInBackground(Context... params) {
-        context = params[0];
+    protected String doInBackground(Object... params) {
+        context = (Context) params[0];
+        ssid = (String) params[1];
+        key = (String) params[2];
         WifiManager wifiManager = (WifiManager) context.getSystemService(WIFI_SERVICE);
 
         WifiInfo info = wifiManager.getConnectionInfo(); //get WifiInfo

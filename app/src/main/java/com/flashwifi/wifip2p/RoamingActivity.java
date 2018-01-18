@@ -34,6 +34,8 @@ import java.util.ArrayList;
 
 import com.flashwifi.wifip2p.billing.Accountant;
 import com.flashwifi.wifip2p.broadcast.WiFiDirectBroadcastService;
+import com.flashwifi.wifip2p.datastore.PeerStore;
+import com.flashwifi.wifip2p.protocol.NegotiationFinalization;
 
 
 public class RoamingActivity extends AppCompatActivity {
@@ -44,6 +46,8 @@ public class RoamingActivity extends AppCompatActivity {
 
     String name;
     String address;
+    String ssid;
+    String key;
 
     WiFiDirectBroadcastService mService;
     //AccessPointService apService;
@@ -166,6 +170,9 @@ public class RoamingActivity extends AppCompatActivity {
         Intent intent = getIntent();
         name = intent.getStringExtra("name");
         address = intent.getStringExtra("address");
+        NegotiationFinalization negFin = PeerStore.getInstance().getLatestFinalization(address);
+        ssid = negFin.getHotspotName();
+        key = negFin.getHotspotPassword();
 
         initUI();
 
@@ -258,9 +265,9 @@ public class RoamingActivity extends AppCompatActivity {
             mBound = true;
             // start hotspot
             if (mService.isInRoleHotspot()) {
-                mService.startAP();
+                mService.startAP(ssid, key);
             } else {
-                mService.connect2AP("Iotify", "1234567890");
+                mService.connect2AP(ssid, key);
             }
             initUIWithService();
         }
