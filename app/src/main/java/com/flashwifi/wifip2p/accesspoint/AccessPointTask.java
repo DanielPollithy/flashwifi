@@ -13,12 +13,12 @@ import java.lang.reflect.Method;
 
 import static android.content.Context.WIFI_SERVICE;
 
-public class AccessPointTask extends AsyncTask<Context, Void, String> {
+public class AccessPointTask extends AsyncTask<Object, Void, String> {
 
     private final static String TAG = "AccessPointTask";
     private Context context;
-    String ssid = "Iotify";
-    String key = "1234567890";
+    String ssid;
+    String key;
     WifiManager wifi;
     WifiInfo w;
 
@@ -30,8 +30,10 @@ public class AccessPointTask extends AsyncTask<Context, Void, String> {
     }
 
     @Override
-    protected String doInBackground(Context... params) {
-        context = params[0];
+    protected String doInBackground(Object... params) {
+        context = (Context) params[0];
+        ssid = (String) params[1];
+        key = (String) params[2];
         wifi = (WifiManager) context.getSystemService(WIFI_SERVICE);
         w = wifi.getConnectionInfo();
         Log.d("dsd", w.toString());

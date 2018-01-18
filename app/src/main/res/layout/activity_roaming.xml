@@ -60,20 +60,87 @@
                 android:clickable="false"
                 android:text="Flash channel" />
 
-            <Button
-                android:id="@+id/stopRoamingButton"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="STOP"
+                android:orientation="horizontal"
                 android:layout_marginLeft="15dp"
                 android:layout_marginRight="15dp"
-                android:layout_marginBottom="10dp" />
+                android:layout_marginBottom="10dp" >
 
+                <Button
+                    android:id="@+id/stopRoamingButton"
+                    android:layout_width="250dp"
+                    android:layout_height="wrap_content"
+                    android:text="STOP"
+                    />
+
+                <ProgressBar
+                    android:id="@+id/stopProgressBar"
+                    android:layout_marginTop="5dp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="35dp"
+                    android:indeterminate="true"
+                    android:visibility="gone"
+                    />
+
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/stopText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/channelClosed"
+                android:visibility="invisible"/>
 
         </LinearLayout>
 
 
     </android.support.v7.widget.CardView>
+
+        <android.support.v7.widget.CardView
+            xmlns:card_view="http://schemas.android.com/apk/res-auto"
+            android:id="@+id/card_view_tangle_attachment"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="15dp"
+            android:layout_gravity="center"
+            android:visibility="gone"
+            card_view:cardCornerRadius="4dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_margin="15dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+
+                    android:text="Retransfer deposits"
+                    android:textSize="20sp" />
+
+                <ProgressBar
+                    android:id="@+id/progressbarRetransfer"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="100"
+                    android:progress="5"
+                    />
+
+                <TextView
+                    android:id="@+id/retransferText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/initRetransfer"/>
+
+
+            </LinearLayout>
+
+        </android.support.v7.widget.CardView>
 
     <android.support.v7.widget.CardView
         xmlns:card_view="http://schemas.android.com/apk/res-auto"
@@ -98,14 +165,14 @@
                 android:textSize="20sp" />
 
 
-            <TextView
+            <ProgressBar
+                android:id="@+id/progressbarMegabytes"
+                style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="15dp"
-                android:layout_marginEnd="15dp"
-                android:id="@+id/summaryMinutes"
-                android:text="0 minutes open"
-                android:textSize="15sp" />
+                android:layout_marginLeft="15dp"
+                android:layout_marginRight="15dp"
+                />
 
             <TextView
                 android:id="@+id/summaryMegabytes"
@@ -116,29 +183,50 @@
                 android:text="0/0 Megabytes"
                 android:textSize="15sp" />
 
+            <ProgressBar
+                android:id="@+id/progressbarDurance"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="15dp"
+                android:layout_marginRight="15dp"
+                android:layout_marginTop="20dp"
+                />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="15dp"
+                android:layout_marginEnd="15dp"
+                android:id="@+id/summaryMinutes"
+                android:text="0/0 seconds"
+                android:textSize="15sp" />
+
+            <ProgressBar
+                android:id="@+id/progressbarIota"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="15dp"
+                android:layout_marginRight="15dp"
+                android:layout_marginTop="20dp"
+                />
+
             <TextView
                 android:id="@+id/summaryIota"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="15dp"
                 android:layout_marginEnd="15dp"
-                android:text="0 Iota transferred"
-                android:textSize="15sp" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="15dp"
-                android:layout_marginEnd="15dp"
-                android:text="0.1 Miota still locked"
+                android:text="0/0 Iota transferred"
                 android:textSize="15sp"
-                android:layout_marginBottom="20dp"/>
-
-
+                android:paddingBottom="20dp"/>
 
         </LinearLayout>
 
     </android.support.v7.widget.CardView>
+
+
 
 
 

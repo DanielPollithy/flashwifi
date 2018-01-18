@@ -1,7 +1,13 @@
 package com.flashwifi.wifip2p.billing;
 
+import android.app.usage.NetworkStats;
+import android.app.usage.NetworkStatsManager;
 import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.wifi.WifiManager;
+import android.os.RemoteException;
+import android.text.format.Formatter;
 import android.util.Log;
 
 import com.flashwifi.wifip2p.negotiation.SocketWrapper;
@@ -15,10 +21,13 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+
+import static android.content.Context.WIFI_SERVICE;
 
 /**
  * 1) This class keeps the socket connection alive.
@@ -40,6 +49,7 @@ public class BillingServer {
     private static final int serverTimeoutMillis = 2 * 60 * 1000;
 
     Context context;
+    NetworkStatsManager networkStatsManager;
 
     private void sendUpdateUIBroadcastWithMessage(String message){
         Intent local = new Intent();
@@ -48,16 +58,21 @@ public class BillingServer {
         context.sendBroadcast(local);
     }
 
-    public BillingServer(int bookedMegabytes, int timeoutMinutes, Context context){
+    public BillingServer(int bookedMegabytes, int timeoutMinutes, int maxMinutes, int iotaDepositClient, int iotaPerMegabyte, Context context){
         this.context = context;
-        Accountant.getInstance().start(bookedMegabytes,timeoutMinutes);
+        Accountant.getInstance().start(bookedMegabytes, timeoutMinutes, maxMinutes, iotaDepositClient, iotaPerMegabyte);
         gson = new GsonBuilder().create();
+        networkStatsManager = (NetworkStatsManager) context.getSystemService(Context.NETWORK_STATS_SERVICE);
     }
 
     public void start() throws IOException {
         // 0) create deadline guard
         createDeadlineGuard();
         // 1) create a socket
+
+        Log.d(TAG, "start: Billing server has been started");
+
+        // ToDo: receive end of roaming broadcast
 
         while (state != State.CLOSED) {
             try {
@@ -90,7 +105,7 @@ public class BillingServer {
                     // answer with billingOpenChannelAnswerString
                     // ToDo: create the flash channel
                     String[] myDigests = new String[]{"1234", "2345", "3456"};
-                    BillingOpenChannelAnswer billingOpenChannelAnswer = new BillingOpenChannelAnswer(0, 0, "", "", myDigests);
+                    BillingOpenChannelAnswer billingOpenChannelAnswer = new BillingOpenChannelAnswer(1000, 1000, "", "", myDigests);
                     String billingOpenChannelAnswerString = gson.toJson(billingOpenChannelAnswer);
                     socketWrapper.sendLine(billingOpenChannelAnswerString);
 
@@ -117,10 +132,23 @@ public class BillingServer {
                         Log.d(TAG, "start: Good morning!");
                         // create new bill
                         // ToDo: integrate real network data
-                        // ToDo: calculate time correctly
-                        b = Accountant.getInstance().createBill(0,0,1);
+                        NetworkStats.Bucket bucket;
+                        long total_bytes;
+                        try {
+                            bucket = networkStatsManager.querySummaryForDevice(ConnectivityManager.TYPE_WIFI,
+                                    "",
+                                    Accountant.getInstance().getLastTime() * 1000,
+                                    System.currentTimeMillis());
+                            long bytes_received = bucket.getRxBytes();
+                            long bytes_transmitted = bucket.getTxBytes();
+                            total_bytes = bytes_received + bytes_transmitted;
+                        } catch (RemoteException e) {
+                            Log.d(TAG, "start: Can't get the network traffic.");
+                            total_bytes = 0;
+                        }
+                        b = Accountant.getInstance().createBill((int)total_bytes);
                         // ToDo: integrate real flash channel
-                        latestBill = new BillMessage(b, "", false);
+                        latestBill = new BillMessage(b, "<flash obj>", Accountant.getInstance().isCloseAfterwards());
                         latestBillString = gson.toJson(latestBill);
                         socketWrapper.sendLine(latestBillString);
 
@@ -136,11 +164,14 @@ public class BillingServer {
                         if (latestBill.isCloseAfterwards() || latestBillAnswer.isCloseAfterwards()) {
                             state = State.CLOSE;
                         }
+
+                        sendUpdateUIBroadcastWithMessage("Billing");
                     }
 
                 }
 
                 if (state == State.CLOSE) {
+                    Log.d(TAG, "start: state is CLOSE now");
                     // ToDo: handle the final deposit of the flash channel
                     // ToDo: sign the transaction
                     BillingCloseChannel billingCloseChannel = new BillingCloseChannel(0,0,0,0,"", "", "");
@@ -150,6 +181,9 @@ public class BillingServer {
                     String billingCloseChannelAnswerString = socketWrapper.getLineThrowing();
                     BillingCloseChannelAnswer billingCloseChannelAnswer = gson.fromJson(billingCloseChannelAnswerString, BillingCloseChannelAnswer.class);
                     // ToDo: validate the signature
+
+                    // change the ui
+                    sendUpdateUIBroadcastWithMessage("Channel closed");
                     state = State.CLOSED;
                 }
 
@@ -162,13 +196,14 @@ public class BillingServer {
                     state = State.FULLY_ATTACHED;
                 }
             } catch (IOException e) {
-
+                e.printStackTrace();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
 
     }
+
 
     private void createDeadlineGuard() {
         // this method measures the time and stops the connection if

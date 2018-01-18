@@ -21,7 +21,9 @@ import com.flashwifi.wifip2p.accesspoint.ConnectTask;
 import com.flashwifi.wifip2p.accesspoint.StopAccessPointTask;
 import com.flashwifi.wifip2p.billing.BillingClient;
 import com.flashwifi.wifip2p.billing.BillingServer;
+import com.flashwifi.wifip2p.datastore.PeerStore;
 import com.flashwifi.wifip2p.negotiation.Negotiator;
+import com.flashwifi.wifip2p.protocol.NegotiationFinalization;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -99,8 +101,9 @@ public class WiFiDirectBroadcastService extends Service {
             Runnable task = new Runnable() {
                 @Override
                 public void run() {
+                    Log.d(TAG, "run: instantiate billing server");
                     // ToDo: remove magic numbers
-                    BillingServer billingServer = new BillingServer(100, 20, getApplicationContext());
+                    BillingServer billingServer = new BillingServer(10, 20, 30, 10000, 1000, getApplicationContext());
 
                     try {
                         billingServer.start();
@@ -113,8 +116,10 @@ public class WiFiDirectBroadcastService extends Service {
             };
             Log.d(TAG, "startBillingServer");
             Thread thread = new Thread(task);
+            //asyncTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, params);
+            //AsyncTask.execute(thread);
             threads.add(thread);
-            AsyncTask.execute(thread);
+            thread.start();
         }
     }
 
@@ -146,19 +151,20 @@ public class WiFiDirectBroadcastService extends Service {
     public void connect2AP(String ssid, String key) {
         connectTask = new ConnectTask();
         Log.d(TAG, "connect2AP: CONNECT TO THE HOTSPOT");
-        connectTask.execute(getApplicationContext());
+        connectTask.execute(getApplicationContext(), ssid, key);
     }
 
 
     public void disconnectAP() {
+        // ToDo: implement this?
     }
 
-    public void startAP() {
+    public void startAP(String ssid, String key) {
         if (!apRuns) {
             Log.d(TAG, "start Access point");
             apRuns = true;
             apTask = new AccessPointTask();
-            apTask.execute(getApplicationContext());
+            apTask.execute(getApplicationContext(), ssid, key);
         } else {
             Log.d(TAG, "Access point ALREADY RUNNING");
         }
@@ -235,7 +241,10 @@ public class WiFiDirectBroadcastService extends Service {
                     // block the discovery mode due to switch to roaming state
                     setRoaming(true);
                     // tell the UI
-                    sendStartRoamingBroadcast(peer_mac_address);
+                    NegotiationFinalization negFin = PeerStore.getInstance().getLatestFinalization(peer_mac_address);
+                    String ssid = negFin.getHotspotName();
+                    String key = negFin.getHotspotPassword();
+                    sendStartRoamingBroadcast(peer_mac_address, ssid, key);
                 }
             }
 
@@ -250,10 +259,12 @@ public class WiFiDirectBroadcastService extends Service {
         }
     }
 
-    private void sendStartRoamingBroadcast(String peer_mac_address) {
+    private void sendStartRoamingBroadcast(String peer_mac_address, String ssid, String key) {
         Intent local = new Intent();
-        local.putExtra("peer_mac_address", peer_mac_address);
         local.setAction("com.flashwifi.wifip2p.start_roaming");
+        local.putExtra("peer_mac_address", peer_mac_address);
+        local.putExtra("ssid", ssid);
+        local.putExtra("key", key);
         this.sendBroadcast(local);
     }
 
@@ -280,7 +291,10 @@ public class WiFiDirectBroadcastService extends Service {
                     // block the discovery mode due to switch to roaming state
                     setRoaming(true);
                     // tell the UI
-                    sendStartRoamingBroadcast(peer_mac_address);
+                    NegotiationFinalization negFin = PeerStore.getInstance().getLatestFinalization(peer_mac_address);
+                    String ssid = negFin.getHotspotName();
+                    String key = negFin.getHotspotPassword();
+                    sendStartRoamingBroadcast(peer_mac_address, ssid, key);
                 }
             }
         };
@@ -341,7 +355,12 @@ public class WiFiDirectBroadcastService extends Service {
 
     private void stopService_() {
         if (setup) {
-            unregisterReceiver(mReceiver);
+            try {
+                unregisterReceiver(mReceiver);
+            } catch (IllegalArgumentException e) {
+                Log.d(TAG, "stopService_: Illegal argument exception");
+                e.printStackTrace();
+            }
         }
     }
 

@@ -21,6 +21,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
@@ -223,6 +224,11 @@ public class SearchFragment extends Fragment {
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                 if (!busy) {
                     busy = true;
+
+                    // show progress bar
+                    ProgressBar progressConnection = (ProgressBar) getActivity().findViewById(R.id.progressConnection);
+                    progressConnection.setVisibility(View.VISIBLE);
+
                     PeerInformation peer = PeerStore.getInstance().getPeerArrayList().get(i);
 
                     peer.setSelected(true);

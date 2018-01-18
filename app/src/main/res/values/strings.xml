@@ -64,5 +64,7 @@
     <string name="startSearch">Start Search</string>
     <string name="roaming_title">Roaming (This is your hotspot)</string>
     <string name="roaming_title_client">Roaming (You are consuming)</string>
+    <string name="channelClosed">The payment channel was closed.</string>
+    <string name="initRetransfer">Initializing retransfer</string>
 
 </resources>

@@ -15,6 +15,7 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class Negotiator {
     private static final String TAG = "Negotiator";
@@ -198,6 +199,7 @@ public class Negotiator {
         // SEND NegotiationAnswer
         // ToDo: where shall the input come from?
         NegotiationOfferAnswer answer = new NegotiationOfferAnswer(true, 10, ownMacAddress);
+        PeerStore.getInstance().setLatestOfferAnswer(otherMac, answer);
         String answerString = gson.toJson(answer);
         socketWrapper.sendLine(answerString);
 
@@ -232,6 +234,7 @@ public class Negotiator {
         // send offer
         int iotaPerMegabyte = (int) (Math.random() * (1000 - 10)) + 10;
         NegotiationOffer offer = new NegotiationOffer(1, 100, iotaPerMegabyte, ownMacAddress);
+
         String offerString = gson.toJson(offer);
         socketWrapper.sendLine(offerString);
 
@@ -247,6 +250,7 @@ public class Negotiator {
         // Parse the answer
         NegotiationOfferAnswer answer = gson.fromJson(answerString, NegotiationOfferAnswer.class);
         String otherMac = answer.getConsumerMac();
+        PeerStore.getInstance().setLatestOffer(otherMac, offer);
         PeerStore.getInstance().setLatestOfferAnswer(otherMac, answer);
 
         // CHECK_ANSWER
@@ -265,15 +269,17 @@ public class Negotiator {
 //            // ToDo: Error handling
 //        }
 
-        // GENERATE_PASSWORD
-        // ToDo: Don't mock this
+        // GENERATE_PASSWORD and hotspot name
         hotspot_state = HotspotState.GENERATE_PASSWORD;
-        String password = "123456789";
-        String hotspotName = "Iotify";
+        int min = 100000000;
+        int max = 999999999;
+        String password = Integer.toString(ThreadLocalRandom.current().nextInt(min, max + 1));
+        String hotspotName = "Iotify-"+Integer.toString(ThreadLocalRandom.current().nextInt(100, 10000));;
 
         // send password and hotspot name
         NegotiationFinalization finalization = new NegotiationFinalization(hotspotName, password,
                 "Address", 0, 0, "");
+        PeerStore.getInstance().setLatestFinalization(otherMac, finalization);
         String finalizationString = gson.toJson(finalization);
 
         socketWrapper.sendLine(finalizationString);
