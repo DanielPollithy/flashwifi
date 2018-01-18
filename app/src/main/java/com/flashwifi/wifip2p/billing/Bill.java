@@ -3,18 +3,18 @@ package com.flashwifi.wifip2p.billing;
 
 public class Bill {
     private int index;
-    private int megabytesUsed;
+    private int bytesUsed;
     private int priceInIota;
     private long duranceInSeconds;
     private long time;
 
     private boolean acceptedByPeer;
 
-    public Bill(int index, long time, long duranceInSeconds, int megabytesUsed, int priceInIota) {
+    public Bill(int index, long time, long duranceInSeconds, int bytesUsed, int priceInIota) {
         this.index = index;
         this.time = time;
         this.duranceInSeconds = duranceInSeconds;
-        this.megabytesUsed = megabytesUsed;
+        this.bytesUsed = bytesUsed;
         this.priceInIota = priceInIota;
     }
 
@@ -39,8 +39,8 @@ public class Bill {
         return (int) duranceInSeconds;
     }
 
-    public int getMegabytesUsed() {
-        return megabytesUsed;
+    public int getBytesUsed() {
+        return bytesUsed;
     }
 
     public int getPriceInIota() {

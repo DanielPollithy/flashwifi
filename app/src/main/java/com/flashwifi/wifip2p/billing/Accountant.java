@@ -8,13 +8,14 @@ public class Accountant {
 
 
     private ArrayList<Bill> bills;
-    private int totalMegabytes;
+    private int totalBytes;
     private int totalIotaPrice;
     private int totalDurance;
     private int bookedMegabytes;
     private int bookedMinutes;
     private int totalIotaDeposit;
     private int timeoutMinutes;
+    private int iotaPerMegaByte;
     private boolean closeAfterwards;
     private long startTime;
 
@@ -29,13 +30,14 @@ public class Accountant {
     private Accountant() {
     }
 
-    public void start(int bookedMegabytes, int timeoutMinutes, int bookedMinutes, int totalIotaDeposit){
+    public void start(int bookedMegabytes, int timeoutMinutes, int bookedMinutes, int totalIotaDeposit, int iotaPerMegaByte){
         if (closed) {
             bills = new ArrayList<Bill>();
             this.bookedMegabytes = bookedMegabytes;
             this.timeoutMinutes = timeoutMinutes;
             this.totalIotaDeposit = totalIotaDeposit;
-            totalMegabytes = 0;
+            this.iotaPerMegaByte = iotaPerMegaByte;
+            totalBytes = 0;
             totalIotaPrice = 0;
             totalDurance = 0;
             flashChannelHelper = new FlashChannelHelper();
@@ -46,7 +48,7 @@ public class Accountant {
         }
     }
 
-    private long getLastTime() {
+    public long getLastTime() {
         if (bills.isEmpty()) {
             return startTime;
         } else {
@@ -78,7 +80,7 @@ public class Accountant {
 
         // ToDo: check bill
 
-        totalMegabytes += b.getMegabytesUsed();
+        totalBytes += b.getBytesUsed();
         totalIotaPrice += b.getPriceInIota();
         totalDurance += b.getDuranceInSeconds();
 
@@ -87,13 +89,14 @@ public class Accountant {
         return true;
     }
 
-    public Bill createBill(int megaByte, int priceInIota){
+    public Bill createBill(int bytes){
         if (!closed) {
             long now = System.currentTimeMillis() / 1000L;
             long duranceInSeconds = now - getLastTime();
-            Bill b = new Bill(getNextBillNumber(), now, duranceInSeconds, megaByte, priceInIota);
+            int priceInIota = (int) (bytes * getIotaPerByte());
+            Bill b = new Bill(getNextBillNumber(), now, duranceInSeconds, bytes, priceInIota);
 
-            totalMegabytes += megaByte;
+            totalBytes += bytes;
             totalIotaPrice += priceInIota;
             totalDurance += duranceInSeconds;
 
@@ -126,7 +129,11 @@ public class Accountant {
     }
 
     public int getTotalMegabytes() {
-        return totalMegabytes;
+        return totalBytes / (1024*1024);
+    }
+
+    public int getTotalBytes() {
+        return totalBytes / (1024*1024);
     }
 
     public int getTotalIotaPrice() {
@@ -141,6 +148,10 @@ public class Accountant {
         return bookedMegabytes;
     }
 
+    public int getBookedBytes() {
+        return bookedMegabytes;
+    }
+
     public int getTimeoutMinutes() {
         return timeoutMinutes;
     }
@@ -151,5 +162,13 @@ public class Accountant {
 
     public int getTotalIotaDeposit() {
         return totalIotaDeposit;
+    }
+
+    public int getIotaPerMegaByte() {
+        return iotaPerMegaByte;
+    }
+
+    public double getIotaPerByte() {
+        return ((double)getIotaPerMegaByte()) / (1024.0d * 1024.0d);
     }
 }

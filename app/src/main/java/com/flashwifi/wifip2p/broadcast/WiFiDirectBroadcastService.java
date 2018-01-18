@@ -103,7 +103,7 @@ public class WiFiDirectBroadcastService extends Service {
                 public void run() {
                     Log.d(TAG, "run: instantiate billing server");
                     // ToDo: remove magic numbers
-                    BillingServer billingServer = new BillingServer(100, 20, 60, 100, getApplicationContext());
+                    BillingServer billingServer = new BillingServer(10, 20, 30, 10000, 1000, getApplicationContext());
 
                     try {
                         billingServer.start();

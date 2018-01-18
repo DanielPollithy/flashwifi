@@ -141,8 +141,8 @@ public class RoamingActivity extends AppCompatActivity {
         }
         int minutes = Accountant.getInstance().getTotalDurance() / 60;
         int minutes_max = Accountant.getInstance().getBookedMinutes();
-        int megabytes_max = Accountant.getInstance().getBookedMegabytes();
-        int megabytes_used = Accountant.getInstance().getTotalMegabytes();
+        int bytes_max = Accountant.getInstance().getBookedBytes();
+        int bytes_used = Accountant.getInstance().getTotalBytes();
         int iotas_transferred = Accountant.getInstance().getTotalIotaPrice();
         int iotas_max = Accountant.getInstance().getTotalIotaDeposit();
 
@@ -150,7 +150,7 @@ public class RoamingActivity extends AppCompatActivity {
         summaryMinutes.setText(String.format("%d/%d minutes active", minutes, minutes_max));
 
         TextView summaryMegabytes = (TextView) findViewById(R.id.summaryMegabytes);
-        summaryMegabytes.setText(String.format("%d/%d Megabytes roamed", megabytes_used, megabytes_max));
+        summaryMegabytes.setText(String.format("%d/%d Megabytes roamed", bytes_used, bytes_max));
 
         TextView summaryIota = (TextView) findViewById(R.id.summaryIota);
         summaryIota.setText(String.format("%d/%d Iota transferred", iotas_transferred, iotas_max));
@@ -160,8 +160,8 @@ public class RoamingActivity extends AppCompatActivity {
         progressMinutes.setProgress(minutes);
 
         ProgressBar progressMegabytes = (ProgressBar) findViewById(R.id.progressbarMegabytes);
-        progressMegabytes.setMax(megabytes_max);
-        progressMegabytes.setProgress(megabytes_used);
+        progressMegabytes.setMax(bytes_max);
+        progressMegabytes.setProgress(bytes_used);
 
         ProgressBar progressIota = (ProgressBar) findViewById(R.id.progressbarIota);
         progressIota.setProgress(iotas_transferred);
@@ -256,7 +256,7 @@ public class RoamingActivity extends AppCompatActivity {
 
 
     private void initUI() {
-        updateBillingCard();
+
     }
 
     /** Defines callbacks for service binding, passed to bindService() */
@@ -299,6 +299,8 @@ public class RoamingActivity extends AppCompatActivity {
                 endRoaming();
             }
         });
+
+        updateBillingCard();
 
         showNotification();
     }

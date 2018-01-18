@@ -85,7 +85,8 @@ public class BillingClient {
                         String billingOpenChannelAnswerString = socketWrapper.getLineThrowing();
                         billingOpenChannelAnswer = gson.fromJson(billingOpenChannelAnswerString, BillingOpenChannelAnswer.class);
                         // now create the flash channel on our side
-                        Accountant.getInstance().start(billingOpenChannel.getTotalMegabytes(), billingOpenChannel.getTimeoutMinutesClient(), billingOpenChannel.getTotalMinutes(), billingOpenChannelAnswer.getClientDepositIota());
+                        Accountant.getInstance().start(billingOpenChannel.getTotalMegabytes(), billingOpenChannel.getTimeoutMinutesClient(), billingOpenChannel.getTotalMinutes(), billingOpenChannelAnswer.getClientDepositIota(),
+                                billingOpenChannel.getIotaPerMegabyte());
                         sendUpdateUIBroadcastWithMessage("Channel established");
                         state = State.ROAMING;
                     } else {

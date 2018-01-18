@@ -1,8 +1,12 @@
 package com.flashwifi.wifip2p.billing;
 
+import android.app.usage.NetworkStats;
+import android.app.usage.NetworkStatsManager;
 import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
 import android.net.wifi.WifiManager;
+import android.os.RemoteException;
 import android.text.format.Formatter;
 import android.util.Log;
 
@@ -17,6 +21,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
@@ -44,6 +49,7 @@ public class BillingServer {
     private static final int serverTimeoutMillis = 2 * 60 * 1000;
 
     Context context;
+    NetworkStatsManager networkStatsManager;
 
     private void sendUpdateUIBroadcastWithMessage(String message){
         Intent local = new Intent();
@@ -52,10 +58,11 @@ public class BillingServer {
         context.sendBroadcast(local);
     }
 
-    public BillingServer(int bookedMegabytes, int timeoutMinutes, int maxMinutes, int iotaDepositClient, Context context){
+    public BillingServer(int bookedMegabytes, int timeoutMinutes, int maxMinutes, int iotaDepositClient, int iotaPerMegabyte, Context context){
         this.context = context;
-        Accountant.getInstance().start(bookedMegabytes, timeoutMinutes, maxMinutes, iotaDepositClient);
+        Accountant.getInstance().start(bookedMegabytes, timeoutMinutes, maxMinutes, iotaDepositClient, iotaPerMegabyte);
         gson = new GsonBuilder().create();
+        networkStatsManager = (NetworkStatsManager) context.getSystemService(Context.NETWORK_STATS_SERVICE);
     }
 
     public void start() throws IOException {
@@ -98,7 +105,7 @@ public class BillingServer {
                     // answer with billingOpenChannelAnswerString
                     // ToDo: create the flash channel
                     String[] myDigests = new String[]{"1234", "2345", "3456"};
-                    BillingOpenChannelAnswer billingOpenChannelAnswer = new BillingOpenChannelAnswer(0, 0, "", "", myDigests);
+                    BillingOpenChannelAnswer billingOpenChannelAnswer = new BillingOpenChannelAnswer(1000, 1000, "", "", myDigests);
                     String billingOpenChannelAnswerString = gson.toJson(billingOpenChannelAnswer);
                     socketWrapper.sendLine(billingOpenChannelAnswerString);
 
@@ -125,7 +132,21 @@ public class BillingServer {
                         Log.d(TAG, "start: Good morning!");
                         // create new bill
                         // ToDo: integrate real network data
-                        b = Accountant.getInstance().createBill(3,9);
+                        NetworkStats.Bucket bucket;
+                        long total_bytes;
+                        try {
+                            bucket = networkStatsManager.querySummaryForDevice(ConnectivityManager.TYPE_WIFI,
+                                    "",
+                                    Accountant.getInstance().getLastTime() * 1000,
+                                    System.currentTimeMillis());
+                            long bytes_received = bucket.getRxBytes();
+                            long bytes_transmitted = bucket.getTxBytes();
+                            total_bytes = bytes_received + bytes_transmitted;
+                        } catch (RemoteException e) {
+                            Log.d(TAG, "start: Can't get the network traffic.");
+                            total_bytes = 0;
+                        }
+                        b = Accountant.getInstance().createBill((int)total_bytes);
                         // ToDo: integrate real flash channel
                         latestBill = new BillMessage(b, "<flash obj>", Accountant.getInstance().isCloseAfterwards());
                         latestBillString = gson.toJson(latestBill);
@@ -182,6 +203,7 @@ public class BillingServer {
         }
 
     }
+
 
     private void createDeadlineGuard() {
         // this method measures the time and stops the connection if
