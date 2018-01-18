@@ -5,8 +5,8 @@ android {
     buildToolsVersion '26.0.2'
     defaultConfig {
         applicationId "jenny.daniel.wifip2p"
-        minSdkVersion 22
-        targetSdkVersion 22
+        minSdkVersion 23
+        targetSdkVersion 23
         multiDexEnabled = true
         versionCode 1
         versionName "1.0"
