@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="err_no_finalization_received">No finalization received</string>
+    <string name="err_pairing_roles_broken">Pairing roles are broken</string>
+    <string name="no_hello_received">No hello received</string>
+    <string name="err_no_offer_received">No offer received</string>
+    <string name="err_buy_price_bad_setting">Buy price bad setting</string>
+    <string name="err_price_too_high">Price too high</string>
+    <string name="err_client_minutes_bad_setting">Client minutes bad setting</string>
+    <string name="err_client_minutes_not_acceptable_for_hotspot">Client minutes not acceptable for hotspot</string>
+    <string name="err_sell_price_bad_setting">Sell price bad setting</string>
+    <string name="err_min_minutes_bad_setting">Min minutes bad setting</string>
+    <string name="err_max_minutes_bad_setting">Max minutes bad setting</string>
+    <string name="err_no_answer_received">No answer received</string>
+    <string name="err_client_does_not_agree">Client does not agree to conditions</string>
+    <string name="err_client_minutes_out_of_bounds">Client minutes is out of bounds</string>
+    <string name="err_timeout">Timeout</string>
+    <string name="err_io_exception">IO Exception</string>
+</resources>

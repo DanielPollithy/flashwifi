@@ -1,4 +1,5 @@
 package com.flashwifi.wifip2p.broadcast;
+import android.app.Activity;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -14,6 +15,7 @@ import android.net.wifi.p2p.WifiP2pManager;
 import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.IBinder;
+import android.preference.PreferenceManager;
 import android.util.Log;
 
 import com.flashwifi.wifip2p.accesspoint.AccessPointTask;
@@ -217,17 +219,23 @@ public class WiFiDirectBroadcastService extends Service {
         }
     }
 
+
     public void startNegotiationServer(final boolean isClient, String macAddress) {
         Runnable task = new Runnable() {
             @Override
             public void run() {
-                Negotiator negotiator = new Negotiator(isClient, getWFDMacAddress());
+                Negotiator negotiator = new Negotiator(isClient,
+                        getWFDMacAddress(),
+                        PreferenceManager.getDefaultSharedPreferences(getApplicationContext()),
+                        getBaseContext()
+                        );
+
                 String peer_mac_address = null;
                 while (!isRoaming && enabled && peer_mac_address == null) {
                     Log.d(TAG, "run: " + enabled);
-                    peer_mac_address = negotiator.workAsServer();
-                    // ToDo: use other broadcast for this
-                    // sendUpdateUIBroadcast();
+                    Negotiator.NegotiationReturn ret = negotiator.workAsServer();
+                    peer_mac_address = ret.mac;
+                    sendUpdateUIBroadcastWithMessage(getString(ret.code));
                     try {
                         Thread.sleep(2000);
                     } catch (InterruptedException e) {
@@ -272,12 +280,20 @@ public class WiFiDirectBroadcastService extends Service {
         Runnable task = new Runnable() {
             @Override
             public void run() {
-                Negotiator negotiator = new Negotiator(isClient, getWFDMacAddress());
+                Negotiator negotiator = new Negotiator(
+                        isClient,
+                        getWFDMacAddress(),
+                        PreferenceManager.getDefaultSharedPreferences(getApplicationContext()),
+                        getBaseContext()
+                );
                 String peer_mac_address = null;
+                Negotiator.NegotiationReturn negotiationReturn;
                 while (!isRoaming && enabled && peer_mac_address == null) {
                     Log.d(TAG, "run: " + enabled);
                     System.out.println(" *******+ work as client *******");
-                    peer_mac_address = negotiator.workAsClient(address.getHostAddress());
+                    negotiationReturn = negotiator.workAsClient(address.getHostAddress());
+                    peer_mac_address = negotiationReturn.mac;
+                    sendUpdateUIBroadcastWithMessage(getString(negotiationReturn.code));
                     try {
                         Thread.sleep(2000);
                     } catch (InterruptedException e) {

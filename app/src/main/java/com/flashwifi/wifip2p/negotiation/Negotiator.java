@@ -1,8 +1,12 @@
 package com.flashwifi.wifip2p.negotiation;
 
 
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
 import android.util.Log;
 
+import com.flashwifi.wifip2p.R;
 import com.flashwifi.wifip2p.datastore.PeerStore;
 import com.flashwifi.wifip2p.protocol.NegotiationFinalization;
 import com.flashwifi.wifip2p.protocol.NegotiationOffer;
@@ -11,6 +15,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -34,7 +39,12 @@ public class Negotiator {
     // consumer as in consumer-hotspot
     private boolean isConsumer;
 
+    String mac = null;
+    String peer_mac_address = null;
+
     private Gson gson;
+    private SharedPreferences prefs;
+    private Context context;
 
     public enum ConsumerState {
         INITIAL,
@@ -59,18 +69,22 @@ public class Negotiator {
         ERROR
     }
 
-    public Negotiator(boolean isConsumer, String ownMacAddress) {
+    public Negotiator(boolean isConsumer, String ownMacAddress, SharedPreferences prefs, Context context) {
         this.isConsumer = isConsumer;
         gson = new GsonBuilder().create();
         this.ownMacAddress = ownMacAddress;
+        this.prefs = prefs;
+        this.context = context;
         Log.d(TAG, "Negotiator: " + ownMacAddress);
     }
 
-    public String workAsClient(String serverIPAddress) {
+    public NegotiationReturn workAsClient(String serverIPAddress) {
         this.isClient = true;
-
-        String success = null;
         Socket socket = null;
+        NegotiationReturn negReturn;
+        int code = 0;
+        boolean restartAfterwards = false;
+
 
         try {
             // create client socket that connects to server
@@ -87,13 +101,23 @@ public class Negotiator {
 
             // Whether we want to provide a hotspot or use one
             if (isConsumer) {
-                success = runConsumerProtocol(serverIPAddress);
+                negReturn = runConsumerProtocol(serverIPAddress);
             } else {
-                success = runHotspotProtocol(serverIPAddress);
+                negReturn = runHotspotProtocol(serverIPAddress);
             }
+
+            mac = negReturn.mac;
+            restartAfterwards = negReturn.restartAfterwards;
+            code = negReturn.code;
         } catch (SocketTimeoutException ste) {
-            Log.d(TAG, "workAsServer: ### Timed out after 1 seconds");
+            mac = null;
+            restartAfterwards = true;
+            code = R.string.err_timeout;
+            Log.d(TAG, "workAsServer: ### Timed out");
         } catch (IOException e) {
+            mac = null;
+            restartAfterwards = true;
+            code = R.string.err_io_exception;
             Log.d("", e.getMessage());
         } finally {
             if (socket != null) {
@@ -104,16 +128,19 @@ public class Negotiator {
                 }
             }
         }
-        return success;
+        return new NegotiationReturn(code, mac, restartAfterwards);
     }
 
-    public String workAsServer() {
+    public NegotiationReturn workAsServer() {
         // this device is the socket server
         this.isClient = false;
 
-        String peer_mac_address = null;
+        peer_mac_address = null;
         ServerSocket serverSocket = null;
         Socket socket = null;
+        int code = 0;
+        NegotiationReturn negReturn;
+        boolean restartAfterwards = false;
 
         try {
             // use the port to start
@@ -132,27 +159,35 @@ public class Negotiator {
             String hello = socketWrapper.getLine();
 
             if (hello == null) {
-                error(0, "no hello received");
-                return null;
+                return error(R.string.no_hello_received, true);
             }
 
             // Check: Is the peer in the same role as we are
             // server and server or client and client MAKES NO SENSE
             if (hello.contains("SERVER") && !isClient || hello.contains("CLIENT") && isClient){
-                error(1, "Pairing roles are broken");
-                return null;
+                return error(R.string.err_pairing_roles_broken, true);
             }
 
             // Whether we want to provide a hotspot or use one
             if (isConsumer) {
-                peer_mac_address = runConsumerProtocol(socketWrapper.getClientAddress().getHostAddress());
+                negReturn = runConsumerProtocol(socketWrapper.getClientAddress().getHostAddress());
             } else {
-                peer_mac_address = runHotspotProtocol(socketWrapper.getClientAddress().getHostAddress());
+                negReturn = runHotspotProtocol(socketWrapper.getClientAddress().getHostAddress());
             }
+            peer_mac_address = negReturn.mac;
+            code = negReturn.code;
+            restartAfterwards = negReturn.restartAfterwards;
+
         } catch (SocketTimeoutException ste) {
-            Log.d(TAG, "workAsServer: ### Timed out after 1 seconds");
+            Log.d(TAG, "workAsServer: ### Timed out");
+            code = R.string.err_timeout;
+            peer_mac_address = null;
+            restartAfterwards = true;
         } catch (IOException e) {
-            Log.d("", e.getMessage());
+            Log.d(TAG, e.getMessage());
+            code = R.string.err_io_exception;
+            peer_mac_address = null;
+            restartAfterwards = true;
         } finally {
             if (socket != null) {
                 try {
@@ -168,19 +203,17 @@ public class Negotiator {
                     e.printStackTrace();
                 }
             }
-
         }
-        return peer_mac_address;
+        return new NegotiationReturn(code, peer_mac_address, restartAfterwards);
     }
 
-    private String runConsumerProtocol(String ipAddress) throws IOException {
+    private NegotiationReturn runConsumerProtocol(String ipAddress) throws IOException {
         consumer_state = ConsumerState.WAIT_FOR_OFFER;
 
         // RECEIVE OFFER
         String offerString = socketWrapper.getLine();
         if (offerString == null) {
-            error(2, "No offer received");
-            return null;
+            return error(R.string.err_no_offer_received, true);
         }
 
         // CHECK OFFER
@@ -190,15 +223,29 @@ public class Negotiator {
         // Write offer to the PeerStore
         PeerStore.getInstance().setLatestOffer(otherMac, offer);
 
-        // ToDo: implement accept or deny logic
-        if (!true) {
-            error(3, "Offer not acceptable");
-            return null;
+        // accept or deny logic
+        int iotaPerMegabyte = Integer.valueOf(prefs.getString("edit_text_buy_price", "-1"));
+        if (iotaPerMegabyte < 0) {
+            return error(R.string.err_buy_price_bad_setting, false);
+        }
+        if (offer.getIotaPerMegabyte() > iotaPerMegabyte) {
+            return error(R.string.err_price_too_high, false);
+        }
+
+        int hotspot_max_minutes = offer.getMaxMinutes();
+        int hotspot_min_minutes = offer.getMinMinutes();
+        int client_roaming_minutes = Integer.valueOf(prefs.getString("edit_text_client_minutes", "-1"));
+
+        if (client_roaming_minutes < 0) {
+            return error(R.string.err_client_minutes_bad_setting, false);
+        }
+
+        if (client_roaming_minutes < hotspot_min_minutes || client_roaming_minutes > hotspot_max_minutes) {
+            return error(R.string.err_client_minutes_not_acceptable_for_hotspot, false);
         }
 
         // SEND NegotiationAnswer
-        // ToDo: where shall the input come from?
-        NegotiationOfferAnswer answer = new NegotiationOfferAnswer(true, 10, ownMacAddress);
+        NegotiationOfferAnswer answer = new NegotiationOfferAnswer(true, client_roaming_minutes, ownMacAddress);
         PeerStore.getInstance().setLatestOfferAnswer(otherMac, answer);
         String answerString = gson.toJson(answer);
         socketWrapper.sendLine(answerString);
@@ -208,8 +255,7 @@ public class Negotiator {
         String finalizationString = socketWrapper.getLine();
 
         if (finalizationString == null) {
-            error(4, "No finalization received");
-            return null;
+            return error(R.string.err_no_finalization_received, true);
         }
 
         NegotiationFinalization finalization = gson.fromJson(finalizationString, NegotiationFinalization.class);
@@ -224,16 +270,27 @@ public class Negotiator {
         // End
         socketWrapper.close();
 
-        return otherMac;
+        return new NegotiationReturn(0, otherMac, false);
     }
 
-    private String runHotspotProtocol(String ipAddress) throws IOException {
+    private NegotiationReturn runHotspotProtocol(String ipAddress) throws IOException {
         // CHECK_CLIENT_REQUEST
         hotspot_state = HotspotState.CHECK_CLIENT_REQUEST;
 
         // send offer
-        int iotaPerMegabyte = (int) (Math.random() * (1000 - 10)) + 10;
-        NegotiationOffer offer = new NegotiationOffer(1, 100, iotaPerMegabyte, ownMacAddress);
+        int iotaPerMegabyte = Integer.valueOf(prefs.getString("edit_text_sell_price", "-1"));
+        if (iotaPerMegabyte < 0) {
+            return error(R.string.err_sell_price_bad_setting, false);
+        }
+        int minMinutes = Integer.valueOf(prefs.getString("edit_text_min_minutes", "-1"));
+        if (minMinutes < 0) {
+            return error(R.string.err_min_minutes_bad_setting, false);
+        }
+        int maxMinutes = Integer.valueOf(prefs.getString("edit_text_max_minutes", "-1"));
+        if (maxMinutes < 0) {
+            return error(R.string.err_max_minutes_bad_setting, false);
+        }
+        NegotiationOffer offer = new NegotiationOffer(minMinutes, maxMinutes, iotaPerMegabyte, ownMacAddress);
 
         String offerString = gson.toJson(offer);
         socketWrapper.sendLine(offerString);
@@ -243,13 +300,13 @@ public class Negotiator {
         String answerString = socketWrapper.getLine();
 
         if (answerString == null) {
-            error(8, "No answer received");
-            return null;
+            return error(R.string.err_no_answer_received, true);
         }
 
         // Parse the answer
         NegotiationOfferAnswer answer = gson.fromJson(answerString, NegotiationOfferAnswer.class);
         String otherMac = answer.getConsumerMac();
+        peer_mac_address = otherMac;
         PeerStore.getInstance().setLatestOffer(otherMac, offer);
         PeerStore.getInstance().setLatestOfferAnswer(otherMac, answer);
 
@@ -257,8 +314,11 @@ public class Negotiator {
         hotspot_state = HotspotState.CHECK_ANSWER;
 
         if (!answer.isAgreeToConditions()) {
-            error(5, "Client does not agree to conditions");
-            return null;
+            return error(R.string.err_client_does_not_agree, false);
+        }
+
+        if (answer.getDuranceInMinutes() > maxMinutes || answer.getDuranceInMinutes() < minMinutes) {
+            return error(R.string.err_client_minutes_out_of_bounds, false);
         }
 
         // CHECK_ITP
@@ -266,7 +326,6 @@ public class Negotiator {
 //        if (!true) {
 //            writeError(0, "");
 //            server_state = NegotiationServerTask.State.ERROR;
-//            // ToDo: Error handling
 //        }
 
         // GENERATE_PASSWORD and hotspot name
@@ -274,11 +333,18 @@ public class Negotiator {
         int min = 100000000;
         int max = 999999999;
         String password = Integer.toString(ThreadLocalRandom.current().nextInt(min, max + 1));
-        String hotspotName = "Iotify-"+Integer.toString(ThreadLocalRandom.current().nextInt(100, 10000));;
+        String hotspotName = "Iotify-"+Integer.toString(ThreadLocalRandom.current().nextInt(100, 10000));
 
-        // send password and hotspot name
+
+        // ToDo: get depositAddressFlashChannel from SharedPreferences
+        // ToDo: get the bandwidth of the hotspot
+        // ToDo: create initial flash object
+        double bandwidth = 0.1; // megabyte per second;
+        int max_data_volume_megabytes = (int) (answer.getDuranceInMinutes() * bandwidth);
+        int max_iota_transferred = max_data_volume_megabytes * offer.getIotaPerMegabyte();
+        // send the most important message to the user
         NegotiationFinalization finalization = new NegotiationFinalization(hotspotName, password,
-                "Address", 0, 0, "");
+                "Address", max_iota_transferred, max_iota_transferred, "");
         PeerStore.getInstance().setLatestFinalization(otherMac, finalization);
         String finalizationString = gson.toJson(finalization);
 
@@ -296,20 +362,35 @@ public class Negotiator {
 
         socketWrapper.close();
 
-        return otherMac;
+        return new NegotiationReturn(0, otherMac, false);
     }
 
     // ------------------------
     //   HELPER METHODS BELOW
     // ------------------------
 
-    private void error(int code, String msg) throws IOException {
-        Log.d(TAG, "error: " + msg);
+    private NegotiationReturn error(int err_no, boolean restartAfterwards) throws IOException {
+        String str = context.getString(err_no);
+        Log.d(TAG, "error: " + str);
         if (isConsumer) {
             consumer_state = ConsumerState.ERROR;
         } else {
             hotspot_state = HotspotState.ERROR;
         }
+        String macAdd = (restartAfterwards) ? null : this.peer_mac_address;
         socketWrapper.close();
+        return new NegotiationReturn(err_no, macAdd, restartAfterwards);
+    }
+
+    public class NegotiationReturn {
+        public int code;
+        public String mac;
+        public boolean restartAfterwards;
+
+        public NegotiationReturn(int code, String mac, boolean restartAfterwards) {
+            this.mac = mac;
+            this.code = code;
+            this.restartAfterwards = restartAfterwards;
+        }
     }
 }

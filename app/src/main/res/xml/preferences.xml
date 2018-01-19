@@ -55,7 +55,38 @@
     </PreferenceCategory>
 
     <PreferenceCategory
-        android:title="Payment"
+        android:title="Hotspot payment conditions"
+        android:elevation="10dp"
+        android:key="pref_key_payment_settings">
+
+        <EditTextPreference
+            android:defaultValue="10"
+            android:key="edit_text_sell_price"
+            android:inputType="number"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="Sell Price" />
+
+        <EditTextPreference
+            android:defaultValue="15"
+            android:key="edit_text_min_minutes"
+            android:inputType="number"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="Minimum selling durance [minutes]" />
+
+        <EditTextPreference
+            android:defaultValue="100"
+            android:key="edit_text_max_minutes"
+            android:inputType="number"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="Maximum selling durance [minutes]" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="Client payment conditions"
         android:elevation="10dp"
         android:key="pref_key_payment_settings">
 
@@ -68,12 +99,12 @@
             android:title="Max Buy Price" />
 
         <EditTextPreference
-            android:defaultValue="10"
-            android:key="edit_text_sell_price"
+            android:defaultValue="60"
+            android:key="edit_text_client_minutes"
             android:inputType="number"
             android:selectAllOnFocus="true"
             android:singleLine="true"
-            android:title="Sell Price" />
+            android:title="Client roaming durance" />
 
     </PreferenceCategory>
 
