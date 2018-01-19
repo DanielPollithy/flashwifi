@@ -247,7 +247,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void startSettingsFragment() {
-        Fragment fragment = new WithdrawWalletFragment();
+        Fragment fragment = new SettingsFragment();
         fragment.setRetainInstance(true);
 
         // Insert the fragment by replacing any existing fragment

@@ -10,6 +10,8 @@
             android:key="pref_key_security"
             android:divider="@null"
             android:dividerHeight="0dp"
+            android:entries="@array/securityPref"
+            android:entryValues="@array/securityPref"
             android:title="Security" />
 
         <Preference
@@ -28,28 +30,27 @@
 
         <ListPreference
             android:key="pref_key_network_timeout"
+            android:entries="@array/networkTimeoutPref"
+            android:entryValues="@array/networkTimeoutPref"
             android:title="Network Timeout" />
 
         <ListPreference
             android:key="pref_key_units"
+            android:entries="@array/unitsPref"
+            android:entryValues="@array/unitsPref"
             android:title="Units" />
 
 
-        <PreferenceScreen
-            android:key="button_testnet_category_key"
-            android:title="Testnet"
-            android:persistent="false">
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="pref_key_switch_testnet"
+            android:title="Testnet" />
 
-            <SwitchPreference
-                android:defaultValue="false"
-                android:key="switch_preference_testnet"
-                android:title="Testnet" />
-
-            <Preference
-                android:key="pref_key_reset_password"
-                android:title="Reset Password"/>
-
-        </PreferenceScreen>
+        <Preference
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:key="pref_key_testnet_fund_add"
+            android:title="Add 2000i testnet"/>
 
     </PreferenceCategory>
 
@@ -59,15 +60,17 @@
         android:key="pref_key_payment_settings">
 
         <EditTextPreference
-            android:defaultValue="Default value"
+            android:defaultValue="10"
             android:key="edit_text_buy_price"
+            android:inputType="number"
             android:selectAllOnFocus="true"
             android:singleLine="true"
-            android:title="Buy Price" />
+            android:title="Max Buy Price" />
 
         <EditTextPreference
-            android:defaultValue="Default value"
+            android:defaultValue="10"
             android:key="edit_text_sell_price"
+            android:inputType="number"
             android:selectAllOnFocus="true"
             android:singleLine="true"
             android:title="Sell Price" />

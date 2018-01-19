@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="securityPref" >
+        <item>One</item>
+        <item>Two</item>
+    </string-array>
+
+    <string-array name="networkTimeoutPref" >
+        <item>15 seconds</item>
+        <item>30 seconds</item>
+        <item>1 minute</item>
+        <item>3 minutes</item>
+        <item>No timeout</item>
+    </string-array>
+
+    <string-array name="unitsPref" >
+        <item>Iota (i)</item>
+        <item>Kilo Iota (Ki)</item>
+        <item>Mega Iota (Mi)</item>
+        <item>Giga Iota (Gi)</item>
+        <item>Tera Iota (Ti)</item>
+        <item>Peta Iota (Pi)</item>
+    </string-array>
+
+</resources>
