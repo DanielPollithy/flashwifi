@@ -2,6 +2,7 @@ package com.flashwifi.wifip2p.negotiation;
 
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 import android.util.Log;
@@ -67,6 +68,14 @@ public class Negotiator {
         CREATE_HOTSPOT,
         SUCCESS,
         ERROR
+    }
+
+    private void sendUpdateUIBroadcastWithMessage(String message, String snd_message){
+        Intent local = new Intent();
+        local.putExtra("message", message);
+        local.putExtra("snd_message", snd_message);
+        local.setAction("com.flashwifi.wifip2p.update_ui");
+        context.sendBroadcast(local);
     }
 
     public Negotiator(boolean isConsumer, String ownMacAddress, SharedPreferences prefs, Context context) {
@@ -224,12 +233,15 @@ public class Negotiator {
         PeerStore.getInstance().setLatestOffer(otherMac, offer);
 
         // accept or deny logic
+        boolean agree = true;
+        int disagree_reason = 0;
         int iotaPerMegabyte = Integer.valueOf(prefs.getString("edit_text_buy_price", "-1"));
         if (iotaPerMegabyte < 0) {
             return error(R.string.err_buy_price_bad_setting, false);
         }
         if (offer.getIotaPerMegabyte() > iotaPerMegabyte) {
-            return error(R.string.err_price_too_high, false);
+            agree = false;
+            disagree_reason = R.string.err_price_too_high;
         }
 
         int hotspot_max_minutes = offer.getMaxMinutes();
@@ -241,14 +253,19 @@ public class Negotiator {
         }
 
         if (client_roaming_minutes < hotspot_min_minutes || client_roaming_minutes > hotspot_max_minutes) {
-            return error(R.string.err_client_minutes_not_acceptable_for_hotspot, false);
+            agree = false;
+            disagree_reason = R.string.err_client_minutes_not_acceptable_for_hotspot;
         }
 
         // SEND NegotiationAnswer
-        NegotiationOfferAnswer answer = new NegotiationOfferAnswer(true, client_roaming_minutes, ownMacAddress);
+        NegotiationOfferAnswer answer = new NegotiationOfferAnswer(agree, client_roaming_minutes, ownMacAddress);
         PeerStore.getInstance().setLatestOfferAnswer(otherMac, answer);
         String answerString = gson.toJson(answer);
         socketWrapper.sendLine(answerString);
+
+        if (!agree) {
+            return error(disagree_reason, false);
+        }
 
         // WAIT FOR PASSWORD and hostname
         consumer_state = ConsumerState.WAIT_FOR_PASSWORD;
@@ -256,6 +273,8 @@ public class Negotiator {
 
         if (finalizationString == null) {
             return error(R.string.err_no_finalization_received, true);
+        } else if (answerString.equals("BYE")) {
+            return error(R.string.err_peer_quit, false);
         }
 
         NegotiationFinalization finalization = gson.fromJson(finalizationString, NegotiationFinalization.class);
@@ -301,6 +320,8 @@ public class Negotiator {
 
         if (answerString == null) {
             return error(R.string.err_no_answer_received, true);
+        } else if (answerString.equals("BYE")) {
+            return error(R.string.err_peer_quit, false);
         }
 
         // Parse the answer
@@ -378,6 +399,17 @@ public class Negotiator {
             hotspot_state = HotspotState.ERROR;
         }
         String macAdd = (restartAfterwards) ? null : this.peer_mac_address;
+        sendUpdateUIBroadcastWithMessage("error", str);
+        if (this.peer_mac_address != null) {
+            PeerStore.getInstance().setErrorMessage(this.peer_mac_address, str);
+        }
+        if (!restartAfterwards) {
+            try {
+                socketWrapper.sendLine("BYE");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
         socketWrapper.close();
         return new NegotiationReturn(err_no, macAdd, restartAfterwards);
     }

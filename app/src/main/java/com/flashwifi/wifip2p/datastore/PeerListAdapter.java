@@ -6,6 +6,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.ProgressBar;
 import android.widget.TableRow;
 import android.widget.TextView;
 
@@ -41,8 +42,7 @@ public class PeerListAdapter extends ArrayAdapter<PeerInformation> {
             TextView tt1 = (TextView) v.findViewById(R.id.deviceName);
             TextView tt2 = (TextView) v.findViewById(R.id.categoryId);
             TextView tt3 = (TextView) v.findViewById(R.id.description);
-            TextView tt4 = (TextView) v.findViewById(R.id.ipAddr);
-            TextView tt5 = (TextView) v.findViewById(R.id.iotaPrice);
+            TextView tt4 = (TextView) v.findViewById(R.id.iotaPrice);
 
 
             WifiP2pDevice device = p.getWifiP2pDevice();
@@ -58,22 +58,22 @@ public class PeerListAdapter extends ArrayAdapter<PeerInformation> {
 
             NegotiationOffer offer = p.getLatestNegotiationOffer();
             if (offer != null) {
-                tt5.setText(Integer.toString(offer.getIotaPerMegabyte()));
+                tt4.setText(Integer.toString(offer.getIotaPerMegabyte()) + "i");
             }
 
-            if (p.getIpAddress() != null) {
-                tt4.setText(p.getIpAddress());
+            if (!p.isSelected()) {
+                ProgressBar progress_bar = (ProgressBar) v.findViewById(R.id.progressConnection);
+                progress_bar.setVisibility(View.GONE);
             }
 
-
-            if (tt3 != null)
-                tt3.setText(String.format("%s", Integer.toString(p.getAge())));
+            if (tt3 != null) {
+                tt3.setText(p.getErrorMessage());
             }
 
-
-
+        }
 
         return v;
     }
+
 
 }

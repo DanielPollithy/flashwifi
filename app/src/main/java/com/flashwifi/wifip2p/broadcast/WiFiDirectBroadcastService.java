@@ -231,21 +231,33 @@ public class WiFiDirectBroadcastService extends Service {
                         );
 
                 String peer_mac_address = null;
-                while (!isRoaming && enabled && peer_mac_address == null) {
+                boolean restartAfterwards = true;
+                int error_count = 0;
+                int max_error_count = 10;
+                Negotiator.NegotiationReturn ret = null;
+                while (!isRoaming && enabled && peer_mac_address == null && restartAfterwards && (error_count < max_error_count)) {
+                    Log.d(TAG, String.format("%d/%d errors", error_count, max_error_count));
                     Log.d(TAG, "run: " + enabled);
-                    Negotiator.NegotiationReturn ret = negotiator.workAsServer();
+                    ret = negotiator.workAsServer();
                     peer_mac_address = ret.mac;
-                    sendUpdateUIBroadcastWithMessage(getString(ret.code));
+                    restartAfterwards = ret.restartAfterwards;
+                    if (ret.code != 0) {
+                        sendUpdateUIBroadcastWithMessage(getString(ret.code));
+                        if (restartAfterwards) {
+                            error_count++;
+                        }
+                    }
                     try {
                         Thread.sleep(2000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
+                        error_count++;
                     }
                     if (peer_mac_address == null) {
                         deletePersistentGroups();
                     }
                 }
-                if (peer_mac_address != null) {
+                if (peer_mac_address != null && ret != null && ret.code == 0) {
                     // block the discovery mode due to switch to roaming state
                     setRoaming(true);
                     // tell the UI
@@ -253,6 +265,8 @@ public class WiFiDirectBroadcastService extends Service {
                     String ssid = negFin.getHotspotName();
                     String key = negFin.getHotspotPassword();
                     sendStartRoamingBroadcast(peer_mac_address, ssid, key);
+                } else if (peer_mac_address != null) {
+                    PeerStore.getInstance().unselectAll();
                 }
             }
 
@@ -262,6 +276,7 @@ public class WiFiDirectBroadcastService extends Service {
             Thread thread = new Thread(task);
             threads.add(thread);
             AsyncTask.execute(thread);
+            //stopDiscovery(null);
         } else {
             Log.d(TAG, "startNegServer: BLOCKED due to roaming state");
         }
@@ -287,13 +302,17 @@ public class WiFiDirectBroadcastService extends Service {
                         getBaseContext()
                 );
                 String peer_mac_address = null;
-                Negotiator.NegotiationReturn negotiationReturn;
-                while (!isRoaming && enabled && peer_mac_address == null) {
+                boolean restartAfterwards = true;
+                Negotiator.NegotiationReturn negotiationReturn = null;
+                while (!isRoaming && enabled && peer_mac_address == null && restartAfterwards) {
                     Log.d(TAG, "run: " + enabled);
                     System.out.println(" *******+ work as client *******");
                     negotiationReturn = negotiator.workAsClient(address.getHostAddress());
                     peer_mac_address = negotiationReturn.mac;
-                    sendUpdateUIBroadcastWithMessage(getString(negotiationReturn.code));
+                    restartAfterwards = negotiationReturn.restartAfterwards;
+                    if (negotiationReturn.code != 0) {
+                        sendUpdateUIBroadcastWithMessage(getString(negotiationReturn.code));
+                    }
                     try {
                         Thread.sleep(2000);
                     } catch (InterruptedException e) {
@@ -303,7 +322,7 @@ public class WiFiDirectBroadcastService extends Service {
                         deletePersistentGroups();
                     }
                 }
-                if (peer_mac_address != null) {
+                if (peer_mac_address != null && negotiationReturn != null && negotiationReturn.code == 0) {
                     // block the discovery mode due to switch to roaming state
                     setRoaming(true);
                     // tell the UI
@@ -312,6 +331,7 @@ public class WiFiDirectBroadcastService extends Service {
                     String key = negFin.getHotspotPassword();
                     sendStartRoamingBroadcast(peer_mac_address, ssid, key);
                 }
+                PeerStore.getInstance().unselectAll();
             }
         };
         if (!isRoaming()) {

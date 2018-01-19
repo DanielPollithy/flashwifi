@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -176,9 +177,32 @@ public class MainActivity extends AppCompatActivity
         return true;
     }
 
+    private boolean settingsAreReady(){
+        // check whether all necessary settings were set by the user
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        String[] intVariables = new String[]{
+                "edit_text_min_minutes",
+                "edit_text_sell_price",
+                "edit_text_min_minutes",
+                "edit_text_max_minutes",
+                "edit_text_buy_price",
+                "edit_text_client_minutes"
+        };
+        String val;
+        for (String variable: intVariables) {
+            val = prefs.getString(variable, null);
+            if (val == null) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public void startSearchFragment() {
         if (mBound && mService.isInRoleHotspot()) {
             Toast.makeText(this, "Can't start search because you are hotspot", Toast.LENGTH_SHORT).show();
+        } else if (!settingsAreReady()) {
+            Toast.makeText(this, "Navigate to settings and assign all variables", Toast.LENGTH_SHORT).show();
         } else {
             Fragment fragment = new SearchFragment();
 
@@ -202,11 +226,11 @@ public class MainActivity extends AppCompatActivity
     public void startHotspotFragment() {
         if (mBound && mService.isInRoleConsumer()) {
             Toast.makeText(this, "Can't start hotspot because you are searching", Toast.LENGTH_SHORT).show();
+        } else if (!settingsAreReady()) {
+            Toast.makeText(this, "Navigate to settings and assign all variables", Toast.LENGTH_SHORT).show();
         } else {
             Fragment fragment = new HotspotFragment();
             Bundle args = new Bundle();
-            //args.putInt(PlanetFragment.ARG_PLANET_NUMBER, position);
-            //fragment.setArguments(args);
 
             // Insert the fragment by replacing any existing fragment
             FragmentManager fragmentManager = getFragmentManager();

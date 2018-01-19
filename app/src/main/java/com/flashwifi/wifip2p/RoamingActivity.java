@@ -105,6 +105,7 @@ public class RoamingActivity extends AppCompatActivity {
                 } else if (message.equals("AP FAILED")) {
                     apConnected.setChecked(false);
                     Toast.makeText(getApplicationContext(), "Could not create Access point", Toast.LENGTH_LONG).show();
+                    exitRoaming();
                 } else if (message.equals("AP STOPPED")) {
                     apConnected.setChecked(false);
                 } else if (message.equals("Channel established")) {
@@ -116,6 +117,12 @@ public class RoamingActivity extends AppCompatActivity {
                     if (mService.isInRoleHotspot()) {
                         showRetransferCard();
                     }
+                } else if (message.equals("Socket exception")) {
+                    //Toast.makeText(getApplicationContext(), "Socket exception", Toast.LENGTH_LONG).show();
+                    //exitRoaming();
+                } else if (message.equals("Exit")) {
+                    Toast.makeText(getApplicationContext(), "Can't connect", Toast.LENGTH_LONG).show();
+                    exitRoaming();
                 }
             }
 

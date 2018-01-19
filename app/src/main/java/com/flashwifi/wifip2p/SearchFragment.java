@@ -43,7 +43,7 @@ public class SearchFragment extends Fragment {
 
     WiFiDirectBroadcastService mService;
     boolean mBound = false;
-    BroadcastReceiver updateUIReceiver;
+    BroadcastReceiver updateUIReceiver = null;
 
     ArrayList<String> arrayList;
     PeerListAdapter peerListAdapter;
@@ -87,8 +87,8 @@ public class SearchFragment extends Fragment {
     }
 
     private void updateList() {
-        peerListAdapter.notifyDataSetInvalidated();
         peerListAdapter.clear();
+        // peerListAdapter.notifyDataSetInvalidated();
         peerListAdapter.addAll(PeerStore.getInstance().getPeerArrayList());
         peerListAdapter.notifyDataSetChanged();
     }
@@ -97,15 +97,17 @@ public class SearchFragment extends Fragment {
         updateList();
 
         String what = intent.getStringExtra("what");
-        Log.d(">>>>>>>>>>>>", "updateUi: " + what);
+        String message = intent.getStringExtra("message");
 
-        if (what == null) {
-            what = "";
-        }
-
-        if (what.equals("connectivity_changed")) {
+        if (what != null && what.equals("connectivity_changed")) {
             String currentDeviceConnected = intent.getStringExtra("currentDeviceConnected");
             startNegotiationProtocol(currentDeviceConnected);
+        }
+
+        if (message != null && message.equals("error")) {
+            String snd_message = intent.getStringExtra("snd_message");
+            Snackbar.make(view, snd_message, Snackbar.LENGTH_LONG).setAction("Action", null).show();
+            updateList();
         }
     }
 
@@ -153,9 +155,14 @@ public class SearchFragment extends Fragment {
     @Override
     public void onStop() {
         super.onStop();
-        getActivity().unbindService(mConnection);
-        getActivity().unregisterReceiver(updateUIReceiver);
-        mBound = false;
+        if (mBound) {
+            getActivity().unbindService(mConnection);
+            mBound = false;
+        }
+        if (updateUIReceiver != null) {
+            getActivity().unregisterReceiver(updateUIReceiver);
+            updateUIReceiver = null;
+        }
     }
 
     @Override

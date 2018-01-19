@@ -17,6 +17,7 @@ public class PeerInformation  {
     private WifiP2pDevice wifiP2pDevice;
     private Date lastUpdate;
     private boolean selected;
+    private String errorMessage = "info";
 
     // age stores how long it has been since the last signal from this peer
     // it is not stored in seconds but in update cycles
@@ -85,5 +86,13 @@ public class PeerInformation  {
 
     public void setSelected(boolean selected) {
         this.selected = selected;
+    }
+
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
+    }
+
+    public String getErrorMessage() {
+        return errorMessage;
     }
 }

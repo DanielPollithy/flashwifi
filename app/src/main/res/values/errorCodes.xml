@@ -16,4 +16,5 @@
     <string name="err_client_minutes_out_of_bounds">Client minutes is out of bounds</string>
     <string name="err_timeout">Timeout</string>
     <string name="err_io_exception">IO Exception</string>
+    <string name="err_peer_quit">Peer quit the conversation</string>
 </resources>

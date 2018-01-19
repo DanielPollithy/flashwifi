@@ -83,7 +83,7 @@ public class HotspotFragment extends Fragment {
             WifiP2pInfo p2p_info = mService.getP2p_info();
             WifiP2pGroup wifiP2pGroup = mService.getP2p_group();
 
-            //if (intent.hasExtra("currentDeviceConnected")) {
+            if (intent.hasExtra("currentDeviceConnected")) {
                 //String macAddress = intent.getExtras().getString("currentDeviceConnected");
                 if (network_info.getState() == NetworkInfo.State.CONNECTED) {
                     // ToDo: look for the other device and make sure we are only two
@@ -98,7 +98,7 @@ public class HotspotFragment extends Fragment {
                     }
 
                 }
-            //}
+            }
 
 
 

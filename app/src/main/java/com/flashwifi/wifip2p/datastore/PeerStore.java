@@ -87,6 +87,20 @@ public class PeerStore {
         getOrCreatePeer(macAddress.toLowerCase()).setLatestOffer(offer);
     }
 
+    public void setErrorMessage(String macAddress, String msg) {
+        getOrCreatePeer(macAddress.toLowerCase()).setErrorMessage(msg);
+    }
+
+    public void setSelected(String macAddress, boolean selected) {
+        getOrCreatePeer(macAddress.toLowerCase()).setSelected(selected);
+    }
+
+    public void unselectAll() {
+        for (PeerInformation p: peers.values()) {
+            p.setSelected(false);
+        }
+    }
+
     public void setLatestOfferAnswer(String macAddress, NegotiationOfferAnswer answer) {
         getOrCreatePeer(macAddress.toLowerCase()).setLatestOfferAnswer(answer);
     }

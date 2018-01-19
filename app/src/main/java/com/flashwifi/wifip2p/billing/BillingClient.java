@@ -36,6 +36,7 @@ public class BillingClient {
     private SocketWrapper socketWrapper;
     private static final int PORT = 9199;
     private static final int clientTimeoutMillis = 2 * 60 * 1000;
+    private static final int maxErrorCount = 5;
 
     private BillingOpenChannel billingOpenChannel;
     private BillingOpenChannelAnswer billingOpenChannelAnswer;
@@ -58,7 +59,9 @@ public class BillingClient {
 
 
     public void start(String serverIPAddress) {
-        while (state != State.CLOSED) {
+        int error_count = 0;
+
+        while (state != State.CLOSED && state != State.ERROR) {
             try {
                 // create client socket that connects to server
                 socket = new Socket(serverIPAddress, PORT);
@@ -140,10 +143,38 @@ public class BillingClient {
 
             } catch (SocketException e) {
                 e.printStackTrace();
+                sendUpdateUIBroadcastWithMessage("Socket exception");
+                error_count++;
             } catch (UnknownHostException e) {
+                sendUpdateUIBroadcastWithMessage("UnknownHostException exception");
                 e.printStackTrace();
+                error_count++;
             } catch (IOException e) {
+                sendUpdateUIBroadcastWithMessage("IOException");
                 e.printStackTrace();
+                error_count++;
+            } finally {
+                if (socket != null) {
+                    try {
+                        socketWrapper.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                // sleep in finally case 5 seconds
+                try {
+                    Thread.sleep(1000*5);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                if (error_count >= maxErrorCount) {
+                    // stop trying to connect
+                    state = State.ERROR;
+                    sendUpdateUIBroadcastWithMessage("Exit");
+                }
+
             }
         }
     }
@@ -152,6 +183,7 @@ public class BillingClient {
         NOT_PAIRED,
         ROAMING,
         CLOSE,
-        CLOSED
+        CLOSED,
+        ERROR
     }
 }
