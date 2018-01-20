@@ -12,10 +12,10 @@
             android:id="@+id/nav_start"
             android:icon="@drawable/icon_tethering_on"
             android:title="@string/menuStartHotspot" />
-        <item
+<!--        <item
             android:id="@+id/nav_itp"
             android:icon="@drawable/ic_highlight_black"
-            android:title="@string/initialTrustPayment" />
+            android:title="@string/initialTrustPayment" />-->
 
     </group>
 
@@ -32,12 +32,12 @@
         </menu>
     </item>
 
-    <item android:title="Communicate">
+    <item android:title="Conditions">
         <menu>
-            <item
+<!--            <item
                 android:id="@+id/nav_conditions"
                 android:icon="@drawable/ic_compare_arrows"
-                android:title="@string/navConditions" />
+                android:title="@string/navConditions" />-->
             <item
                 android:id="@+id/nav_settings"
                 android:icon="@drawable/ic_menu_manage"
