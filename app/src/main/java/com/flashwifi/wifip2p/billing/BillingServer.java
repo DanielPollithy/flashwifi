@@ -192,6 +192,7 @@ public class BillingServer {
                     boolean attached = false;
                     while (!attached) {
                         Log.d(TAG, "start: Attach to tangle please");
+                        Thread.sleep(5000);
                     }
                     state = State.FULLY_ATTACHED;
                 }

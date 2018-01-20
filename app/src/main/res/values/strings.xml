@@ -66,5 +66,6 @@
     <string name="roaming_title_client">Roaming (You are consuming)</string>
     <string name="channelClosed">The payment channel was closed.</string>
     <string name="initRetransfer">Initializing retransfer</string>
+    <string name="welcome">Welcome to the Wifi Iota Hotspot App</string>
 
 </resources>

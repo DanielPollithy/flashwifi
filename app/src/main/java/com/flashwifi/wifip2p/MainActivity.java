@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -19,6 +20,7 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -59,7 +61,6 @@ public class MainActivity extends AppCompatActivity
                     ProgressBar progressConnection = (ProgressBar) findViewById(R.id.progressConnection);
                     progressConnection.setVisibility(View.VISIBLE);
                 } catch (Exception e) {
-                    e.printStackTrace();
                 }
                 if (intent.getAction().equals("com.flashwifi.wifip2p.start_roaming")) {
                     startRoamingView(intent.getStringExtra("peer_mac_address"),
@@ -69,6 +70,35 @@ public class MainActivity extends AppCompatActivity
             }
         };
         registerReceiver(updateUIReceiver, filter);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        //unbindWifiBroadcast();
+        unsubscribeFromBroadcast();
+    }
+
+    private void unbindWifiBroadcast() {
+        try {unregisterReceiver(updateUIReceiver);
+            unbindService(mConnection);
+        }
+        catch(IllegalArgumentException e) {
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        initEverything();
+    }
+
+    private void unsubscribeFromBroadcast() {
+        try {
+            unregisterReceiver(updateUIReceiver);
+            updateUIReceiver = null;
+        } catch (Exception e){
+        }
     }
 
     private void initUi() {
@@ -92,9 +122,15 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        // get the secrets from the login screen
+        Intent intent = getIntent();
+        password = intent.getStringExtra("password");
+        seed = intent.getStringExtra("seed");
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -105,17 +141,13 @@ public class MainActivity extends AppCompatActivity
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
-        // get the secrets from the login screen
-        Intent intent = getIntent();
-        password = intent.getStringExtra("password");
-        seed = intent.getStringExtra("seed");
-
-        // Bind to Service
-        Intent intent2 = new Intent(this, WiFiDirectBroadcastService.class);
-        bindService(intent2, mConnection, Context.BIND_AUTO_CREATE);
-
         PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
 
+        Intent intent2 = new Intent(this, WiFiDirectBroadcastService.class);
+        bindService(intent2, mConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    private void initEverything() {
         subscribeToBroadcasts();
         initUi();
     }
@@ -165,13 +197,13 @@ public class MainActivity extends AppCompatActivity
             startSearchFragment();
         } else if (id == R.id.nav_start) {
             startHotspotFragment();
-        } else if (id == R.id.nav_itp) {
-
+//        } else if (id == R.id.nav_itp) {
+//
         } else if (id == R.id.nav_fund) {
             startFundWalletFragment();
         } else if (id == R.id.nav_withdraw) {
             startWithdrawWalletFragment();
-        } else if (id == R.id.nav_conditions) {
+//        } else if (id == R.id.nav_conditions) {
 
         } else if (id == R.id.nav_settings) {
             startSettingsFragment();
@@ -221,6 +253,21 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void startRoamingView(String macAddress, String ssid, String key){
+        // disable WiFi P2P
+        if (mBound) {
+            mService.stopDiscovery(new WifiP2pManager.ActionListener() {
+                @Override
+                public void onSuccess() {
+                    Log.d("MainAct", "discovery stopped");
+                }
+
+                @Override
+                public void onFailure(int i) {
+                    Log.d("MainAct", "discovery could not be stopped");
+                }
+            });
+        }
+
         Intent intent = new Intent(this, RoamingActivity.class);
         intent.putExtra("address", macAddress);
         intent.putExtra("key", key);

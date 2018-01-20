@@ -19,6 +19,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
@@ -74,6 +75,7 @@ public class HotspotFragment extends Fragment {
         Log.d(TAG, "updateUi: Got some network data into the hotspot fragment");
         String numberAvailableDevices = Integer.toString(mService.getArrayList().size());
         TextView text = (TextView) getActivity().findViewById(R.id.numberPeers);
+        text.setVisibility(View.VISIBLE);
         text.setText(String.format("%s peers", numberAvailableDevices));
         final View activity_view = getActivity().findViewById(R.id.drawer_layout);
 
@@ -118,15 +120,41 @@ public class HotspotFragment extends Fragment {
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
 
+        initFragment();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        initFragment();
+    }
+
+    private void initFragment(){
         IntentFilter filter = new IntentFilter();
         filter.addAction("com.flashwifi.wifip2p.update_ui");
+        filter.addAction("com.flashwifi.wifip2p.start_roaming");
+        filter.addAction("com.flashwifi.wifip2p.stop_roaming");
 
         updateUIReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                updateUi(intent);
+                if (intent.getAction().equals("com.flashwifi.wifip2p.start_roaming")) {
+                    String mac = intent.getStringExtra("peer_mac_address");
+                    ToggleButton toggle = (ToggleButton) getActivity().findViewById(R.id.startAPButton);
+                    toggle.setChecked(false);
+                    ProgressBar progressBar = (ProgressBar) getActivity().findViewById(R.id.progressbarAP);
+                    progressBar.setVisibility(View.INVISIBLE);
+                } else if (intent.getAction().equals("com.flashwifi.wifip2p.stop_roaming")) {
+                    ToggleButton toggle = (ToggleButton) getActivity().findViewById(R.id.startAPButton);
+                    toggle.setChecked(false);
+                    ProgressBar progressBar = (ProgressBar) getActivity().findViewById(R.id.progressbarAP);
+                    progressBar.setVisibility(View.INVISIBLE);
+                } else {
+                    updateUi(intent);
+                }
             }
         };
+
         getActivity().registerReceiver(updateUIReceiver, filter);
 
         // Bind to Service
@@ -182,11 +210,16 @@ public class HotspotFragment extends Fragment {
             mService.getPeerList(new WifiP2pManager.ActionListener() {
                 @Override
                 public void onSuccess() {
+                    // show progress wheel
+                    ProgressBar progressBar = (ProgressBar) getActivity().findViewById(R.id.progressbarAP);
+                    progressBar.setVisibility(View.VISIBLE);
                 }
 
                 @Override
                 public void onFailure(int reasonCode) {
                     Snackbar.make(activity_view, "Aaaargh :( Searching problem!", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+                    ProgressBar progressBar = (ProgressBar) getActivity().findViewById(R.id.progressbarAP);
+                    progressBar.setVisibility(View.INVISIBLE);
                 }
             });
         }
@@ -202,6 +235,8 @@ public class HotspotFragment extends Fragment {
                     mService.setInRoleConsumer(false);
                     mService.setInRoleHotspot(false);
                     Snackbar.make(activity_view, "Stopped Hotspot mode", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+                    ProgressBar progressBar = (ProgressBar) getActivity().findViewById(R.id.progressbarAP);
+                    progressBar.setVisibility(View.INVISIBLE);
                 }
 
                 @Override
@@ -209,6 +244,8 @@ public class HotspotFragment extends Fragment {
                     mService.setInRoleConsumer(false);
                     mService.setInRoleHotspot(false);
                     Snackbar.make(activity_view, "Aaaargh :( Problem stopping discovery", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+                    ProgressBar progressBar = (ProgressBar) getActivity().findViewById(R.id.progressbarAP);
+                    progressBar.setVisibility(View.INVISIBLE);
                 }
             });
         }
@@ -222,6 +259,13 @@ public class HotspotFragment extends Fragment {
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                if (mBound) {
+                    if (!mService.isSetup()) {
+                        Snackbar.make(activity_view, "Please enable WiFi P2P", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+                        button.setChecked(false);
+                        return;
+                    }
+                }
                 if (button.isChecked()) {
                     startDiscovery();
                     Snackbar.make(activity_view, "Start Discovery Mode", Snackbar.LENGTH_LONG).setAction("Action", null).show();
@@ -244,8 +288,6 @@ public class HotspotFragment extends Fragment {
             mService = binder.getService();
             mBound = true;
 
-            final ToggleButton button = (ToggleButton) getActivity().findViewById(R.id.startAPButton);
-            button.setChecked(mService.isInRoleHotspot());
         }
 
         @Override

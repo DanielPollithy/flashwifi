@@ -167,7 +167,7 @@ public class Negotiator {
             // WAIT FOR CLIENT
             String hello = socketWrapper.getLine();
 
-            if (hello == null) {
+            if (hello == null || hello.contains("java.net.SocketException")) {
                 return error(R.string.no_hello_received, true);
             }
 
@@ -221,7 +221,7 @@ public class Negotiator {
 
         // RECEIVE OFFER
         String offerString = socketWrapper.getLine();
-        if (offerString == null) {
+        if (offerString == null || offerString.contains("java.net.SocketException")) {
             return error(R.string.err_no_offer_received, true);
         }
 
@@ -271,7 +271,7 @@ public class Negotiator {
         consumer_state = ConsumerState.WAIT_FOR_PASSWORD;
         String finalizationString = socketWrapper.getLine();
 
-        if (finalizationString == null) {
+        if (finalizationString == null || finalizationString.contains("java.net.SocketException")) {
             return error(R.string.err_no_finalization_received, true);
         } else if (answerString.equals("BYE")) {
             return error(R.string.err_peer_quit, false);
@@ -318,7 +318,7 @@ public class Negotiator {
         hotspot_state = HotspotState.WAIT_FOR_ANSWER;
         String answerString = socketWrapper.getLine();
 
-        if (answerString == null) {
+        if (answerString == null || answerString.contains("java.net.SocketException")) {
             return error(R.string.err_no_answer_received, true);
         } else if (answerString.equals("BYE")) {
             return error(R.string.err_peer_quit, false);

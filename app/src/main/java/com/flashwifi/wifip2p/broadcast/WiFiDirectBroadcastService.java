@@ -77,6 +77,11 @@ public class WiFiDirectBroadcastService extends Service {
     AccessPointTask apTask;
     boolean apRuns = false;
     ConnectTask connectTask;
+    private boolean negotiatorRunning = false;
+
+    public boolean isSetup() {
+        return setup;
+    }
 
     public void enableWiFi() {
         WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
@@ -146,7 +151,8 @@ public class WiFiDirectBroadcastService extends Service {
             };
             Thread thread = new Thread(task);
             threads.add(thread);
-            AsyncTask.execute(thread);
+            thread.start();
+            //AsyncTask.execute(thread);
         }
     }
 
@@ -268,14 +274,18 @@ public class WiFiDirectBroadcastService extends Service {
                 } else if (peer_mac_address != null) {
                     PeerStore.getInstance().unselectAll();
                 }
+                negotiatorRunning = false;
             }
 
 
         };
-        if (!isRoaming()) {
+        if (!isRoaming() && !negotiatorRunning) {
+            negotiatorRunning = true;
             Thread thread = new Thread(task);
             threads.add(thread);
-            AsyncTask.execute(thread);
+            //AsyncTask.execute(thread);
+            stopAllTasks();
+            thread.start();
             //stopDiscovery(null);
         } else {
             Log.d(TAG, "startNegServer: BLOCKED due to roaming state");
@@ -304,7 +314,7 @@ public class WiFiDirectBroadcastService extends Service {
                 String peer_mac_address = null;
                 boolean restartAfterwards = true;
                 Negotiator.NegotiationReturn negotiationReturn = null;
-                while (!isRoaming && enabled && peer_mac_address == null && restartAfterwards) {
+                while (!isRoaming && enabled && peer_mac_address == null && restartAfterwards && negotiatorRunning) {
                     Log.d(TAG, "run: " + enabled);
                     System.out.println(" *******+ work as client *******");
                     negotiationReturn = negotiator.workAsClient(address.getHostAddress());
@@ -330,14 +340,19 @@ public class WiFiDirectBroadcastService extends Service {
                     String ssid = negFin.getHotspotName();
                     String key = negFin.getHotspotPassword();
                     sendStartRoamingBroadcast(peer_mac_address, ssid, key);
+                } else {
+                    Log.d(TAG, "run: could not start roaming");
                 }
                 PeerStore.getInstance().unselectAll();
+                negotiatorRunning = false;
             }
         };
-        if (!isRoaming()) {
+        if (!isRoaming() && !negotiatorRunning) {
+            negotiatorRunning = true;
             Thread thread = new Thread(task);
             threads.add(thread);
-            AsyncTask.execute(thread);
+            stopAllTasks();
+            thread.start();
         } else {
             Log.d(TAG, "startNegotiationClient: BLOCKED due to roaming state");
         }
@@ -424,8 +439,10 @@ public class WiFiDirectBroadcastService extends Service {
     }
 
     public void startDiscoveryMode(WifiP2pManager.ActionListener action_listener) {
-        mManager.discoverPeers(mChannel, action_listener);
-        discoveryModeActive = true;
+        if (setup) {
+            mManager.discoverPeers(mChannel, action_listener);
+            discoveryModeActive = true;
+        }
     }
 
     public boolean isInRoleHotspot() {
@@ -449,10 +466,14 @@ public class WiFiDirectBroadcastService extends Service {
     }
 
     public void setRoaming(boolean roaming) {
-        if (roaming) {
+        if (!roaming) {
             stopAllTasks();
         }
         isRoaming = roaming;
+    }
+
+    public void freezeWiFiP2P() {
+
     }
 
 
@@ -493,7 +514,9 @@ public class WiFiDirectBroadcastService extends Service {
     }
 
     public void getPeerList(WifiP2pManager.ActionListener action_listener) {
-        mManager.discoverPeers(mChannel, action_listener);
+        if (setup) {
+            mManager.discoverPeers(mChannel, action_listener);
+        }
     }
 
     public void stopDiscovery(WifiP2pManager.ActionListener action_listener) {

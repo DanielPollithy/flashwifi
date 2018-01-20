@@ -153,6 +153,19 @@ public class SearchFragment extends Fragment {
     }
 
     @Override
+    public void onPause() {
+        super.onPause();
+        if (mBound) {
+            getActivity().unbindService(mConnection);
+            mBound = false;
+        }
+        if (updateUIReceiver != null) {
+            getActivity().unregisterReceiver(updateUIReceiver);
+            updateUIReceiver = null;
+        }
+    }
+
+    @Override
     public void onStop() {
         super.onStop();
         if (mBound) {
@@ -169,14 +182,36 @@ public class SearchFragment extends Fragment {
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
 
+       initFragment();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        initFragment();
+    }
+
+    private void initFragment() {
         IntentFilter filter = new IntentFilter();
         filter.addAction("com.flashwifi.wifip2p.update_ui");
+        filter.addAction("com.flashwifi.wifip2p.start_roaming");
+        filter.addAction("com.flashwifi.wifip2p.stop_roaming");
 
         updateUIReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 Log.d("", "onReceive: FRAGMENT HAT WAS");
-                updateUi(intent);
+                if (intent.getAction().equals("com.flashwifi.wifip2p.start_roaming")) {
+                    String mac = intent.getStringExtra("peer_mac_address");
+                    ToggleButton toggle = (ToggleButton) getActivity().findViewById(R.id.startSearchButton);
+                    toggle.setChecked(false);
+                } else if (intent.getAction().equals("com.flashwifi.wifip2p.stop_roaming")) {
+                    peerListAdapter.clear();
+                    ToggleButton toggle = (ToggleButton) getActivity().findViewById(R.id.startSearchButton);
+                    toggle.setChecked(false);
+                } else {
+                    updateUi(intent);
+                }
             }
         };
         getActivity().registerReceiver(updateUIReceiver, filter);
@@ -195,10 +230,17 @@ public class SearchFragment extends Fragment {
         toolbar.setTitle("Discover Peers");
 
         final ToggleButton toggle = (ToggleButton) getActivity().findViewById(R.id.startSearchButton);
-        //toggle.setChecked(mService.isInRoleConsumer());
+
         toggle.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(final View view) {
+                if (mBound) {
+                    if (!mService.isSetup()) {
+                        Snackbar.make(view, "Please enable WiFi P2P", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+                        toggle.setChecked(false);
+                        return;
+                    }
+                }
                 updateList();
                 if (toggle.isChecked()) {
                     if (mBound) {
@@ -314,9 +356,6 @@ public class SearchFragment extends Fragment {
             WiFiDirectBroadcastService.LocalBinder binder = (WiFiDirectBroadcastService.LocalBinder) service;
             mService = binder.getService();
             mBound = true;
-
-            final ToggleButton toggle = (ToggleButton) getActivity().findViewById(R.id.startSearchButton);
-            toggle.setChecked(mService.isInRoleConsumer());
         }
 
         @Override
