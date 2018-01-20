@@ -18,7 +18,7 @@
             android:divider="@null"
             android:dividerHeight="0dp"
             android:key="pref_key_reset_data_usage"
-            android:title="Reset Data Usage"/>
+            android:title="Reset data usage"/>
 
     </PreferenceCategory>
 
@@ -32,7 +32,7 @@
             android:key="pref_key_network_timeout"
             android:entries="@array/networkTimeoutPref"
             android:entryValues="@array/networkTimeoutPref"
-            android:title="Network Timeout" />
+            android:title="Network timeout" />
 
         <ListPreference
             android:key="pref_key_units"
@@ -65,23 +65,23 @@
             android:inputType="number"
             android:selectAllOnFocus="true"
             android:singleLine="true"
-            android:title="Sell Price" />
+            android:title="Sell price" />
 
         <EditTextPreference
             android:defaultValue="15"
-            android:key="edit_text_min_minutes"
             android:inputType="number"
+            android:key="edit_text_sell_min_minutes"
             android:selectAllOnFocus="true"
             android:singleLine="true"
-            android:title="Minimum selling durance [minutes]" />
+            android:title="Minimum sell duration (minutes)" />
 
         <EditTextPreference
             android:defaultValue="100"
-            android:key="edit_text_max_minutes"
+            android:key="edit_text_sell_max_minutes"
             android:inputType="number"
             android:selectAllOnFocus="true"
             android:singleLine="true"
-            android:title="Maximum selling durance [minutes]" />
+            android:title="Maximum sell duration (minutes)" />
 
     </PreferenceCategory>
 
@@ -96,7 +96,7 @@
             android:inputType="number"
             android:selectAllOnFocus="true"
             android:singleLine="true"
-            android:title="Max Buy Price" />
+            android:title="Max buy price" />
 
         <EditTextPreference
             android:defaultValue="60"
@@ -104,7 +104,7 @@
             android:inputType="number"
             android:selectAllOnFocus="true"
             android:singleLine="true"
-            android:title="Client roaming durance" />
+            android:title="Client roaming duration" />
 
     </PreferenceCategory>
 

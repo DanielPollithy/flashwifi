@@ -123,8 +123,13 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onStop() {
         super.onStop();
-        unregisterReceiver(updateUIReceiver);
-        unbindService(mConnection);
+
+        try {unregisterReceiver(updateUIReceiver);
+            unbindService(mConnection);
+        }
+        catch(IllegalArgumentException e) {
+            System.out.println(e);
+        }
     }
 
     @Override

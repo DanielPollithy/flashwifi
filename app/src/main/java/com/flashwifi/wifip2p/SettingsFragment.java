@@ -43,11 +43,20 @@ public class SettingsFragment extends PreferenceFragment implements SharedPrefer
             case "pref_key_switch_testnet":
                 Toast.makeText(getActivity(), "Testnet on/off Changed", Toast.LENGTH_SHORT).show();
                 break;
+            case "edit_text_sell_price":
+                Toast.makeText(getActivity(), "Hotspot Sell Price Changed", Toast.LENGTH_SHORT).show();
+                break;
+            case "edit_text_sell_min_minutes":
+                Toast.makeText(getActivity(), "Hotspot Min sell duration changed", Toast.LENGTH_SHORT).show();
+                break;
+            case "edit_text_sell_max_minutes":
+                Toast.makeText(getActivity(), "Hotspot Max sell duration changed", Toast.LENGTH_SHORT).show();
+                break;
             case "edit_text_buy_price":
                 Toast.makeText(getActivity(), "Buy Price Changed", Toast.LENGTH_SHORT).show();
                 break;
-            case "edit_text_sell_price":
-                Toast.makeText(getActivity(), "Sell Price Changed", Toast.LENGTH_SHORT).show();
+            case "edit_text_client_minutes":
+                Toast.makeText(getActivity(), "Client duration duration changed", Toast.LENGTH_SHORT).show();
                 break;
         }
     }
