@@ -15,6 +15,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -210,7 +211,10 @@ public class HomeActivity extends AppCompatActivity {
         } else {
             final EditText field = (EditText) findViewById(R.id.password);
             field.setText("");
-            Snackbar.make(view, getString(R.string.wrong_password), Snackbar.LENGTH_LONG).setAction("Action", null).show();
+            Toast toast= Toast.makeText(getApplicationContext(),
+                    getString(R.string.wrong_password), Toast.LENGTH_SHORT);
+            toast.setGravity(Gravity.TOP|Gravity.CENTER_HORIZONTAL, 0, 0);
+            toast.show();
         }
     }
 
@@ -250,9 +254,17 @@ public class HomeActivity extends AppCompatActivity {
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(final View view) {
-                setProgressBar(50);
-                String password = new_password_field.getText().toString();
-                storeNewSeed(seed, password);
+                if (new_password_field.getText().toString().length() > 0) {
+                    setProgressBar(50);
+                    String password = new_password_field.getText().toString();
+                    storeNewSeed(seed, password);
+                } else {
+                    Toast toast= Toast.makeText(getApplicationContext(),
+                            "No blank password allowed", Toast.LENGTH_SHORT);
+                    toast.setGravity(Gravity.TOP|Gravity.CENTER_HORIZONTAL, 0, 0);
+                    toast.show();
+                }
+
             }
         });
     }
