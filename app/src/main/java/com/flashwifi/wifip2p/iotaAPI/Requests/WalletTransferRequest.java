@@ -1,9 +1,11 @@
 package com.flashwifi.wifip2p.iotaAPI.Requests;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Message;
+import android.preference.PreferenceManager;
 
 import com.flashwifi.wifip2p.AddressBalanceTransfer;
 
@@ -39,22 +41,25 @@ public class WalletTransferRequest extends AsyncTask<Void, Void, Void> {
         context = inContext;
         mHandler = inMHandler;
 
-        //Mainnet node:
-        /*
-        api = new IotaAPI.Builder()
-                .protocol("http")
-                .host("node.iotawallet.info")
-                .port("14265")
-                .build();
-        */
+        SharedPreferences prefManager = PreferenceManager.getDefaultSharedPreferences(context);
+        Boolean testnet = prefManager.getBoolean("pref_key_switch_testnet",false);
 
-        //Testnet node:
-        api = new IotaAPI.Builder()
-                .protocol("https")
-                .host("testnet140.tangle.works")
-                .port("443")
-                .build();
-
+        if(testnet){
+            //Testnet node:
+            api = new IotaAPI.Builder()
+                    .protocol("https")
+                    .host("testnet140.tangle.works")
+                    .port("443")
+                    .build();
+        }
+        else{
+            //Mainnet node:
+            api = new IotaAPI.Builder()
+                    .protocol("http")
+                    .host("node.iotawallet.info")
+                    .port("14265")
+                    .build();
+        }
     }
 
     @Override
