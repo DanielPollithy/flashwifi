@@ -135,6 +135,12 @@ public class RoamingActivity extends AppCompatActivity {
 
     }
 
+    private void stopRoamingBroadcast() {
+        Intent local = new Intent();
+        local.setAction("com.flashwifi.wifip2p.stop_roaming");
+        this.sendBroadcast(local);
+    }
+
     private void showRetransferCard() {
         CardView cardView = (CardView) findViewById(R.id.card_view_tangle_attachment);
         cardView.setVisibility(View.VISIBLE);
@@ -341,6 +347,7 @@ public class RoamingActivity extends AppCompatActivity {
         TextView stopText = (TextView) findViewById(R.id.stopText);
         stopText.setVisibility(View.VISIBLE);
 
+        stopRoamingBroadcast();
 
         Toast.makeText(getApplicationContext(), "Press BACK now", Toast.LENGTH_LONG).show();
     }
