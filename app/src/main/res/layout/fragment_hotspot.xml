@@ -9,6 +9,7 @@
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
+            android:paddingTop="25dp"
             android:text="@string/hotspotIntroduction"
             android:textSize="20sp" />
 
@@ -25,6 +26,7 @@
             style="?android:attr/progressBarStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:paddingTop="25dp"
             android:visibility="invisible" />
 
         <TextView
@@ -32,6 +34,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
+            android:visibility="invisible"
             android:text="0 peers"
             android:textSize="30sp" />
 
