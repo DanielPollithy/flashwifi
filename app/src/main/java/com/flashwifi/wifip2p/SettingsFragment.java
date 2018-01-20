@@ -1,11 +1,15 @@
 package com.flashwifi.wifip2p;
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.Preference;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceScreen;
+import android.text.InputType;
+import android.widget.EditText;
 import android.widget.Toast;
 
 import com.pddstudio.preferences.encrypted.EncryptedPreferences;
@@ -15,6 +19,9 @@ import com.pddstudio.preferences.encrypted.EncryptedPreferences;
  */
 
 public class SettingsFragment extends PreferenceFragment implements SharedPreferences.OnSharedPreferenceChangeListener {
+
+    String password = "";
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -74,6 +81,7 @@ public class SettingsFragment extends PreferenceFragment implements SharedPrefer
                 break;
             case "pref_key_reset_password":
                 Toast.makeText(getActivity(), "Reset Password", Toast.LENGTH_SHORT).show();
+                askPassword();
                 break;
             case "pref_key_reset_wallet":
                 Toast.makeText(getActivity(), "Reset Wallet", Toast.LENGTH_SHORT).show();
@@ -82,19 +90,84 @@ public class SettingsFragment extends PreferenceFragment implements SharedPrefer
         return super.onPreferenceTreeClick(preferenceScreen, preference);
     }
 
-    public void updatePassword(String password){
+    private void askPassword() {
+        Context context = getActivity();
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("Enter current password");
+
+        final EditText input = new EditText(context);
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        builder.setView(input);
+
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                password = input.getText().toString();
+                updatePassword();
+            }
+        });
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+                password = "";
+            }
+        });
+        builder.show();
+    }
+
+    public void updatePassword(){
+
+        if(password.equals("")){
+            //Blank Password
+            Toast.makeText(getActivity(), "Current password cannot be blank.", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         Context context = getActivity();
         EncryptedPreferences encryptedPreferences = new EncryptedPreferences.Builder(context).withEncryptionPassword(password).build();
         String seed = encryptedPreferences.getString(getString(R.string.encrypted_seed), null);
 
         if (seed != null && context != null) {
-            //Correct password, re-store seed with new password
-            EncryptedPreferences encryptedPreferencesUpdated = new EncryptedPreferences.Builder(context).withEncryptionPassword(password).build();
-            encryptedPreferencesUpdated.edit().putString(getString(R.string.encrypted_seed), seed).apply();
+            //Correct password, re-store seed with new input password
+            AlertDialog.Builder builder = new AlertDialog.Builder(context);
+            builder.setTitle("Enter new password");
+
+            final EditText input = new EditText(context);
+            input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+            builder.setView(input);
+
+            builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    String newPassword = input.getText().toString();
+                    if(!newPassword.equals("")){
+                        EncryptedPreferences encryptedPreferencesRemove = new EncryptedPreferences.Builder(context).withEncryptionPassword(password).build();
+                        encryptedPreferencesRemove.edit().remove(getString(R.string.encrypted_seed)).apply();
+
+                        EncryptedPreferences encryptedPreferencesUpdated = new EncryptedPreferences.Builder(context).withEncryptionPassword(newPassword).build();
+                        encryptedPreferencesUpdated.edit().putString(getString(R.string.encrypted_seed), seed).apply();
+                        password = "";
+                        Toast.makeText(getActivity(), "Password changed.", Toast.LENGTH_SHORT).show();
+                    }
+                    else{
+                        password = "";
+                        Toast.makeText(getActivity(), "New password cannot be blank.", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+            builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.cancel();
+                    password = "";
+                }
+            });
+            builder.show();
         }
         else{
             //Wrong Password
+            Toast.makeText(getActivity(), "Wrong Password. Please try again.", Toast.LENGTH_SHORT).show();
         }
     }
 
