@@ -15,7 +15,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.flashwifi.wifip2p.iotaAPI.Requests.WalletAddressAndBalanceChecker;
+import com.flashwifi.wifip2p.iotaAPI.Requests.WalletBalanceChecker;
 
 import net.glxn.qrgen.android.QRCode;
 
@@ -45,7 +45,7 @@ public class FundWalletFragment extends Fragment {
     private Handler mHandler;
 
     private static Boolean transactionInProgress = false;
-    private WalletAddressAndBalanceChecker addressAndBalanceChecker;
+    private WalletBalanceChecker addressAndBalanceChecker;
 
     public FundWalletFragment() {
         // Required empty public constructor
@@ -84,19 +84,19 @@ public class FundWalletFragment extends Fragment {
                         hideLoadingGIF();
                         transactionInProgress = false;
 
-                        if(returnStatus == "noError"){
+                        if(returnStatus.equals("noError")){
                             balanceTextView.setText(balance + " i");
                             addressTextView.setText(depositAddress);
                             createAddressQRCode(depositAddress);
                             makeToastFundWalletFragment("Balance and address updated");
                         }
-                        else if (returnStatus == "hostError"){
+                        else if (returnStatus.equals("hostError")){
                             makeToastFundWalletFragment("Unable to reach host (node)");
                         }
-                        else if (returnStatus == "addressError"){
+                        else if (returnStatus.equals("addressError")){
                             makeToastFundWalletFragment("Error getting address");
                         }
-                        else if (returnStatus == "balanceError"){
+                        else if (returnStatus.equals("balanceError")){
                             makeToastFundWalletFragment("Error getting balance. May not be able to resolve host/node");
                         }
                         else{
@@ -191,7 +191,7 @@ public class FundWalletFragment extends Fragment {
 
     private void getBalance(){
         transactionInProgress = true;
-        addressAndBalanceChecker = new WalletAddressAndBalanceChecker(getActivity(),getActivity().getString(R.string.preference_file_key),seed, mHandler,FUND_WALLET,true);
+        addressAndBalanceChecker = new WalletBalanceChecker(getActivity(),getActivity().getString(R.string.preference_file_key),seed, mHandler,FUND_WALLET,true);
         addressAndBalanceChecker.execute();
     }
 

@@ -13,16 +13,13 @@ import android.preference.PreferenceManager;
 
 import com.flashwifi.wifip2p.AddressBalanceTransfer;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import jota.IotaAPI;
 import jota.dto.response.GetBalancesResponse;
-import jota.dto.response.GetNewAddressResponse;
 import jota.error.ArgumentException;
-import jota.model.Transaction;
 
-public class WalletAddressAndBalanceChecker extends AsyncTask<Void, Void, Void> {
+public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
 
     private static final int BALANCE_RETRIEVE_TASK_COMPLETE = 1;
 
@@ -39,7 +36,7 @@ public class WalletAddressAndBalanceChecker extends AsyncTask<Void, Void, Void> 
 
     //GetNodeInfoResponse response = api.getNodeInfo();
 
-    public WalletAddressAndBalanceChecker(Context inActivity, String inPrefFile, String inSeed, Handler inMHandler, int inType, Boolean inUpdateMessage) {
+    public WalletBalanceChecker(Context inActivity, String inPrefFile, String inSeed, Handler inMHandler, int inType, Boolean inUpdateMessage) {
         context = inActivity;
         prefFile = inPrefFile;
         seed = inSeed;
@@ -71,9 +68,11 @@ public class WalletAddressAndBalanceChecker extends AsyncTask<Void, Void, Void> 
     @Override
     protected Void doInBackground(Void... voids) {
         if(context != null){
-            List<String> addressList = getAddress(seed);
 
-            if(addressList != null && addressList.get(0) == "Unable to resolve host"){
+            WalletAddressChecker addressChecker = new WalletAddressChecker(context,prefFile);
+            List<String> addressList = addressChecker.getAddress(seed);
+
+            if(addressList != null && addressList.get(0).equals("Unable to resolve host")){
                 AddressBalanceTransfer addressBalanceTransfer = new AddressBalanceTransfer(null,null,"hostError");
                 Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE, addressBalanceTransfer);
                 completeMessage.sendToTarget();
@@ -129,75 +128,6 @@ public class WalletAddressAndBalanceChecker extends AsyncTask<Void, Void, Void> 
             return balanceArray[balanceArray.length-1];
         }
 
-    }
-
-    public List<String> getAddress(String seed) {
-
-        Boolean foundAddress = false;
-        List<String> addressList = new ArrayList<>();
-        int keyIndex = getKeyIndex();
-
-        while(foundAddress == false){
-
-            GetNewAddressResponse addressResponse = null;
-            try {
-                addressResponse = api.getNewAddress(seed, 2, keyIndex, false, 1, false);
-            } catch (ArgumentException e) {
-                e.printStackTrace();
-            }
-
-            if(addressResponse != null) {
-                addressList.add(addressResponse.getAddresses().get(0));
-
-                String[] addressesCheckArray = new String[1];
-                addressesCheckArray[0] = addressResponse.getAddresses().get(0);
-
-                List<Transaction> transactionsForAddress = null;
-                try {
-                    transactionsForAddress = api.findTransactionObjectsByAddresses(addressesCheckArray);
-                } catch (ArgumentException | IllegalStateException | IllegalAccessError e) {
-                    e.printStackTrace();
-                    if(e.getMessage().contains("Unable to resolve host")){
-                        List<String> errorStringList = new ArrayList<>();
-                        errorStringList.add("Unable to resolve host");
-                        return errorStringList;
-                    }
-                }
-
-                if(transactionsForAddress.isEmpty() || (transactionsForAddress.size() == 0 || transactionsForAddress.equals(null))){
-                    //Transactions not found, use this address
-                    foundAddress = true;
-                }
-                else{
-                    //Found transactions, increment for new address
-                    keyIndex = keyIndex + 1;
-                }
-            }
-        }
-
-        if(keyIndex == 0){
-            //Put the initial address to search. No transactions for the seed yet.
-            putKeyIndex(keyIndex);
-        }
-        else{
-            //Put the second last address to search
-            putKeyIndex(keyIndex-1);
-        }
-        return addressList;
-    }
-
-    private int getKeyIndex() {
-        SharedPreferences sharedPref = context.getSharedPreferences(prefFile, Context.MODE_PRIVATE);
-        int keyIndex = sharedPref.getInt("keyIndex",0);
-        return keyIndex;
-    }
-
-    private void putKeyIndex(int inKeyIndex) {
-        SharedPreferences sharedPref = context.getSharedPreferences(
-                prefFile, Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPref.edit();
-        editor.putInt("keyIndex", inKeyIndex);
-        editor.apply();
     }
 
 }
