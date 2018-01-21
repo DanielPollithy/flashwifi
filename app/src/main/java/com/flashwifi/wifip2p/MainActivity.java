@@ -324,6 +324,9 @@ public class MainActivity extends AppCompatActivity
 
     private void startSettingsFragment() {
         Fragment fragment = new SettingsFragment();
+        Bundle bundle = new Bundle();
+        bundle.putString("seed", seed);
+        fragment.setArguments(bundle);
         fragment.setRetainInstance(true);
 
         // Insert the fragment by replacing any existing fragment

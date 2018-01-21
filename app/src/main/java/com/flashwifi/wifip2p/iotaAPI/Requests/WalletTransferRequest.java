@@ -23,6 +23,7 @@ public class WalletTransferRequest extends AsyncTask<Void, Void, Void> {
 
     private static IotaAPI api;
     private static Context context;
+    Boolean testnet;
     private String appWalletSeed;
     private String sendAddress;
     private String sendAmount;
@@ -42,9 +43,10 @@ public class WalletTransferRequest extends AsyncTask<Void, Void, Void> {
         mHandler = inMHandler;
 
         SharedPreferences prefManager = PreferenceManager.getDefaultSharedPreferences(context);
-        Boolean testnet = prefManager.getBoolean("pref_key_switch_testnet",false);
+        testnet = prefManager.getBoolean("pref_key_switch_testnet",false);
 
         if(testnet){
+
             //Testnet node:
             api = new IotaAPI.Builder()
                     .protocol("https")
@@ -64,8 +66,6 @@ public class WalletTransferRequest extends AsyncTask<Void, Void, Void> {
 
     @Override
     protected Void doInBackground(Void... voids) {
-        sendRequest();
-
         String result = null;
 
         if(context != null){
@@ -88,25 +88,26 @@ public class WalletTransferRequest extends AsyncTask<Void, Void, Void> {
         SendTransferResponse sendTransferResponse = null;
 
         try {
-                //Mainnet
-                //sendTransferResponse = api.sendTransfer(appWalletSeed, 2, 4, 18, transfers, null, null, false);
-
+            if(testnet) {
                 //Testnet
                 sendTransferResponse = api.sendTransfer(appWalletSeed, 2, 4, 9, transfers, null, null, false);
-
+            }
+            else{
+                //Mainnet
+                sendTransferResponse = api.sendTransfer(appWalletSeed, 2, 4, 18, transfers, null, null, false);
+            }
         } catch (ArgumentException | IllegalAccessError | IllegalStateException e) {
             if (e instanceof ArgumentException) {
                 if (e.getMessage().contains("Sending to a used address.") || e.getMessage().contains("Private key reuse detect!") || e.getMessage().contains("Send to inputs!")) {
                     transferResult = "Sending to a used address/Private key reuse detect. Error Occurred.";
                 }
-                else if(e.getMessage().contains("Failed to connect to")){
-                    transferResult = "Failed to connect to";
+                else if(e.getMessage().contains("Failed to connect to node")){
+                    transferResult = "Failed to connect to node";
                 }
                 else{
                     transferResult = "Network Error: Attaching new address failed or Transaction failed";
                 }
             }
-
             if (e instanceof IllegalAccessError) {
                 transferResult = "Local POW needs to be enabled";
             }
@@ -121,14 +122,12 @@ public class WalletTransferRequest extends AsyncTask<Void, Void, Void> {
                     break;
                 }
             }
-
             if(success){
                 transferResult = "Sent";
             }
             else{
                 transferResult = "Transfer not successful, check transfer status via Tangle explorer";
             }
-
         }
         else{
             transferResult = "Transfer error: Send Response not received";

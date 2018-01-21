@@ -5,26 +5,39 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.preference.Preference;
 import android.preference.PreferenceFragment;
+import android.preference.PreferenceManager;
 import android.preference.PreferenceScreen;
 import android.text.InputType;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.flashwifi.wifip2p.iotaAPI.Requests.WalletTestnetTokenGen;
 import com.pddstudio.preferences.encrypted.EncryptedPreferences;
-
-/**
- * Created by Toby on 1/16/2018.
- */
 
 public class SettingsFragment extends PreferenceFragment implements SharedPreferences.OnSharedPreferenceChangeListener {
 
-    String password = "";
+    private String password = "";
+    private String seed = "";
+
+    private static final int TOKEN_TESTNET_RETRIEVE_TASK_COMPLETE = 0;
+    private static final int TOKEN_TESTNET_STATUS_UPDATE = 1;
+
+    private Handler mHandler;
+    private Preference testnetFundAddPref;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        Bundle bundle = this.getArguments();
+        if (bundle != null) {
+            seed = bundle.getString("seed");
+        }
 
         // Load the preferences from an XML resource
         addPreferencesFromResource(R.xml.preferences);
@@ -33,37 +46,60 @@ public class SettingsFragment extends PreferenceFragment implements SharedPrefer
         getPreferenceScreen().getSharedPreferences()
                 .registerOnSharedPreferenceChangeListener(this);
 
+        //Handle post-asynctask activities of updating UI
+        mHandler = new Handler(Looper.getMainLooper()) {
+            @Override
+            public void handleMessage(Message inputMessage) {
+                String result = (String) inputMessage.obj;
+                switch (inputMessage.what) {
+                    case TOKEN_TESTNET_STATUS_UPDATE:
+                        if(result.equals("Sending")){
+                            testnetFundAddPref.setSummary("Sending...");
+                        }
+                        break;
+                    case TOKEN_TESTNET_RETRIEVE_TASK_COMPLETE:
+                        if(result.equals("Sent")){
+                            makeToastSettingsFragment("2000i generated and added to testnet wallet. Check balance.");
+                        }
+                        else{
+                            makeToastSettingsFragment(result);
+                        }
+                        testnetFundAddPref.setSummary("");
+                        break;
+                }
+            }
+        };
     }
 
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
         switch(key){
             case "pref_key_security":
-                Toast.makeText(getActivity(), "Security Changed", Toast.LENGTH_SHORT).show();
+                makeToastSettingsFragment("Security Changed");
                 break;
             case "pref_key_network_timeout":
-                Toast.makeText(getActivity(), "Network Timeout Changed", Toast.LENGTH_SHORT).show();
+                makeToastSettingsFragment("Network Timeout Changed");
                 break;
             case "pref_key_units":
-                Toast.makeText(getActivity(), "Units Changed", Toast.LENGTH_SHORT).show();
+                makeToastSettingsFragment("Units Changed");
                 break;
             case "pref_key_switch_testnet":
-                Toast.makeText(getActivity(), "Testnet on/off Changed", Toast.LENGTH_SHORT).show();
+                makeToastSettingsFragment("Testnet on/off Changed");
                 break;
             case "edit_text_sell_price":
-                Toast.makeText(getActivity(), "Hotspot Sell Price Changed", Toast.LENGTH_SHORT).show();
+                makeToastSettingsFragment("Hotspot Sell Price Changed");
                 break;
             case "edit_text_sell_min_minutes":
-                Toast.makeText(getActivity(), "Hotspot Min sell duration changed", Toast.LENGTH_SHORT).show();
+                makeToastSettingsFragment("Hotspot Min sell duration changed");
                 break;
             case "edit_text_sell_max_minutes":
-                Toast.makeText(getActivity(), "Hotspot Max sell duration changed", Toast.LENGTH_SHORT).show();
+                makeToastSettingsFragment("Hotspot Max sell duration changed");
                 break;
             case "edit_text_buy_price":
-                Toast.makeText(getActivity(), "Buy Price Changed", Toast.LENGTH_SHORT).show();
+                makeToastSettingsFragment("Buy Price Changed");
                 break;
             case "edit_text_client_minutes":
-                Toast.makeText(getActivity(), "Client duration duration changed", Toast.LENGTH_SHORT).show();
+                makeToastSettingsFragment("Client duration duration changed");
                 break;
         }
     }
@@ -74,17 +110,29 @@ public class SettingsFragment extends PreferenceFragment implements SharedPrefer
 
         switch (key) {
             case "pref_key_reset_data_usage":
-                Toast.makeText(getActivity(), "Reset Data Usage", Toast.LENGTH_SHORT).show();
+                makeToastSettingsFragment( "Reset Data Usage");
                 break;
             case "pref_key_testnet_fund_add":
-                Toast.makeText(getActivity(), "Testnet fund add", Toast.LENGTH_SHORT).show();
+                SharedPreferences prefManager = PreferenceManager.getDefaultSharedPreferences(getActivity());
+                Boolean testnet = prefManager.getBoolean("pref_key_switch_testnet",false);
+
+                if(testnet){
+                    testnetFundAddPref = preference;
+                    testnetFundAddPref.setSummary("Generating...");
+                    makeToastSettingsFragment("Testnet wallet token generation request sent.");
+                    WalletTestnetTokenGen tokenGen = new WalletTestnetTokenGen(mHandler, getActivity(), getString(R.string.preference_file_key), seed);
+                    tokenGen.execute();
+                }
+                else{
+                    makeToastSettingsFragment("Please enable testnet first.");
+                }
                 break;
             case "pref_key_reset_password":
-                Toast.makeText(getActivity(), "Reset Password", Toast.LENGTH_SHORT).show();
+                makeToastSettingsFragment( "Reset Password");
                 askPassword();
                 break;
             case "pref_key_reset_wallet":
-                Toast.makeText(getActivity(), "Reset Wallet", Toast.LENGTH_SHORT).show();
+                makeToastSettingsFragment("Reset Wallet.");
                 break;
         }
         return super.onPreferenceTreeClick(preferenceScreen, preference);
@@ -120,7 +168,7 @@ public class SettingsFragment extends PreferenceFragment implements SharedPrefer
 
         if(password.equals("")){
             //Blank Password
-            Toast.makeText(getActivity(), "Current password cannot be blank.", Toast.LENGTH_SHORT).show();
+            makeToastSettingsFragment("Current password cannot be blank.");
             return;
         }
 
@@ -148,11 +196,11 @@ public class SettingsFragment extends PreferenceFragment implements SharedPrefer
                         EncryptedPreferences encryptedPreferencesUpdated = new EncryptedPreferences.Builder(context).withEncryptionPassword(newPassword).build();
                         encryptedPreferencesUpdated.edit().putString(getString(R.string.encrypted_seed), seed).apply();
                         password = "";
-                        Toast.makeText(getActivity(), "Password changed.", Toast.LENGTH_SHORT).show();
+                        makeToastSettingsFragment("Password changed.");
                     }
                     else{
                         password = "";
-                        Toast.makeText(getActivity(), "New password cannot be blank.", Toast.LENGTH_SHORT).show();
+                        makeToastSettingsFragment("New password cannot be blank.");
                     }
                 }
             });
@@ -167,7 +215,13 @@ public class SettingsFragment extends PreferenceFragment implements SharedPrefer
         }
         else{
             //Wrong Password
-            Toast.makeText(getActivity(), "Wrong Password. Please try again.", Toast.LENGTH_SHORT).show();
+            makeToastSettingsFragment("Wrong Password. Please try again.");
+        }
+    }
+
+    private void makeToastSettingsFragment(String s) {
+        if(getActivity() != null){
+            Toast.makeText(getActivity(), s, Toast.LENGTH_SHORT).show();
         }
     }
 
