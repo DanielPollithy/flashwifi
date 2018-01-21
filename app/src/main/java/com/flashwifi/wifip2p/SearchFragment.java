@@ -303,7 +303,7 @@ public class SearchFragment extends Fragment {
                 Toast.makeText(view.getContext(), "Connected to peer", Toast.LENGTH_SHORT).show();
                 // start the protocol
                 startNegotiationProtocol(address);
-                busy = false;
+                busy = true;
             }
             @Override
             public void onFailure(int reason) {

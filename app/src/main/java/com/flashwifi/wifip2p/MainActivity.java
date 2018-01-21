@@ -218,10 +218,9 @@ public class MainActivity extends AppCompatActivity
         // check whether all necessary settings were set by the user
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         String[] intVariables = new String[]{
-                "edit_text_min_minutes",
+                "edit_text_sell_min_minutes",
                 "edit_text_sell_price",
-                "edit_text_min_minutes",
-                "edit_text_max_minutes",
+                "edit_text_sell_max_minutes",
                 "edit_text_buy_price",
                 "edit_text_client_minutes"
         };
@@ -229,6 +228,7 @@ public class MainActivity extends AppCompatActivity
         for (String variable: intVariables) {
             val = prefs.getString(variable, null);
             if (val == null) {
+                Log.d("Variable not set: ", "settingsAreReady: " + variable);
                 return false;
             }
         }
