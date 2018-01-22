@@ -36,6 +36,7 @@ public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener
 {
 
+    private static final String TAG = "MainAct";
     private String password;
     private String seed;
 
@@ -52,6 +53,7 @@ public class MainActivity extends AppCompatActivity
     private void subscribeToBroadcasts() {
         IntentFilter filter = new IntentFilter();
         filter.addAction("com.flashwifi.wifip2p.start_roaming");
+        filter.addAction("com.flashwifi.wifip2p.stop_roaming");
 
         updateUIReceiver = new BroadcastReceiver() {
             @Override
@@ -66,6 +68,9 @@ public class MainActivity extends AppCompatActivity
                     startRoamingView(intent.getStringExtra("peer_mac_address"),
                             intent.getStringExtra("ssid"),
                             intent.getStringExtra("key"));
+                } else if (intent.getAction().equals("com.flashwifi.wifip2p.stop_roaming")) {
+                    Log.d(TAG, "onReceive: Reset billing state");
+                    mService.resetBillingState();
                 }
             }
         };

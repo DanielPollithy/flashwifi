@@ -206,7 +206,8 @@ public class SearchFragment extends Fragment {
                     ToggleButton toggle = (ToggleButton) getActivity().findViewById(R.id.startSearchButton);
                     toggle.setChecked(false);
                 } else if (intent.getAction().equals("com.flashwifi.wifip2p.stop_roaming")) {
-                    peerListAdapter.clear();
+                    PeerStore.getInstance().clear();
+                    busy = false;
                     ToggleButton toggle = (ToggleButton) getActivity().findViewById(R.id.startSearchButton);
                     toggle.setChecked(false);
                 } else {

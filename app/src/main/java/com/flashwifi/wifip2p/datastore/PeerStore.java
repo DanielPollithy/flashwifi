@@ -119,4 +119,5 @@ public class PeerStore {
     public void setIPAddress(String macAddress, InetAddress IPAddress) {
         getOrCreatePeer(macAddress.toLowerCase()).setIPAddress(IPAddress.getHostAddress());
     }
+
 }

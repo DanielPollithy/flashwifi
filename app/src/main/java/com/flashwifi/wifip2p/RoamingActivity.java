@@ -100,6 +100,7 @@ public class RoamingActivity extends AppCompatActivity {
                 CheckBox flashEstablished = (CheckBox)findViewById(R.id.flashEstablished);
                 if (message.equals("AP SUCCESS")) {
                     apConnected.setChecked(true);
+                    mService.resetBillingState();
                     // when the AP is setup we can start the server
                     startBillingProtocol();
                 } else if (message.equals("AP FAILED")) {
@@ -124,6 +125,7 @@ public class RoamingActivity extends AppCompatActivity {
                     Toast.makeText(getApplicationContext(), "Can't connect", Toast.LENGTH_LONG).show();
                     exitRoaming();
                 }
+                // ToDo: add a critical error that uses exitRoaming()
             }
 
         }
@@ -207,6 +209,8 @@ public class RoamingActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_roaming);
+
+        Accountant.getInstance().reset();
 
         // Get the Intent that started this activity and extract the string
         Intent intent = getIntent();
@@ -330,6 +334,7 @@ public class RoamingActivity extends AppCompatActivity {
     }
 
     private void exitRoaming() {
+        Accountant.getInstance().setCloseAfterwards(true);
         endRoamingFlag = true;
         cancelNotification();
         if (mService.isInRoleHotspot()){
@@ -350,6 +355,8 @@ public class RoamingActivity extends AppCompatActivity {
         stopRoamingBroadcast();
 
         Toast.makeText(getApplicationContext(), "Press BACK now", Toast.LENGTH_LONG).show();
+        initiatedEnd = false;
+        //finish();
     }
 
     @Override

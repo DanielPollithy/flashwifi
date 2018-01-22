@@ -200,6 +200,17 @@ public class BillingServer {
                 e.printStackTrace();
             } catch (InterruptedException e) {
                 e.printStackTrace();
+            } finally {
+                try {
+                    socketWrapper.close();
+                } catch (IOException e) {
+
+                }
+                try {
+                    serverSocket.close();
+                } catch (IOException e) {
+
+                }
             }
         }
 

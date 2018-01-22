@@ -31,21 +31,19 @@ public class Accountant {
     }
 
     public void start(int bookedMegabytes, int timeoutMinutes, int bookedMinutes, int totalIotaDeposit, int iotaPerMegaByte){
-        if (closed) {
-            bills = new ArrayList<Bill>();
-            this.bookedMegabytes = bookedMegabytes;
-            this.timeoutMinutes = timeoutMinutes;
-            this.totalIotaDeposit = totalIotaDeposit;
-            this.iotaPerMegaByte = iotaPerMegaByte;
-            totalBytes = 0;
-            totalIotaPrice = 0;
-            totalDurance = 0;
-            flashChannelHelper = new FlashChannelHelper();
-            closeAfterwards = false;
-            startTime = System.currentTimeMillis() / 1000L;
-            this.bookedMinutes = bookedMinutes;
-            closed = false;
-        }
+        bills = new ArrayList<Bill>();
+        this.bookedMegabytes = bookedMegabytes;
+        this.timeoutMinutes = timeoutMinutes;
+        this.totalIotaDeposit = totalIotaDeposit;
+        this.iotaPerMegaByte = iotaPerMegaByte;
+        totalBytes = 0;
+        totalIotaPrice = 0;
+        totalDurance = 0;
+        flashChannelHelper = new FlashChannelHelper();
+        closeAfterwards = false;
+        startTime = System.currentTimeMillis() / 1000L;
+        this.bookedMinutes = bookedMinutes;
+        closed = false;
     }
 
     public long getLastTime() {
@@ -54,6 +52,17 @@ public class Accountant {
         } else {
             return bills.get(bills.size()-1).getTime();
         }
+    }
+
+    public void reset() {
+        this.bookedMegabytes = 0;
+        this.timeoutMinutes = 0;
+        this.totalIotaDeposit = 0;
+        this.iotaPerMegaByte = 0;
+        totalBytes = 0;
+        totalIotaPrice = 0;
+        totalDurance = 0;
+        bookedMinutes = 0;
     }
 
     public boolean isCloseAfterwards() {

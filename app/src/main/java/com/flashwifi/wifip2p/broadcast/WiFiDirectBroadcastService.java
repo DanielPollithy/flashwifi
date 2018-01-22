@@ -101,6 +101,11 @@ public class WiFiDirectBroadcastService extends Service {
         }
     }
 
+    public void resetBillingState() {
+        billingClientIsRunning = false;
+        billingServerIsRunning = false;
+    }
+
     public void startBillingServer(){
         if (!billingServerIsRunning) {
             billingServerIsRunning = true;
@@ -127,6 +132,8 @@ public class WiFiDirectBroadcastService extends Service {
             //AsyncTask.execute(thread);
             threads.add(thread);
             thread.start();
+        } else {
+            Log.d(TAG, "startBillingServer: blocked");
         }
     }
 
@@ -153,6 +160,8 @@ public class WiFiDirectBroadcastService extends Service {
             threads.add(thread);
             thread.start();
             //AsyncTask.execute(thread);
+        } else {
+            Log.d(TAG, "startBillingClient: blocked");
         }
     }
 
