@@ -90,11 +90,12 @@ public class WalletTransferRequest extends AsyncTask<Void, Void, Void> {
         try {
             if(testnet) {
                 //Testnet
-                sendTransferResponse = api.sendTransfer(appWalletSeed, 2, 4, 9, transfers, null, null, false);
+                System.out.println("WalletTransferRequest: Testnet");
+                sendTransferResponse = api.sendTransfer(appWalletSeed, 2, 4, 13, transfers, null, null, false);
             }
             else{
                 //Mainnet
-                sendTransferResponse = api.sendTransfer(appWalletSeed, 2, 4, 18, transfers, null, null, false);
+                sendTransferResponse = api.sendTransfer(appWalletSeed, 2, 4, 14, transfers, null, null, false);
             }
         } catch (ArgumentException | IllegalAccessError | IllegalStateException e) {
             if (e instanceof ArgumentException) {
@@ -132,6 +133,7 @@ public class WalletTransferRequest extends AsyncTask<Void, Void, Void> {
         else{
             transferResult = "Transfer error: Send Response not received";
         }
+        System.out.println("WalletTransferRequest - result: "+transferResult);
         return transferResult;
     }
 }

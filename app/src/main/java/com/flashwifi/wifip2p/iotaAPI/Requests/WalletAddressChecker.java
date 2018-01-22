@@ -60,6 +60,7 @@ public class WalletAddressChecker {
             }
 
             if(addressResponse != null) {
+                System.out.println("WalletAddressChecker - Address: "+addressResponse.getAddresses().get(0));
                 addressList.add(addressResponse.getAddresses().get(0));
 
                 String[] addressesCheckArray = new String[1];

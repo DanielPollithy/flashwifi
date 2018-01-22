@@ -5,7 +5,6 @@ import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.preference.Preference;
 
 import com.flashwifi.wifip2p.AddressBalanceTransfer;
 import com.flashwifi.wifip2p.iotaAPI.Requests.Model.TokenGenJSONResponse;
@@ -99,6 +98,11 @@ public class WalletTestnetTokenGen extends AsyncTask<Void, Void, Void> {
                 token.setSuccess("Connection Error");
                 e.printStackTrace();
             }
+            else if(e.toString().contains("Unable to resolve host")){
+                //Could not reach token gen page
+                token.setSuccess("Unable to resolve host. Please try again.");
+                e.printStackTrace();
+            }
             else{
                 //Unknown error
                 token.setSuccess("Unknown Error");
@@ -135,6 +139,10 @@ public class WalletTestnetTokenGen extends AsyncTask<Void, Void, Void> {
             Message completeMessage = settingsFragmentHandler.obtainMessage(TOKEN_TESTNET_STATUS_UPDATE, "Sending");
             completeMessage.sendToTarget();
             String destAddress = destAddressses.get(destAddressses.size()-1);
+
+            System.out.println("DestAddress: "+destAddress);
+            System.out.println("TokenAmt: "+token.getAmount().toString());
+
             WalletTransferRequest transferRequest = new WalletTransferRequest(destAddress,token.getSeed(),token.getAmount().toString(),"","",context,testnetTokenGenHandler);
             transferRequest.execute();
         }

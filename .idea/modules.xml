@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/WifiP2P.iml" filepath="$PROJECT_DIR$/WifiP2P.iml" />
+      <module fileurl="file://C:\Users\Toby\Documents\Android Studio Projects\flashwifi\WifiP2P.iml" filepath="C:\Users\Toby\Documents\Android Studio Projects\flashwifi\WifiP2P.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
       <module fileurl="file://$PROJECT_DIR$/flashwifi.iml" filepath="$PROJECT_DIR$/flashwifi.iml" />
     </modules>

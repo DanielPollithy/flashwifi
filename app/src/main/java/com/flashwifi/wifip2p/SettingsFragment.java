@@ -60,15 +60,24 @@ public class SettingsFragment extends PreferenceFragment implements SharedPrefer
                     case TOKEN_TESTNET_RETRIEVE_TASK_COMPLETE:
                         if(result.equals("Sent")){
                             makeToastSettingsFragment("2000i generated and added to testnet wallet. Check balance.");
+                            testnetFundAddPref.setSummary("2000i added");
                         }
                         else{
                             makeToastSettingsFragment(result);
+                            testnetFundAddPref.setSummary(result);
                         }
-                        testnetFundAddPref.setSummary("");
                         break;
                 }
             }
         };
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if(testnetFundAddPref != null){
+            testnetFundAddPref.setSummary("");
+        }
     }
 
     @Override
