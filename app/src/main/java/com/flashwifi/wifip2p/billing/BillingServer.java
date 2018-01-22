@@ -10,6 +10,7 @@ import android.os.RemoteException;
 import android.text.format.Formatter;
 import android.util.Log;
 
+import com.flashwifi.wifip2p.datastore.PeerStore;
 import com.flashwifi.wifip2p.negotiation.SocketWrapper;
 import com.flashwifi.wifip2p.protocol.BillMessage;
 import com.flashwifi.wifip2p.protocol.BillMessageAnswer;
@@ -17,6 +18,9 @@ import com.flashwifi.wifip2p.protocol.BillingCloseChannel;
 import com.flashwifi.wifip2p.protocol.BillingCloseChannelAnswer;
 import com.flashwifi.wifip2p.protocol.BillingOpenChannel;
 import com.flashwifi.wifip2p.protocol.BillingOpenChannelAnswer;
+import com.flashwifi.wifip2p.protocol.NegotiationFinalization;
+import com.flashwifi.wifip2p.protocol.NegotiationOffer;
+import com.flashwifi.wifip2p.protocol.NegotiationOfferAnswer;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -41,6 +45,10 @@ import static android.content.Context.WIFI_SERVICE;
 public class BillingServer {
     private static final String TAG = "BillingServer";
     private final Gson gson;
+    private final String mac;
+    private final String hotspotRefundAddress;
+    private final String channelRootAddress;
+    private final String[] digests;
     private State state = State.NOT_PAIRED;
     private ServerSocket serverSocket;
     private Socket socket;
@@ -58,9 +66,31 @@ public class BillingServer {
         context.sendBroadcast(local);
     }
 
-    public BillingServer(int bookedMegabytes, int timeoutMinutes, int maxMinutes, int iotaDepositClient, int iotaPerMegabyte, Context context){
+    public BillingServer(String mac, Context context){
         this.context = context;
-        Accountant.getInstance().start(bookedMegabytes, timeoutMinutes, maxMinutes, iotaDepositClient, iotaPerMegabyte);
+        this.mac = mac;
+
+        // get the negotiated data
+        NegotiationOffer offer = PeerStore.getInstance().getLatestNegotiationOffer(mac);
+        NegotiationOfferAnswer answer = PeerStore.getInstance().getLatestNegotiationOfferAnswer(mac);
+        NegotiationFinalization finalization = PeerStore.getInstance().getLatestFinalization(mac);
+        // get the necessary values
+        // ToDo: replace magic number with setting
+        int totalMegabytes = 100;
+        int treeDepth = 8;
+        this.digests = new String[]{"1234", "2345", "3456"};
+        int timeoutMinutesServer = 20 * 60 * 1000;
+
+        this.hotspotRefundAddress = finalization.getHotspotRefundAddress();
+        this.channelRootAddress = finalization.getDepositAddressFlashChannel();
+
+
+        int iotaPerMegabyte = offer.getIotaPerMegabyte();
+        int iotaDepositClient = totalMegabytes * iotaPerMegabyte;
+        String clientRefundAddress = finalization.getClientRefundAddress();
+        int totalMinutes = answer.getDuranceInMinutes();
+
+        Accountant.getInstance().start(totalMegabytes, timeoutMinutesServer, totalMinutes, iotaDepositClient, iotaPerMegabyte);
         gson = new GsonBuilder().create();
         networkStatsManager = (NetworkStatsManager) context.getSystemService(Context.NETWORK_STATS_SERVICE);
     }
@@ -101,11 +131,20 @@ public class BillingServer {
                     // receive the BillingOpenChannel message
                     String billingOpenChannelString = socketWrapper.getLineThrowing();
                     BillingOpenChannel billingOpenChannel = gson.fromJson(billingOpenChannelString, BillingOpenChannel.class);
-
+                    PeerStore.getInstance().setLatestBillingOpenChannel(mac, billingOpenChannel);
                     // answer with billingOpenChannelAnswerString
+
+
                     // ToDo: create the flash channel
-                    String[] myDigests = new String[]{"1234", "2345", "3456"};
-                    BillingOpenChannelAnswer billingOpenChannelAnswer = new BillingOpenChannelAnswer(1000, 1000, "", "", myDigests);
+
+                    
+                    BillingOpenChannelAnswer billingOpenChannelAnswer = new BillingOpenChannelAnswer(
+                            Accountant.getInstance().getTotalIotaDeposit(),
+                            Accountant.getInstance().getTotalIotaDeposit(),
+                            hotspotRefundAddress,
+                            channelRootAddress,
+                            digests);
+                    PeerStore.getInstance().setLatestBillingOpenChannelAnswer(mac, billingOpenChannelAnswer);
                     String billingOpenChannelAnswerString = gson.toJson(billingOpenChannelAnswer);
                     socketWrapper.sendLine(billingOpenChannelAnswerString);
 
@@ -113,6 +152,9 @@ public class BillingServer {
 
                     // OK
                     state = State.ROAMING;
+
+                    // start funding
+                    sendUpdateUIBroadcastWithMessage("Start Channel funding");
                 }
 
                 if (state == State.ROAMING) {

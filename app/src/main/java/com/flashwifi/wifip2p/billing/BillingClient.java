@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
+import com.flashwifi.wifip2p.datastore.PeerInformation;
+import com.flashwifi.wifip2p.datastore.PeerStore;
 import com.flashwifi.wifip2p.negotiation.SocketWrapper;
 import com.flashwifi.wifip2p.protocol.BillMessage;
 import com.flashwifi.wifip2p.protocol.BillMessageAnswer;
@@ -12,6 +14,9 @@ import com.flashwifi.wifip2p.protocol.BillingCloseChannel;
 import com.flashwifi.wifip2p.protocol.BillingCloseChannelAnswer;
 import com.flashwifi.wifip2p.protocol.BillingOpenChannel;
 import com.flashwifi.wifip2p.protocol.BillingOpenChannelAnswer;
+import com.flashwifi.wifip2p.protocol.NegotiationFinalization;
+import com.flashwifi.wifip2p.protocol.NegotiationOffer;
+import com.flashwifi.wifip2p.protocol.NegotiationOfferAnswer;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -31,6 +36,7 @@ import java.net.UnknownHostException;
 public class BillingClient {
     private static final String TAG = "BillingClient";
     private final Gson gson;
+    private final String mac;
     private State state = State.NOT_PAIRED;
     private Socket socket;
     private SocketWrapper socketWrapper;
@@ -51,8 +57,9 @@ public class BillingClient {
         context.sendBroadcast(local);
     }
 
-    public BillingClient(Context context){
+    public BillingClient(String mac, Context context){
         this.context = context;
+        this.mac = mac;
         gson = new GsonBuilder().create();
     }
 
@@ -78,20 +85,39 @@ public class BillingClient {
                     String hotspotStateLine = socketWrapper.getLineThrowing();
                     if (hotspotStateLine.contains("INITIAL") || hotspotStateLine.contains("NOT_PAIRED")) {
                         // ask the hotspot to open the flash channel
-                        // ToDo: get real digests
+
+                        // get the negotiated data
+                        NegotiationOffer offer = PeerStore.getInstance().getLatestNegotiationOffer(mac);
+                        NegotiationOfferAnswer answer = PeerStore.getInstance().getLatestNegotiationOfferAnswer(mac);
+                        NegotiationFinalization finalization = PeerStore.getInstance().getLatestFinalization(mac);
+                        // get the necessary values
+                        // ToDo: replace magic number with setting
+                        int totalMegabytes = 100;
+                        int treeDepth = 8;
                         String[] digests = new String[]{"1234", "2345", "3456"};
-                        // ToDo: replace magic numbers
-                        billingOpenChannel = new BillingOpenChannel(100, 100, "clientAddress", 8, digests, 20 * 60 * 1000, 60);
+                        int timeoutMinutesClient = 20 * 60 * 1000;
+
+                        int iotaPerMegabyte = offer.getIotaPerMegabyte();
+                        String clientRefundAddress = finalization.getClientRefundAddress();
+                        int totalMinutes = answer.getDuranceInMinutes();
+
+                        billingOpenChannel = new BillingOpenChannel(totalMegabytes, iotaPerMegabyte, clientRefundAddress, treeDepth, digests, timeoutMinutesClient, totalMinutes);
+                        PeerStore.getInstance().setLatestBillingOpenChannel(mac, billingOpenChannel);
                         String billingOpenChannelString = gson.toJson(billingOpenChannel);
                         socketWrapper.sendLine(billingOpenChannelString);
                         // receive the hotspot details for the flash channel
                         String billingOpenChannelAnswerString = socketWrapper.getLineThrowing();
                         billingOpenChannelAnswer = gson.fromJson(billingOpenChannelAnswerString, BillingOpenChannelAnswer.class);
+                        PeerStore.getInstance().setLatestBillingOpenChannelAnswer(mac, billingOpenChannelAnswer);
                         // now create the flash channel on our side
                         Accountant.getInstance().start(billingOpenChannel.getTotalMegabytes(), billingOpenChannel.getTimeoutMinutesClient(), billingOpenChannel.getTotalMinutes(), billingOpenChannelAnswer.getClientDepositIota(),
                                 billingOpenChannel.getIotaPerMegabyte());
                         sendUpdateUIBroadcastWithMessage("Channel established");
                         state = State.ROAMING;
+
+                        // start the task to fund the channel
+                        sendUpdateUIBroadcastWithMessage("Start Channel funding");
+
                     } else {
                         // what to do if the hotspot already created stuff and was in roaming mode
                         // ToDo: ^^^^^

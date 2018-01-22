@@ -1,5 +1,9 @@
 package com.flashwifi.wifip2p.datastore;
 
+import com.flashwifi.wifip2p.protocol.BillingCloseChannel;
+import com.flashwifi.wifip2p.protocol.BillingCloseChannelAnswer;
+import com.flashwifi.wifip2p.protocol.BillingOpenChannel;
+import com.flashwifi.wifip2p.protocol.BillingOpenChannelAnswer;
 import com.flashwifi.wifip2p.protocol.NegotiationFinalization;
 import com.flashwifi.wifip2p.protocol.NegotiationOffer;
 import com.flashwifi.wifip2p.protocol.NegotiationOfferAnswer;
@@ -116,8 +120,46 @@ public class PeerStore {
         return null;
     }
 
+    public NegotiationOffer getLatestNegotiationOffer(String macAddress) {
+        if (peers.containsKey(macAddress.toLowerCase())) {
+            return peers.get(macAddress.toLowerCase()).getLatestNegotiationOffer();
+        }
+        return null;
+    }
+
+    public NegotiationOfferAnswer getLatestNegotiationOfferAnswer(String macAddress) {
+        if (peers.containsKey(macAddress.toLowerCase())) {
+            return peers.get(macAddress.toLowerCase()).getLatestOfferAnswer();
+        }
+        return null;
+    }
+
     public void setIPAddress(String macAddress, InetAddress IPAddress) {
         getOrCreatePeer(macAddress.toLowerCase()).setIPAddress(IPAddress.getHostAddress());
+    }
+
+    public void setLatestBillingOpenChannel(String macAddress, BillingOpenChannel o) {
+        getOrCreatePeer(macAddress.toLowerCase()).setBillingOpenChannel(o);
+    }
+
+    public void setLatestBillingOpenChannelAnswer(String macAddress, BillingOpenChannelAnswer o) {
+        getOrCreatePeer(macAddress.toLowerCase()).setBillingOpenChannelAnswer(o);
+    }
+
+    public void setLatestBillingCloseChannel(String macAddress, BillingCloseChannel o) {
+        getOrCreatePeer(macAddress.toLowerCase()).setBillingCloseChannel(o);
+    }
+
+    public void setLatestBillingCloseChannelAnswer(String macAddress, BillingCloseChannelAnswer o) {
+        getOrCreatePeer(macAddress.toLowerCase()).setBillingCloseChannelAnswer(o);
+    }
+
+    public PeerInformation getPeer(String address) {
+        address = address.toLowerCase();
+        if (peers.containsKey(address)) {
+            return peers.get(address);
+        }
+        return null;
     }
 
 }

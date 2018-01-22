@@ -22,6 +22,7 @@ public class Accountant {
     private FlashChannelHelper flashChannelHelper;
 
     private boolean closed = true;
+    private String seed;
 
     public static Accountant getInstance() {
         return ourInstance;
@@ -179,5 +180,13 @@ public class Accountant {
 
     public double getIotaPerByte() {
         return ((double)getIotaPerMegaByte()) / (1024.0d * 1024.0d);
+    }
+
+    public void setSeed(String seed) {
+        this.seed = seed;
+    }
+
+    public String getSeed() {
+        return seed;
     }
 }

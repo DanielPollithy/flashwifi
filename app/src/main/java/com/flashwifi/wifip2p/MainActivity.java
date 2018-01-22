@@ -30,6 +30,7 @@ import android.widget.ProgressBar;
 import android.widget.Switch;
 import android.widget.Toast;
 
+import com.flashwifi.wifip2p.billing.Accountant;
 import com.flashwifi.wifip2p.broadcast.WiFiDirectBroadcastService;
 
 public class MainActivity extends AppCompatActivity
@@ -71,6 +72,8 @@ public class MainActivity extends AppCompatActivity
                 } else if (intent.getAction().equals("com.flashwifi.wifip2p.stop_roaming")) {
                     Log.d(TAG, "onReceive: Reset billing state");
                     mService.resetBillingState();
+                    mService.setInRoleConsumer(false);
+                    mService.setInRoleHotspot(false);
                 }
             }
         };
@@ -136,6 +139,8 @@ public class MainActivity extends AppCompatActivity
         Intent intent = getIntent();
         password = intent.getStringExtra("password");
         seed = intent.getStringExtra("seed");
+
+        Accountant.getInstance().setSeed(seed);
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(

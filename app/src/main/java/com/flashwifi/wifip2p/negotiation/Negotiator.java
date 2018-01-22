@@ -363,9 +363,11 @@ public class Negotiator {
         double bandwidth = 0.1; // megabyte per second;
         int max_data_volume_megabytes = (int) (answer.getDuranceInMinutes() * bandwidth);
         int max_iota_transferred = max_data_volume_megabytes * offer.getIotaPerMegabyte();
+        max_iota_transferred = 10;
+        String rootAddress = "JZWUMRUEYFJOCDDRZCNIIMDZSX9LWMITNMDIAIUJKUV9LVDLSICDABFYTTBZFGEBJOADDN9WZ9IJJJD9DXRJRR9TOW";
         // send the most important message to the user
         NegotiationFinalization finalization = new NegotiationFinalization(hotspotName, password,
-                "Address", max_iota_transferred, max_iota_transferred, "");
+                rootAddress, max_iota_transferred, max_iota_transferred, "<flashObj>");
         PeerStore.getInstance().setLatestFinalization(otherMac, finalization);
         String finalizationString = gson.toJson(finalization);
 

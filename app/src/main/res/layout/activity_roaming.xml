@@ -60,6 +60,19 @@
                 android:clickable="false"
                 android:text="Flash channel" />
 
+
+
+            <CheckBox
+                android:id="@+id/channelFunded"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="15dp"
+                android:layout_marginRight="15dp"
+                android:layout_marginBottom="10dp"
+                android:checked="false"
+                android:clickable="false"
+                android:text="Channel funded" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

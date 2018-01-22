@@ -32,6 +32,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 import com.flashwifi.wifip2p.billing.Accountant;
@@ -98,6 +99,7 @@ public class RoamingActivity extends AppCompatActivity {
                 Log.d(TAG, "updateUi: message=" + message);
                 CheckBox apConnected = (CheckBox)findViewById(R.id.accessPointActive);
                 CheckBox flashEstablished = (CheckBox)findViewById(R.id.flashEstablished);
+                CheckBox channelFunded = (CheckBox)findViewById(R.id.channelFunded);
                 if (message.equals("AP SUCCESS")) {
                     apConnected.setChecked(true);
                     mService.resetBillingState();
@@ -111,6 +113,11 @@ public class RoamingActivity extends AppCompatActivity {
                     apConnected.setChecked(false);
                 } else if (message.equals("Channel established")) {
                     flashEstablished.setChecked(true);
+                } else if (message.equals("Start Channel funding")) {
+                    // start the task
+                    mService.fundChannel(address);
+                } else if (message.equals("Channel funded")) {
+                    channelFunded.setChecked(true);
                 } else if (message.equals("Billing")) {
                     updateBillingCard();
                 } else if (message.equals("Channel closed")) {
@@ -188,9 +195,9 @@ public class RoamingActivity extends AppCompatActivity {
     private void startBillingProtocol() {
         // setup the flash channel etc...
         if (mService.isInRoleHotspot()) {
-            mService.startBillingServer();
+            mService.startBillingServer(address);
         } else {
-            mService.startBillingClient();
+            mService.startBillingClient(address);
         }
     }
 
