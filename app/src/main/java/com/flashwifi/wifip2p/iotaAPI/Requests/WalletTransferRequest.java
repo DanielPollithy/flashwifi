@@ -8,6 +8,7 @@ import android.os.Message;
 import android.preference.PreferenceManager;
 
 import com.flashwifi.wifip2p.AddressBalanceTransfer;
+import com.flashwifi.wifip2p.R;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,22 +45,33 @@ public class WalletTransferRequest extends AsyncTask<Void, Void, Void> {
 
         SharedPreferences prefManager = PreferenceManager.getDefaultSharedPreferences(context);
         testnet = prefManager.getBoolean("pref_key_switch_testnet",false);
+        Boolean testnetPrivate = prefManager.getBoolean("pref_key_switch_testnet_private",false);
 
         if(testnet){
-
             //Testnet node:
-            api = new IotaAPI.Builder()
-                    .protocol("https")
-                    .host("testnet140.tangle.works")
-                    .port("443")
-                    .build();
+            if(testnetPrivate){
+                //Private test node
+                api = new IotaAPI.Builder()
+                        .protocol(context.getResources().getString(R.string.protocolPrivateTestnetNode))
+                        .host(context.getResources().getString(R.string.hostPrivateTestnetNode))
+                        .port(context.getResources().getString(R.string.portPrivateTestnetNode))
+                        .build();
+            }
+            else{
+                //Public test node
+                api = new IotaAPI.Builder()
+                        .protocol(context.getResources().getString(R.string.protocolPublicTestnetNode))
+                        .host(context.getResources().getString(R.string.hostPublicTestnetNode))
+                        .port(context.getResources().getString(R.string.portPublicTestnetNode))
+                        .build();
+            }
         }
         else{
             //Mainnet node:
             api = new IotaAPI.Builder()
-                    .protocol("http")
-                    .host("node.iotawallet.info")
-                    .port("14265")
+                    .protocol(context.getResources().getString(R.string.protocolDefaultMainnetNode))
+                    .host(context.getResources().getString(R.string.hostDefaultMainnetNode))
+                    .port(context.getResources().getString(R.string.portDefaultMainnetNode))
                     .build();
         }
     }

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="protocolPrivateTestnetNode">http</string>
+    <string name="hostPrivateTestnetNode">87.118.96.200</string>
+    <string name="portPrivateTestnetNode">14700</string>
+    <string name="generatorPrivateTestnetNode">http://87.118.96.200:3000/</string>
+
+    <string name="protocolPublicTestnetNode">https</string>
+    <string name="hostPublicTestnetNode">testnet140.tangle.works</string>
+    <string name="portPublicTestnetNode">443</string>
+    <string name="generatorPublicTestnetNode">https://hackseeds.tangle.works</string>
+
+    <string name="protocolDefaultMainnetNode">http</string>
+    <string name="hostDefaultMainnetNode">node.iotawallet.info</string>
+    <string name="portDefaultMainnetNode">14265</string>
+
+</resources>

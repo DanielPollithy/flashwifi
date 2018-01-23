@@ -1,14 +1,18 @@
 package com.flashwifi.wifip2p.iotaAPI.Requests;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.preference.PreferenceManager;
 
 import com.flashwifi.wifip2p.AddressBalanceTransfer;
+import com.flashwifi.wifip2p.R;
 import com.flashwifi.wifip2p.iotaAPI.Requests.Model.TokenGenJSONResponse;
 import com.google.api.client.http.GenericUrl;
+import com.google.api.client.http.HttpBackOffUnsuccessfulResponseHandler;
 import com.google.api.client.http.HttpRequest;
 import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.HttpTransport;
@@ -16,6 +20,7 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.JsonObjectParser;
 import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.client.util.ExponentialBackOff;
 import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
@@ -66,7 +71,21 @@ public class WalletTestnetTokenGen extends AsyncTask<Void, Void, Void> {
                 });
         HttpRequest request = null;
         try {
-            request = requestFactory.buildGetRequest(new GenericUrl("https://hackseeds.tangle.works"));
+
+            SharedPreferences prefManager = PreferenceManager.getDefaultSharedPreferences(context);
+            Boolean testnetPrivate = prefManager.getBoolean("pref_key_switch_testnet_private",false);
+
+            if(testnetPrivate){
+                request = requestFactory.buildGetRequest(new GenericUrl(context.getResources().getString(R.string.generatorPrivateTestnetNode)));
+                //Set timeout to 5 min
+                request.setConnectTimeout(300000);
+                request.setReadTimeout(600000);
+            }else{
+                request = requestFactory.buildGetRequest(new GenericUrl(context.getResources().getString(R.string.generatorPublicTestnetNode)));
+                //Set timeout to 5 min
+                request.setConnectTimeout(300000);
+                request.setReadTimeout(600000);
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -74,15 +93,15 @@ public class WalletTestnetTokenGen extends AsyncTask<Void, Void, Void> {
         //TODO: Set timeout
         /*
         ExponentialBackOff backoff = new ExponentialBackOff.Builder()
-                .setInitialIntervalMillis(500)
+                .setInitialIntervalMillis(300000)
                 .setMaxElapsedTimeMillis(900000)
-                .setMaxIntervalMillis(6000)
+                .setMaxIntervalMillis(600000)
                 .setMultiplier(1.5)
-                .setRandomizationFactor(0.5)
+                .setRandomizationFactor(0.999)
                 .build();
         request.setUnsuccessfulResponseHandler(
                 new HttpBackOffUnsuccessfulResponseHandler(backoff));
-        */
+                */
 
         Type type = new TypeToken<TokenGenJSONResponse>() {}.getType();
         TokenGenJSONResponse token = new TokenGenJSONResponse();
@@ -105,7 +124,7 @@ public class WalletTestnetTokenGen extends AsyncTask<Void, Void, Void> {
             }
             else{
                 //Unknown error
-                token.setSuccess("Unknown Error");
+                token.setSuccess("Unknown Error. Please try again.");
                 e.printStackTrace();
             }
         }
@@ -128,6 +147,8 @@ public class WalletTestnetTokenGen extends AsyncTask<Void, Void, Void> {
     }
 
     private void transferToWallet(List<String> destAddressses, TokenGenJSONResponse token) {
+
+        System.out.println("2000 seed: "+token.getSeed());
 
         if(destAddressses != null && destAddressses.get(0).equals("Unable to resolve host")){
             //Host Error
