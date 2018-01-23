@@ -6,14 +6,6 @@
         android:key="pref_key_wifi_settings"
         android:elevation="10dp">
 
-        <ListPreference
-            android:key="pref_key_security"
-            android:divider="@null"
-            android:dividerHeight="0dp"
-            android:entries="@array/securityPref"
-            android:entryValues="@array/securityPref"
-            android:title="Security" />
-
         <Preference
             android:divider="@null"
             android:dividerHeight="0dp"
@@ -28,6 +20,15 @@
         android:animateLayoutChanges="true"
         android:key="pref_key_IOTA_settings">
 
+
+        <ListPreference
+            android:key="pref_key_security"
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:defaultValue="2"
+            android:entries="@array/securityPref"
+            android:entryValues="@array/securityPref"
+            android:title="Security pk/address" />
 
         <ListPreference
             android:key="pref_key_network_timeout"
@@ -126,6 +127,31 @@
         <Preference
             android:key="pref_key_reset_wallet"
             android:title="Reset Wallet"/>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="About"
+        android:key="pref_key_about"
+        android:elevation="10dp">
+
+        <Preference
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:key="pref_key_reset_version"
+            android:title="@string/app_version"/>
+
+        <Preference
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:key="pref_key_license"
+            android:title="License"/>
+
+        <Preference
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:key="pref_key_agreement"
+            android:title="Agreement"/>
 
     </PreferenceCategory>
 

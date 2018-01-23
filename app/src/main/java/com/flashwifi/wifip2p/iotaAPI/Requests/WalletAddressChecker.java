@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import jota.IotaAPI;
+import jota.dto.response.GetInclusionStateResponse;
 import jota.dto.response.GetNewAddressResponse;
 import jota.error.ArgumentException;
 import jota.model.Transaction;
@@ -19,6 +20,9 @@ public class WalletAddressChecker {
     private static IotaAPI api;
     private Context context;
     private String prefFile;
+
+    boolean containsPendingTransaction = false;
+    boolean keyIndexChanged = false;
 
     public WalletAddressChecker(Context inContext, String inPrefFile){
 
@@ -63,12 +67,17 @@ public class WalletAddressChecker {
         Boolean foundAddress = false;
         List<String> addressList = new ArrayList<>();
         int keyIndex = getKeyIndex();
+        ArrayList<String> hashStringList = new ArrayList<>();
 
         while(foundAddress == false){
 
             GetNewAddressResponse addressResponse = null;
             try {
-                addressResponse = api.getNewAddress(seed, 2, keyIndex, false, 1, false);
+                SharedPreferences prefManager = PreferenceManager.getDefaultSharedPreferences(context);
+                String security = prefManager.getString("pref_key_security","2");
+                int securityInt = Integer.parseInt(security);
+                System.out.println("securityInt: "+securityInt);
+                addressResponse = api.getNewAddress(seed, securityInt, keyIndex, true, 1, false);
             } catch (ArgumentException e) {
                 e.printStackTrace();
             }
@@ -99,6 +108,9 @@ public class WalletAddressChecker {
                 else{
                     //Found transactions, increment for new address
 
+                    String curHash = transactionsForAddress.get(0).getHash();
+                    hashStringList.add(curHash);
+
                     System.out.println("WalletAddressChecker value: "+transactionsForAddress.get(0).getValue());
                     System.out.println("WalletAddressChecker time: "+transactionsForAddress.get(0).getAttachmentTimestamp());
                     System.out.println("WalletAddressChecker address: "+transactionsForAddress.get(0).getAddress());
@@ -107,15 +119,48 @@ public class WalletAddressChecker {
                 }
             }
         }
+        String[] hashStringArray = new String[hashStringList.size()];
+        int hashIndex = 0;
+        //Convert hash String List to String Array
+        for (String curHash : hashStringList) {
+            hashStringArray[hashIndex] = curHash;
+            hashIndex = hashIndex + 1;
+        }
 
-        if(keyIndex == 0){
-            //Put the initial address to search. No transactions for the seed yet.
-            putKeyIndex(keyIndex);
+        //Check whether pending transactions exist
+        containsPendingTransaction = false;
+        keyIndexChanged = false;
+        try {
+            GetInclusionStateResponse inclusionResponse = api.getLatestInclusion(hashStringArray);
+            boolean[] states = inclusionResponse.getStates();
+
+            for (boolean state : states) {
+                if(!state){
+                    containsPendingTransaction = true;
+                }
+            }
+        } catch (ArgumentException e) {
+            e.printStackTrace();
         }
-        else{
-            //Put the second last address to search
-            putKeyIndex(keyIndex-1);
+
+        System.out.println("containsPendingTransaction: "+containsPendingTransaction);
+
+        if(!containsPendingTransaction){
+            //all confirmed transactions, ok to change keyIndex
+
+            if(keyIndex != getKeyIndex()){
+                keyIndexChanged = true;
+                if(keyIndex == 0){
+                    //Put the initial address to search. No transactions for the seed yet.
+                    putKeyIndex(keyIndex);
+                }
+                else{
+                    //Put the second last address to search
+                    putKeyIndex(keyIndex-1);
+                }
+            }
         }
+
         return addressList;
     }
 
@@ -131,6 +176,14 @@ public class WalletAddressChecker {
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putInt("keyIndex", inKeyIndex);
         editor.apply();
+    }
+
+    public boolean getContainsPendingTransaction() {
+        return containsPendingTransaction;
+    }
+
+    public boolean getkeyIndexChanged() {
+        return keyIndexChanged;
     }
 
 }

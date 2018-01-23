@@ -77,12 +77,12 @@ public class WalletTestnetTokenGen extends AsyncTask<Void, Void, Void> {
 
             if(testnetPrivate){
                 request = requestFactory.buildGetRequest(new GenericUrl(context.getResources().getString(R.string.generatorPrivateTestnetNode)));
-                //Set timeout to 5 min
+                //Set timeout to 10 min
                 request.setConnectTimeout(300000);
                 request.setReadTimeout(600000);
             }else{
                 request = requestFactory.buildGetRequest(new GenericUrl(context.getResources().getString(R.string.generatorPublicTestnetNode)));
-                //Set timeout to 5 min
+                //Set timeout to 10 min
                 request.setConnectTimeout(300000);
                 request.setReadTimeout(600000);
             }
