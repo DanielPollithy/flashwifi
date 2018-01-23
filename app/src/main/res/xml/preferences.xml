@@ -25,6 +25,7 @@
     <PreferenceCategory
         android:title="IOTA"
         android:elevation="10dp"
+        android:animateLayoutChanges="true"
         android:key="pref_key_IOTA_settings">
 
 
@@ -45,6 +46,11 @@
             android:defaultValue="false"
             android:key="pref_key_switch_testnet"
             android:title="Testnet" />
+
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="pref_key_switch_testnet_private"
+            android:title="Private testnet (recommended)" />
 
         <Preference
             android:divider="@null"

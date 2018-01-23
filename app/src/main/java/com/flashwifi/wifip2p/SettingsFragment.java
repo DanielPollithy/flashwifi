@@ -9,6 +9,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.preference.Preference;
+import android.preference.PreferenceCategory;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 import android.preference.PreferenceScreen;
@@ -29,6 +30,8 @@ public class SettingsFragment extends PreferenceFragment implements SharedPrefer
 
     private Handler mHandler;
     private Preference testnetFundAddPref;
+    private Preference prefTestNetPrivate;
+    private PreferenceCategory prefCatIotaSettings;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -41,6 +44,17 @@ public class SettingsFragment extends PreferenceFragment implements SharedPrefer
 
         // Load the preferences from an XML resource
         addPreferencesFromResource(R.xml.preferences);
+
+        prefTestNetPrivate = findPreference("pref_key_switch_testnet_private");
+        prefCatIotaSettings = (PreferenceCategory) findPreference("pref_key_IOTA_settings");
+
+        SharedPreferences prefManager = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        Boolean testnet = prefManager.getBoolean("pref_key_switch_testnet",false);
+
+        if(!testnet){
+            //Hide the testnet private switch
+            hideTestNetPref();
+        }
 
         //Set change listener
         getPreferenceScreen().getSharedPreferences()
@@ -60,15 +74,24 @@ public class SettingsFragment extends PreferenceFragment implements SharedPrefer
                     case TOKEN_TESTNET_RETRIEVE_TASK_COMPLETE:
                         if(result.equals("Sent")){
                             makeToastSettingsFragment("2000i generated and added to testnet wallet. Check balance.");
+                            testnetFundAddPref.setSummary("2000i added");
                         }
                         else{
                             makeToastSettingsFragment(result);
+                            testnetFundAddPref.setSummary(result);
                         }
-                        testnetFundAddPref.setSummary("");
                         break;
                 }
             }
         };
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if(testnetFundAddPref != null){
+            testnetFundAddPref.setSummary("");
+        }
     }
 
     @Override
@@ -85,6 +108,14 @@ public class SettingsFragment extends PreferenceFragment implements SharedPrefer
                 break;
             case "pref_key_switch_testnet":
                 makeToastSettingsFragment("Testnet on/off Changed");
+                SharedPreferences prefManager = PreferenceManager.getDefaultSharedPreferences(getActivity());
+                Boolean testnet = prefManager.getBoolean("pref_key_switch_testnet",false);
+                if(testnet){
+                    showTestNetPref();
+                }
+                else{
+                    hideTestNetPref();
+                }
                 break;
             case "edit_text_sell_price":
                 makeToastSettingsFragment("Hotspot Sell Price Changed");
@@ -224,5 +255,26 @@ public class SettingsFragment extends PreferenceFragment implements SharedPrefer
             Toast.makeText(getActivity(), s, Toast.LENGTH_SHORT).show();
         }
     }
+
+    private void hidePreference(String prefKey, String catKey){
+        Preference pref = findPreference(prefKey);
+        PreferenceCategory catPref = (PreferenceCategory) findPreference(catKey);
+        catPref.removePreference(pref);
+    }
+
+    private void showPreference(String prefKey, String catKey){
+        Preference pref = findPreference(prefKey);
+        PreferenceCategory catPref = (PreferenceCategory) findPreference(catKey);
+        catPref.addPreference(pref);
+    }
+
+    private void hideTestNetPref() {
+        prefCatIotaSettings.removePreference(prefTestNetPrivate);
+    }
+
+    private void showTestNetPref() {
+        prefCatIotaSettings.addPreference(prefTestNetPrivate);
+    }
+
 
 }

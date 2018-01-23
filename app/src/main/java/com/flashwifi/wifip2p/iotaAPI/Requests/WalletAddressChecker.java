@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 
+import com.flashwifi.wifip2p.R;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,21 +27,33 @@ public class WalletAddressChecker {
 
         SharedPreferences prefManager = PreferenceManager.getDefaultSharedPreferences(context);
         Boolean testnet = prefManager.getBoolean("pref_key_switch_testnet",false);
+        Boolean testnetPrivate = prefManager.getBoolean("pref_key_switch_testnet_private",false);
 
         if(testnet){
             //Testnet node:
-            api = new IotaAPI.Builder()
-                    .protocol("https")
-                    .host("testnet140.tangle.works")
-                    .port("443")
-                    .build();
+            if(testnetPrivate){
+                //Private test node
+                api = new IotaAPI.Builder()
+                        .protocol(context.getResources().getString(R.string.protocolPrivateTestnetNode))
+                        .host(context.getResources().getString(R.string.hostPrivateTestnetNode))
+                        .port(context.getResources().getString(R.string.portPrivateTestnetNode))
+                        .build();
+            }
+            else{
+                //Public test node
+                api = new IotaAPI.Builder()
+                        .protocol(context.getResources().getString(R.string.protocolPublicTestnetNode))
+                        .host(context.getResources().getString(R.string.hostPublicTestnetNode))
+                        .port(context.getResources().getString(R.string.portPublicTestnetNode))
+                        .build();
+            }
         }
         else{
             //Mainnet node:
             api = new IotaAPI.Builder()
-                    .protocol("http")
-                    .host("node.iotawallet.info")
-                    .port("14265")
+                    .protocol(context.getResources().getString(R.string.protocolDefaultMainnetNode))
+                    .host(context.getResources().getString(R.string.hostDefaultMainnetNode))
+                    .port(context.getResources().getString(R.string.portDefaultMainnetNode))
                     .build();
         }
     }
@@ -60,6 +74,7 @@ public class WalletAddressChecker {
             }
 
             if(addressResponse != null) {
+                System.out.println("WalletAddressChecker - Address: "+addressResponse.getAddresses().get(0));
                 addressList.add(addressResponse.getAddresses().get(0));
 
                 String[] addressesCheckArray = new String[1];
@@ -83,6 +98,11 @@ public class WalletAddressChecker {
                 }
                 else{
                     //Found transactions, increment for new address
+
+                    System.out.println("WalletAddressChecker value: "+transactionsForAddress.get(0).getValue());
+                    System.out.println("WalletAddressChecker time: "+transactionsForAddress.get(0).getAttachmentTimestamp());
+                    System.out.println("WalletAddressChecker address: "+transactionsForAddress.get(0).getAddress());
+
                     keyIndex = keyIndex + 1;
                 }
             }

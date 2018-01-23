@@ -1,9 +1,5 @@
 package com.flashwifi.wifip2p.iotaAPI.Requests;
 
-/**
- * Created by Toby on 1/6/2018.
- */
-
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
@@ -12,12 +8,15 @@ import android.os.Message;
 import android.preference.PreferenceManager;
 
 import com.flashwifi.wifip2p.AddressBalanceTransfer;
+import com.flashwifi.wifip2p.R;
 
 import java.util.List;
 
 import jota.IotaAPI;
+import jota.dto.response.GetBalancesAndFormatResponse;
 import jota.dto.response.GetBalancesResponse;
 import jota.error.ArgumentException;
+import jota.utils.StopWatch;
 
 public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
 
@@ -34,8 +33,6 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
     private int type;
     private Boolean updateMessage;
 
-    //GetNodeInfoResponse response = api.getNodeInfo();
-
     public WalletBalanceChecker(Context inActivity, String inPrefFile, String inSeed, Handler inMHandler, int inType, Boolean inUpdateMessage) {
         context = inActivity;
         prefFile = inPrefFile;
@@ -46,21 +43,33 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
 
         SharedPreferences prefManager = PreferenceManager.getDefaultSharedPreferences(context);
         Boolean testnet = prefManager.getBoolean("pref_key_switch_testnet",false);
+        Boolean testnetPrivate = prefManager.getBoolean("pref_key_switch_testnet_private",false);
 
         if(testnet){
             //Testnet node:
-            api = new IotaAPI.Builder()
-                    .protocol("https")
-                    .host("testnet140.tangle.works")
-                    .port("443")
-                    .build();
+            if(testnetPrivate){
+                //Private test node
+                api = new IotaAPI.Builder()
+                        .protocol(context.getResources().getString(R.string.protocolPrivateTestnetNode))
+                        .host(context.getResources().getString(R.string.hostPrivateTestnetNode))
+                        .port(context.getResources().getString(R.string.portPrivateTestnetNode))
+                        .build();
+            }
+            else{
+                //Public test node
+                api = new IotaAPI.Builder()
+                        .protocol(context.getResources().getString(R.string.protocolPublicTestnetNode))
+                        .host(context.getResources().getString(R.string.hostPublicTestnetNode))
+                        .port(context.getResources().getString(R.string.portPublicTestnetNode))
+                        .build();
+            }
         }
         else{
             //Mainnet node:
             api = new IotaAPI.Builder()
-                    .protocol("http")
-                    .host("node.iotawallet.info")
-                    .port("14265")
+                    .protocol(context.getResources().getString(R.string.protocolDefaultMainnetNode))
+                    .host(context.getResources().getString(R.string.hostDefaultMainnetNode))
+                    .port(context.getResources().getString(R.string.portDefaultMainnetNode))
                     .build();
         }
     }
@@ -112,22 +121,69 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
     }
 
     public String getBalance(List<String> inAddresses){
-        String[] balanceArray;
+
+        for (String inAddress : inAddresses) {
+            System.out.println("addressGetBalance: "+inAddress);
+        }
+
+        String updatedBalanceString;
         try {
+            StopWatch stopWatch = new StopWatch();
+            GetBalancesAndFormatResponse balanceResponse = api.getBalanceAndFormat(inAddresses, 0, 0, stopWatch, 2);
+            long total = balanceResponse.getTotalBalance();
+            System.out.println("GetBalance Total: "+total);
+
             GetBalancesResponse balanceResultResponse = api.getBalances(100, inAddresses);
-            balanceArray = balanceResultResponse.getBalances();
+            String[] balanceArray = balanceResultResponse.getBalances();
+
+            System.out.println("balanceArrayLength: "+balanceArray.length);
+
+            for (String s : balanceArray) {
+                System.out.println("balanceArrayEntry: "+s);
+            }
+
+            if(balanceArray.length < 2){
+                System.out.println("updatedBalanceString: "+balanceArray[0]);
+                updatedBalanceString = balanceArray[0];
+                putSharedPrefBalance(updatedBalanceString);
+            }
+            else{
+                long storedBalance = Long.parseLong(getSharedPreKeyBalance());
+                System.out.println("getSharedPreKeyBalance: "+getSharedPreKeyBalance());
+                long updatedBalance = storedBalance + Long.parseLong(balanceArray[balanceArray.length-2]);
+                updatedBalanceString = Long.toString(updatedBalance);
+                System.out.println("updatedBalance: "+updatedBalanceString);
+                putSharedPrefBalance(updatedBalanceString);
+            }
         } catch (ArgumentException | IllegalStateException e) {
             e.printStackTrace();
             return null;
         }
+        return updatedBalanceString;
+    }
 
-        if(balanceArray.length>1){
-            return balanceArray[balanceArray.length-2];
+    private String getSharedPreKeyBalance() {
+        SharedPreferences sharedPref = context.getSharedPreferences(prefFile, Context.MODE_PRIVATE);
+        int keyIndex = sharedPref.getInt("keyIndex",0);
+
+        System.out.println("KeyIndex: "+keyIndex);
+
+        String defaultValue = "0";
+        if(keyIndex > 2){
+            String storedBalance = sharedPref.getString("balance",defaultValue);
+            return storedBalance;
         }
         else{
-            return balanceArray[balanceArray.length-1];
+            return defaultValue;
         }
+    }
 
+    private void putSharedPrefBalance(String inBalance) {
+        SharedPreferences sharedPref = context.getSharedPreferences(
+                prefFile, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putString("balance", inBalance);
+        editor.apply();
     }
 
 }
