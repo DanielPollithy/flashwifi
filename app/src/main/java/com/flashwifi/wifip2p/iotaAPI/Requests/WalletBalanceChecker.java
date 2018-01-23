@@ -80,6 +80,10 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
 
             WalletAddressChecker addressChecker = new WalletAddressChecker(context,prefFile);
             List<String> addressList = addressChecker.getAddress(seed);
+            boolean containsPendingTransactions = addressChecker.getContainsPendingTransaction();
+            boolean keyIndexChanged = addressChecker.getkeyIndexChanged();
+
+            System.out.println("seed: "+seed);
 
             if(addressList != null && addressList.get(0).equals("Unable to resolve host")){
                 AddressBalanceTransfer addressBalanceTransfer = new AddressBalanceTransfer(null,null,"hostError");
@@ -89,7 +93,7 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
             else if(addressList != null){
 
                 String depositAddress = addressList.get(addressList.size()-1);
-                String balance = getBalance(addressList);
+                String balance = getBalance(addressList, containsPendingTransactions, keyIndexChanged);
 
                 if(balance != null){
                     if(type == WITHDRAW_WALLET && updateMessage == false){
@@ -120,7 +124,7 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
         return null;
     }
 
-    public String getBalance(List<String> inAddresses){
+    public String getBalance(List<String> inAddresses, boolean containsPendingTransactions, boolean keyIndexChanged){
 
         for (String inAddress : inAddresses) {
             System.out.println("addressGetBalance: "+inAddress);
@@ -129,30 +133,41 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
         String updatedBalanceString;
         try {
             StopWatch stopWatch = new StopWatch();
-            GetBalancesAndFormatResponse balanceResponse = api.getBalanceAndFormat(inAddresses, 0, 0, stopWatch, 2);
+
+            SharedPreferences prefManager = PreferenceManager.getDefaultSharedPreferences(context);
+            String security = prefManager.getString("pref_key_security","2");
+            int securityInt = Integer.parseInt(security);
+
+            GetBalancesAndFormatResponse balanceResponse = api.getBalanceAndFormat(inAddresses, 0, 0, stopWatch, securityInt);
             long total = balanceResponse.getTotalBalance();
-            System.out.println("GetBalance Total: "+total);
+            System.out.println("getTotalBalance: "+total);
 
-            GetBalancesResponse balanceResultResponse = api.getBalances(100, inAddresses);
-            String[] balanceArray = balanceResultResponse.getBalances();
+            long storedBaseBalance = Long.parseLong(getBaseSharedPrefKeyBalance());
+            System.out.println("getBaseSharedPreKeyBalance: "+storedBaseBalance);
 
-            System.out.println("balanceArrayLength: "+balanceArray.length);
+            long updatedBaseBalance = storedBaseBalance + total;
+            updatedBalanceString = Long.toString(updatedBaseBalance);
 
-            for (String s : balanceArray) {
-                System.out.println("balanceArrayEntry: "+s);
+            //Pending Transaction, no new confirmed transactions
+            if(containsPendingTransactions && !keyIndexChanged){
+                //No action required
             }
-
-            if(balanceArray.length < 2){
-                System.out.println("updatedBalanceString: "+balanceArray[0]);
-                updatedBalanceString = balanceArray[0];
+            //Pending Transaction, new confirmed transactions
+            else if(containsPendingTransactions && keyIndexChanged){
                 putSharedPrefBalance(updatedBalanceString);
             }
-            else{
-                long storedBalance = Long.parseLong(getSharedPreKeyBalance());
-                System.out.println("getSharedPreKeyBalance: "+getSharedPreKeyBalance());
-                long updatedBalance = storedBalance + Long.parseLong(balanceArray[balanceArray.length-2]);
-                updatedBalanceString = Long.toString(updatedBalance);
-                System.out.println("updatedBalance: "+updatedBalanceString);
+            //No Pending Transactions, no new confirmed transactions
+            else if(!containsPendingTransactions && !keyIndexChanged){
+                //No action required
+            }
+            //No Pending Transactions, new confirmed transactions
+            else if(!containsPendingTransactions && keyIndexChanged){
+                putBaseSharedPrefBalance(updatedBalanceString);
+
+                System.out.println("Store new base balance");
+                System.out.println("updated balance: "+updatedBaseBalance);
+
+                updatedBalanceString = Long.toString(updatedBaseBalance);
                 putSharedPrefBalance(updatedBalanceString);
             }
         } catch (ArgumentException | IllegalStateException e) {
@@ -162,20 +177,15 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
         return updatedBalanceString;
     }
 
-    private String getSharedPreKeyBalance() {
+    private String getSharedPrefKeyBalance() {
         SharedPreferences sharedPref = context.getSharedPreferences(prefFile, Context.MODE_PRIVATE);
         int keyIndex = sharedPref.getInt("keyIndex",0);
 
         System.out.println("KeyIndex: "+keyIndex);
 
         String defaultValue = "0";
-        if(keyIndex > 2){
-            String storedBalance = sharedPref.getString("balance",defaultValue);
-            return storedBalance;
-        }
-        else{
-            return defaultValue;
-        }
+        String storedBalance = sharedPref.getString("balance",defaultValue);
+        return storedBalance;
     }
 
     private void putSharedPrefBalance(String inBalance) {
@@ -183,6 +193,25 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
                 prefFile, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putString("balance", inBalance);
+        editor.apply();
+    }
+
+    private String getBaseSharedPrefKeyBalance() {
+        SharedPreferences sharedPref = context.getSharedPreferences(prefFile, Context.MODE_PRIVATE);
+        int keyIndex = sharedPref.getInt("keyIndex",0);
+
+        System.out.println("KeyIndex: "+keyIndex);
+
+        String defaultValue = "0";
+        String storedBalance = sharedPref.getString("baseBalance",defaultValue);
+        return storedBalance;
+    }
+
+    private void putBaseSharedPrefBalance(String inBalance) {
+        SharedPreferences sharedPref = context.getSharedPreferences(
+                prefFile, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putString("baseBalance", inBalance);
         editor.apply();
     }
 

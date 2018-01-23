@@ -25,6 +25,7 @@ public class WalletTransferRequest extends AsyncTask<Void, Void, Void> {
     private static IotaAPI api;
     private static Context context;
     Boolean testnet;
+    Boolean testnetPrivate;
     private String appWalletSeed;
     private String sendAddress;
     private String sendAmount;
@@ -45,7 +46,7 @@ public class WalletTransferRequest extends AsyncTask<Void, Void, Void> {
 
         SharedPreferences prefManager = PreferenceManager.getDefaultSharedPreferences(context);
         testnet = prefManager.getBoolean("pref_key_switch_testnet",false);
-        Boolean testnetPrivate = prefManager.getBoolean("pref_key_switch_testnet_private",false);
+        testnetPrivate = prefManager.getBoolean("pref_key_switch_testnet_private",false);
 
         if(testnet){
             //Testnet node:
@@ -99,15 +100,24 @@ public class WalletTransferRequest extends AsyncTask<Void, Void, Void> {
 
         SendTransferResponse sendTransferResponse = null;
 
+        SharedPreferences prefManager = PreferenceManager.getDefaultSharedPreferences(context);
+        String security = prefManager.getString("pref_key_security","2");
+        int securityInt = Integer.parseInt(security);
+
         try {
             if(testnet) {
                 //Testnet
                 System.out.println("WalletTransferRequest: Testnet");
-                sendTransferResponse = api.sendTransfer(appWalletSeed, 2, 4, 13, transfers, null, null, false);
+                if(testnetPrivate){
+                    sendTransferResponse = api.sendTransfer(appWalletSeed, securityInt, 4, 3, transfers, null, null, false);
+                }
+                else{
+                    sendTransferResponse = api.sendTransfer(appWalletSeed, securityInt, 4, 9, transfers, null, null, false);
+                }
             }
             else{
                 //Mainnet
-                sendTransferResponse = api.sendTransfer(appWalletSeed, 2, 4, 14, transfers, null, null, false);
+                sendTransferResponse = api.sendTransfer(appWalletSeed, securityInt, 4, 14, transfers, null, null, false);
             }
         } catch (ArgumentException | IllegalAccessError | IllegalStateException e) {
             if (e instanceof ArgumentException) {

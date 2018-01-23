@@ -45,6 +45,11 @@ public class SettingsFragment extends PreferenceFragment implements SharedPrefer
         // Load the preferences from an XML resource
         addPreferencesFromResource(R.xml.preferences);
 
+        // Set version text
+        Preference version = findPreference("pref_key_reset_version");
+        String curTitle = version.getTitle().toString();
+        version.setTitle("Version: "+curTitle);
+
         prefTestNetPrivate = findPreference("pref_key_switch_testnet_private");
         prefCatIotaSettings = (PreferenceCategory) findPreference("pref_key_IOTA_settings");
 
