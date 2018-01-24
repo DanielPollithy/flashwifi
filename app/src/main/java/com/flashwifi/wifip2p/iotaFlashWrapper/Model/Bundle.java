@@ -1,50 +1,63 @@
 package com.flashwifi.wifip2p.iotaFlashWrapper.Model;
 
+import com.flashwifi.wifip2p.iotaFlashWrapper.V8Converter;
+import com.flashwifi.wifip2p.iotaFlashWrapper.Helpers;
+import jota.model.Transaction;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+public class Bundle extends jota.model.Bundle {
 
-public class Bundle {
-    private ArrayList<Transaction> bundles;
-
-    public Bundle(ArrayList<Transaction> bundles) {
-        this.bundles = bundles;
+    public Bundle(List<Transaction> transactions) {
+        super(transactions, transactions.size());
     }
 
     public Bundle() {
-        this.bundles = new ArrayList<>();
+        super();
     }
+
 
     @Override
     public String toString() {
         String out = "";
-        for (Transaction t: bundles) {
+        for (Transaction t: getTransactions()) {
             out += t.toString();
             out += "\n";
         }
         return out;
     }
 
+    public String[] toTrytesArray() {
+        String[] bundleTrytes = new String[getTransactions().size()];
+        List<jota.model.Transaction> transactions = getTransactions();
+        for (int i = 0; i < bundleTrytes.length; i++) {
+            bundleTrytes[(bundleTrytes.length - 1) - i] =  transactions.get(i).toTrytes();
+        }
+
+        return bundleTrytes;
+    }
+
     public Map<String, Object> toMap() {
         Map<String, Object> map = new HashMap<String, Object>();
-        List<Object> bundleList = new ArrayList<Object>();
-        for (Transaction b: bundles) {
-            bundleList.add(b.toMap());
-        }
-        map.put("bundles", bundleList);
+
+        map.put("bundles", toArrayList());
         return map;
     }
 
-    public ArrayList<Transaction> getBundles() {
-        return bundles;
+    public List<Object> toArrayList() {
+        List<Object> bundleList = new ArrayList<Object>();
+        for (Transaction tx: getTransactions()) {
+            bundleList.add(V8Converter.transactionToMap(tx));
+        }
+        return bundleList;
     }
 
-    public  Bundle clone() {
+    public Bundle clone() {
         ArrayList<Transaction> clonedTransactions = new ArrayList<>();
-        for (Transaction t: bundles) {
-            clonedTransactions.add(t.clone());
+        for (Transaction tx: getTransactions()) {
+            clonedTransactions.add(Helpers.cloneTransaction(tx));
         }
         return new Bundle(clonedTransactions);
     }

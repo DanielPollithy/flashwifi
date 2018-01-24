@@ -13,10 +13,8 @@ import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import com.flashwifi.wifip2p.iotaFlashWrapper.Example;
 import com.flashwifi.wifip2p.iotaFlashWrapper.IotaFlashBridge;
-import com.flashwifi.wifip2p.iotaFlashWrapper.Main;
-import com.google.common.base.Charsets;
-import com.google.common.io.CharStreams;
 import com.pddstudio.preferences.encrypted.EncryptedPreferences;
 
 import java.io.BufferedReader;
@@ -77,14 +75,16 @@ public class HomeActivity extends AppCompatActivity {
         String iotaflash = readFile("iotaflash");
         String iotaflashhelper = readFile("iotaflashhelper");
 
-        /*try {
+        try {
             IotaFlashBridge.boot(iotaflash, iotaflashhelper);
-            Main.runExample();
+            Example.setup();
+            Example.transaction(Example.one, Example.two);
+            Example.close(Example.one, Example.two);
         } catch (IOException e) {
             e.printStackTrace();
         } catch (Exception e) {
             e.printStackTrace();
-        }*/
+        }
     }
 
     private void setProgressBar(int percentage) {

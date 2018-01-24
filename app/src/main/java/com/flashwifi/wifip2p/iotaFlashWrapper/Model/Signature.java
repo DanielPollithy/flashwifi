@@ -8,55 +8,16 @@ import java.util.List;
  *
  * @author Adrian
  **/
-public class Signature {
+public class Signature extends jota.model.Signature {
     private int index;
     private String bundle;
-    private String address;
-    private List<String> signatureFragments;
 
     /**
      * Initializes a new instance of the Signature class.
      */
     public Signature() {
-        this.signatureFragments = new ArrayList<>();
+        super();
     }
-
-    /**
-     * Get the address.
-     *
-     * @return The address.
-     */
-    public String getAddress() {
-        return address;
-    }
-
-    /**
-     * Set the address.
-     *
-     * @param address The address.
-     */
-    public void setAddress(String address) {
-        this.address = address;
-    }
-
-    /**
-     * Get the signatureFragments.
-     *
-     * @return The signatureFragments.
-     */
-    public List<String> getSignatureFragments() {
-        return signatureFragments;
-    }
-
-    /**
-     * Set the signatureFragments.
-     *
-     * @param signatureFragments The signatureFragments.
-     */
-    public void setSignatureFragments(List<String> signatureFragments) {
-        this.signatureFragments = signatureFragments;
-    }
-
 
     public int getIndex() {
         return index;
@@ -79,10 +40,10 @@ public class Signature {
         String out = "{ \n" +
             " \tindex:" + index + ", " +
                 " \n\tbundle: " + bundle + ", " +
-            " \n\taddress:" + address + ",";
+            " \n\taddress:" + getAddress() + ",";
 
         out += "\n\t[ \n";
-        for (String sf : signatureFragments) {
+        for (String sf : getSignatureFragments()) {
             out += "\n\t" + sf + ",";
         }
         out += " ]";

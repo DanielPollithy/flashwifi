@@ -1,28 +1,36 @@
 package com.flashwifi.wifip2p.iotaFlashWrapper.Model;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import com.flashwifi.wifip2p.iotaFlashWrapper.Model.*;
+import com.eclipsesource.v8.utils.V8ObjectUtils;
+
+import java.util.*;
 
 public class FlashObject {
-    int signersCount = 2;
-    int balance;
-    ArrayList<String> settlementAddresses;
-    ArrayList<Integer> deposits; // Clone correctly
-    ArrayList<Bundle> outputs = new ArrayList<Bundle>();
-    ArrayList<Bundle> transfers = new ArrayList<Bundle>();
-    MultisigAddress root;
-    MultisigAddress remainderAddress;
+    private int signersCount = 2;
+    private int balance;
+    private List<String> settlementAddresses;
+    private List<Double> deposits;
+    private Map<String, Integer> outputs = new HashMap<>();
+    private List<Bundle> transfers = new ArrayList<Bundle>();
+    private Multisig root;
+    private Multisig remainderAddress;
+    private int depth;
+    private int security;
 
+    public FlashObject(double[] deposits, int depth, int security) {
 
-    public FlashObject(int signersCount, int balance, ArrayList<Integer> deposits) {
-        this.signersCount = signersCount;
-        this.balance = balance;
-        this.deposits = deposits;
+        this.signersCount = deposits.length;
+        for (double dep : deposits) {
+            this.balance += dep;
+        }
+        this.deposits = new ArrayList<>();
+        for (double deposit : deposits){
+            this.deposits.add(deposit);
+        }
+        this.depth = depth;
+        this.security = security;
     }
 
-    public FlashObject(int signersCount, int balance, ArrayList<String> settlementAddresses, ArrayList<Integer> deposits, ArrayList<Bundle> outputs, ArrayList<Bundle> transfers, MultisigAddress root, MultisigAddress remainderAddress) {
+    public FlashObject(int signersCount, int balance, List<String> settlementAddresses, List<Double> deposits, Map<String, Integer> outputs, List<Bundle> transfers, Multisig root, Multisig remainderAddress, int depth, int security) {
         this.signersCount = signersCount;
         this.balance = balance;
         this.settlementAddresses = settlementAddresses;
@@ -31,35 +39,8 @@ public class FlashObject {
         this.transfers = transfers;
         this.root = root;
         this.remainderAddress = remainderAddress;
-    }
-
-    @Override
-    public String toString() {
-        String out = "";
-        out += "signersCount: " + signersCount + "\n";
-        out += "balance: " + balance + "\n";
-        out += "settlementAddresses: " + "\n";
-        for (String b: settlementAddresses) {
-            out += "\t" + b + "\n";
-        }
-        out += "deposits: " + "\n";
-        for (Integer b: deposits) {
-            out += "\t" + b + "\n";
-        }
-
-        out += "outputs: " + "\n";
-        for (Bundle b: outputs) {
-            out += "\t" + b.toString() + "\n";
-        }
-
-        out += "transfers: " + "\n";
-        for (Bundle b: transfers) {
-            out += "\t" + b.toString() + "\n";
-        }
-        out += "remainderAddress: " + remainderAddress.toString() + "\n";
-        out += "root: " + root.toString() + "\n";
-
-        return out;
+        this.depth = depth;
+        this.security = security;
     }
 
     public Map<String, Object> toMap() {
@@ -69,57 +50,62 @@ public class FlashObject {
         objectMap.put("root", root.toMap());
         objectMap.put("remainderAddress", remainderAddress.toMap());
         objectMap.put("settlementAddresses", getSettlementAddresses());
-
-        ArrayList<Object> outputMap = new ArrayList<>();
-        for (Bundle b: outputs) {
-            outputMap.add(b.toMap());
-        }
-        objectMap.put("outputs", outputMap);
+        objectMap.put("depth", getDepth());
+        objectMap.put("security", getSecurity());
+        // Wrap outputs inside an array.
+        objectMap.put("outputs", getOutputs());
 
         objectMap.put("deposits", getDeposits());
 
         ArrayList<Object> transfersMap = new ArrayList<>();
-        for (Bundle b: transfers) {
-            outputMap.add(b.toMap());
+        for (Bundle b: getTransfers()) {
+            transfersMap.add(b.toArrayList());
         }
         objectMap.put("transfers", transfersMap);
         return objectMap;
 
     }
 
-    public int getSignersCount() {
-        return signersCount;
-    }
-
     public int getBalance() {
         return balance;
     }
 
-    public MultisigAddress getRoot() {
+    public int getSignersCount() {
+        return signersCount;
+    }
+
+    public int getDepth() {
+        return depth;
+    }
+
+    public int getSecurity() {
+        return security;
+    }
+
+    public Multisig getRoot() {
         return root;
     }
 
-    public ArrayList<Integer> getDeposits() {
+    public List<Double> getDeposits() {
         return deposits;
     }
 
-    public ArrayList<Bundle> getOutputs() {
+    public Map<String, Integer> getOutputs() {
         return outputs;
     }
-
-    public ArrayList<Bundle> getTransfers() {
+    public List<Bundle> getTransfers() {
         return transfers;
     }
 
-    public void setRemainderAddress(MultisigAddress remainderAddress) {
+    public void setRemainderAddress(Multisig remainderAddress) {
         this.remainderAddress = remainderAddress;
     }
 
-    public MultisigAddress getRemainderAddress() {
+    public Multisig getRemainderAddress() {
         return remainderAddress;
     }
 
-    public void setRoot(MultisigAddress root) {
+    public void setRoot(Multisig root) {
         this.root = root;
     }
 
@@ -127,7 +113,7 @@ public class FlashObject {
         this.settlementAddresses = settlementAddresses;
     }
 
-    public ArrayList<String> getSettlementAddresses() {
+    public List<String> getSettlementAddresses() {
         return settlementAddresses;
     }
 }
