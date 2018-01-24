@@ -103,13 +103,14 @@ public class SettingsFragment extends PreferenceFragment implements SharedPrefer
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
         switch(key){
             case "pref_key_security":
-                makeToastSettingsFragment("Security Changed");
+                //makeToastSettingsFragment("Security Changed");
                 break;
             case "pref_key_network_timeout":
-                makeToastSettingsFragment("Network Timeout Changed");
+                //makeToastSettingsFragment("Network Timeout Changed");
                 break;
             case "pref_key_units":
                 makeToastSettingsFragment("Units Changed");
+                //makeToastSettingsFragment("Units Changed");
                 break;
             case "pref_key_switch_testnet":
                 makeToastSettingsFragment("Testnet on/off Changed");

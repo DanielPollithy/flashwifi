@@ -26,6 +26,7 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
 
     private static final int FUND_WALLET = 0;
     private static final int WITHDRAW_WALLET = 1;
+    private static final int PREF_UPDATE = 2;
 
     private static IotaAPI api;
     private static Context context;
@@ -78,6 +79,7 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
 
     @Override
     protected Void doInBackground(Void... voids) {
+
         if(context != null){
 
             WalletAddressChecker addressChecker = new WalletAddressChecker(context,prefFile);

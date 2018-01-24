@@ -14,6 +14,8 @@ import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
+import android.os.Message;
 import android.preference.PreferenceManager;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
@@ -25,14 +27,13 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.CompoundButton;
 import android.widget.ListView;
 import android.widget.ProgressBar;
-import android.widget.Switch;
 import android.widget.Toast;
 
 import com.flashwifi.wifip2p.billing.Accountant;
 import com.flashwifi.wifip2p.broadcast.WiFiDirectBroadcastService;
+import com.flashwifi.wifip2p.iotaAPI.Requests.WalletBalanceChecker;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener
@@ -41,6 +42,9 @@ public class MainActivity extends AppCompatActivity
     private static final String TAG = "MainAct";
     private String password;
     private String seed;
+    private static final int PREF_UPDATE = 2;
+    private static final int BALANCE_RETRIEVE_TASK_COMPLETE = 1;
+    private Handler balanceHandler;
 
     private DrawerLayout mDrawerLayout;
     private ListView mDrawerList;
@@ -152,6 +156,9 @@ public class MainActivity extends AppCompatActivity
         Intent intent = getIntent();
         password = intent.getStringExtra("password");
         seed = intent.getStringExtra("seed");
+
+        setBalanceHandler();
+        updateBalance();
 
         Accountant.getInstance().setSeed(seed);
 
@@ -275,6 +282,11 @@ public class MainActivity extends AppCompatActivity
             }
         }
         return true;
+    }
+
+    private void updateBalance() {
+        WalletBalanceChecker balanceChecker = new WalletBalanceChecker(this,this.getString(R.string.preference_file_key),seed, balanceHandler,PREF_UPDATE,true);
+        balanceChecker.execute();
     }
 
     public void startSearchFragment() {
@@ -421,4 +433,34 @@ public class MainActivity extends AppCompatActivity
             mBound = false;
         }
     };
+
+    private void setBalanceHandler() {
+        //Handle post-asynctask activities
+        balanceHandler = new Handler(Looper.getMainLooper()) {
+            @Override
+            public void handleMessage(Message inputMessage) {
+                switch (inputMessage.what) {
+                    case BALANCE_RETRIEVE_TASK_COMPLETE:
+                        AddressBalanceTransfer addressBalanceTransfer = (AddressBalanceTransfer) inputMessage.obj;
+                        String returnStatus = addressBalanceTransfer.getMessage();
+                        if (returnStatus.equals("noError")) {
+                            makeToastBalance("Balance updated");
+                        } else if (returnStatus.equals("hostError")) {
+                            makeToastBalance("Unable to reach host (node)");
+                        } else if (returnStatus.equals("addressError")) {
+                            makeToastBalance("Error getting address");
+                        } else if (returnStatus.equals("balanceError")) {
+                            makeToastBalance("Error getting balance. May not be able to resolve host/node");
+                        } else {
+                            makeToastBalance("Unknown error");
+                        }
+                }
+            }
+        };
+    }
+
+    private void makeToastBalance(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    }
+
 }
