@@ -69,4 +69,23 @@
     <string name="initRetransfer">Initializing retransfer</string>
     <string name="welcome">Welcome to the Wifi Iota Hotspot App</string>
 
+
+    <!-- Welcome Slideshow -->
+    <!-- Page 1 -->
+    <string name="next">Next</string>
+    <string name="start">Start</string>
+    <string name="save">Save</string>
+
+    <string name="dialog_message_pw">Password missing!</string>
+    <string name="dialog_title_pw">Please enter a password</string>
+
+
+    <string name="slide_1_title">Welcome to Wifiota!</string>
+
+    <string name="slide_2_desc">Share remaining megabytes from your data plan and get paid Iota. Or get access to WiFi in foreign countries, airports or coffee shops in exchange for Iota.</string>
+    <string name="slide_3_desc">In order to discover, communicate and share WiFi with people around you, please give the following permissions.</string>
+    <string name="slide_4_desc">The app creates a new seed for you which is something like a cryptographic password for your iota balance. You can deposit and withdraw to it. </string>
+    <string name="slide_5_desc">The app will only store a version of the seed that is encrypted by a password. Please enter a password! </string>
+    <string name="slide_6_desc">Have fun with Wifiota and please always remember that we are still working on this app.</string>
+
 </resources>

@@ -6,6 +6,48 @@
 
     <color name="black_overlay">#66000000</color>
     <color name="colour_highlight_grey">#ff666666</color>
-    <color name="colour_dark_blue">#ff000066</color>
+    <color name="colour_dark_blue">#000066</color>
     <color name="colour_dark_green">#ff006600</color>
+
+    <!-- Welcome Slideshow -->
+    <color name="screen1">#303F9F</color>
+    <color name="screen2">#14a895</color>
+    <color name="screen3">#057dac</color>
+    <color name="screen4">#0323a6</color>
+    <color name="screen5">#1e408f</color>
+    <color name="screen6">#05bef1</color>
+
+    <!-- dots inactive colors -->
+    <color name="dot_dark_screen1">#101433</color>
+    <color name="dot_dark_screen2">#0c685c</color>
+    <color name="dot_dark_screen3">#034660</color>
+    <color name="dot_dark_screen4">#000826</color>
+    <color name="dot_dark_screen5">#081023</color>
+    <color name="dot_dark_screen6">#006b89</color>
+
+    <!-- dots active colors -->
+    <color name="dot_light_screen1">#7688f9</color>
+    <color name="dot_light_screen2">#8cf9eb</color>
+    <color name="dot_light_screen3">#93c6fd</color>
+    <color name="dot_light_screen4">#7691ff</color>
+    <color name="dot_light_screen5">#4073e9</color>
+    <color name="dot_light_screen6">#adedff</color>
+
+    <array name="array_dot_active">
+        <item>@color/dot_light_screen1</item>
+        <item>@color/dot_light_screen2</item>
+        <item>@color/dot_light_screen3</item>
+        <item>@color/dot_light_screen4</item>
+        <item>@color/dot_light_screen5</item>
+        <item>@color/dot_light_screen6</item>
+    </array>
+
+    <array name="array_dot_inactive">
+        <item>@color/dot_dark_screen1</item>
+        <item>@color/dot_dark_screen2</item>
+        <item>@color/dot_dark_screen3</item>
+        <item>@color/dot_dark_screen4</item>
+        <item>@color/dot_dark_screen5</item>
+        <item>@color/dot_dark_screen6</item>
+    </array>
 </resources>
