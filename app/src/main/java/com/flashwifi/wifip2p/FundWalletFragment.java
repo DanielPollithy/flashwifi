@@ -85,7 +85,7 @@ public class FundWalletFragment extends Fragment {
                         transactionInProgress = false;
 
                         if(returnStatus.equals("noError")){
-                            balanceTextView.setText(balance + " i");
+                            balanceTextView.setText(balance);
                             addressTextView.setText(depositAddress);
                             createAddressQRCode(depositAddress);
                             makeToastFundWalletFragment("Balance and address updated");

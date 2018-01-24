@@ -1,11 +1,10 @@
 package com.flashwifi.wifip2p.iotaFlashWrapper.Model;
 
-
 public class CreateTransactionHelperObject {
     private int generate = 0;
-    private MultisigAddress address;
+    private Multisig address;
 
-    public CreateTransactionHelperObject(int gen, MultisigAddress addr) {
+    public CreateTransactionHelperObject(int gen, Multisig addr) {
         this.generate = gen;
         this.address = addr;
     }
@@ -14,7 +13,11 @@ public class CreateTransactionHelperObject {
         return generate;
     }
 
-    public MultisigAddress getAddress() {
+    public Multisig getAddress() {
         return address;
+    }
+
+    public void setAddress(Multisig address) {
+        this.address = address;
     }
 }

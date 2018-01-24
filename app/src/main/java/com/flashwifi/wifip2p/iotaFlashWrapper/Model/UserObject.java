@@ -4,31 +4,24 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-
 public class UserObject {
-    private int userIndex = 1;
+    private int userIndex;
     private String seed;
-    private int index = 0;
-    private int security = 2;
-    private int depth = 4;
-    private ArrayList<Bundle> bundles = new ArrayList<Bundle>();
-    private ArrayList<Digest> partialDigests = new ArrayList<Digest>();
-    private ArrayList<MultisigAddress> multisigDigests = new ArrayList<MultisigAddress>();
+    private int seedIndex;
+    private int security;
+
     private FlashObject flash;
 
-    public UserObject(int userID, String seed, int depth, FlashObject flash) {
+    public UserObject(int userID, String seed, int seedIndex, int security) {
         this.userIndex = userID;
         this.seed = seed;
-        this.depth = depth;
-        this.flash = flash;
+        this.seedIndex = seedIndex;
+        this.security = security;
     }
 
-    public void incrementIndex() {
-        index++;
-    }
-
-    public void add(Digest digest) {
-        partialDigests.add(digest);
+    public int incrementSeedIndex() {
+        this.seedIndex = this.seedIndex + 1;
+        return seedIndex;
     }
 
     @Override
@@ -36,21 +29,9 @@ public class UserObject {
         String out = "";
         out += "userIndex: " + userIndex + "\n";
         out += "seed: " + seed + "\n";
-        out += "index: " + index + "\n";
+        out += "seedIndex: " + seedIndex + "\n";
         out += "security: " + getSecurity() + "\n";
-        out += "depth: " + depth + "\n";
         out += "bundles: " + "\n";
-        for (Bundle b: bundles) {
-            out += "\t" + b.toString() + "\n";
-        }
-        out += "partialDigests: " + "\n";
-        for (Digest d: partialDigests) {
-            out += "\t" + d.toString() + "\n";
-        }
-        out += "multisigDigests: " + "\n";
-        for (MultisigAddress m: multisigDigests) {
-            out += "\t" + m.toString() + "\n";
-        }
         out += "Flash: " + "\n";
         out += flash.toString();
 
@@ -61,27 +42,8 @@ public class UserObject {
         Map<String, Object> objectMap = new HashMap<>();
         objectMap.put("userIndex", getUserIndex());
         objectMap.put("seed", getSeed());
-        objectMap.put("index", getIndex());
+        objectMap.put("seedIndex", getSeedIndex());
         objectMap.put("security", getSecurity());
-        objectMap.put("depth", depth);
-
-        ArrayList<Object> bundleMaps = new ArrayList<>();
-        for (Bundle b: bundles) {
-            bundleMaps.add(b.toMap());
-        }
-        objectMap.put("bundles", bundleMaps);
-
-        ArrayList<Object> partialDigestMaps = new ArrayList<>();
-        for (Bundle b: bundles) {
-            partialDigestMaps.add(b.toMap());
-        }
-        objectMap.put("partialDigests", partialDigestMaps);
-
-        ArrayList<Object> multisigDigestsMaps = new ArrayList<>();
-        for (Bundle b: bundles) {
-            partialDigestMaps.add(b.toMap());
-        }
-        objectMap.put("multisigDigests", multisigDigestsMaps);
         objectMap.put("flash", flash.toMap());
         return objectMap;
     }
@@ -91,24 +53,12 @@ public class UserObject {
      * Getters and Setters
      */
 
-    public void setMultisigDigests(ArrayList<MultisigAddress> multisigDigests) {
-        this.multisigDigests = multisigDigests;
-    }
-
     public void setFlash(FlashObject flash) {
         this.flash = flash;
     }
 
-    public void setIndex(int index) {
-        this.index = index;
-    }
-
-    public void setBundles(ArrayList<Bundle> bundles) {
-        this.bundles = bundles;
-    }
-
-    public ArrayList<MultisigAddress> getMultisigDigests() {
-        return multisigDigests;
+    public void setSeedIndex(int index) {
+        this.seedIndex = index;
     }
 
     public int getSecurity() {
@@ -119,20 +69,12 @@ public class UserObject {
         return seed;
     }
 
-    public int getIndex() {
-        return index;
+    public int getSeedIndex() {
+        return seedIndex;
     }
 
     public int getUserIndex() {
         return userIndex;
-    }
-
-    public ArrayList<Bundle> getBundles() {
-        return bundles;
-    }
-
-    public ArrayList<Digest> getPartialDigests() {
-        return partialDigests;
     }
 
     public FlashObject getFlash() {

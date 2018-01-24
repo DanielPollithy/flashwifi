@@ -76,14 +76,13 @@ public class WalletAddressChecker {
                 SharedPreferences prefManager = PreferenceManager.getDefaultSharedPreferences(context);
                 String security = prefManager.getString("pref_key_security","2");
                 int securityInt = Integer.parseInt(security);
-                System.out.println("securityInt: "+securityInt);
                 addressResponse = api.getNewAddress(seed, securityInt, keyIndex, true, 1, false);
             } catch (ArgumentException e) {
                 e.printStackTrace();
+                return addressList;
             }
 
             if(addressResponse != null) {
-                System.out.println("WalletAddressChecker - Address: "+addressResponse.getAddresses().get(0));
                 addressList.add(addressResponse.getAddresses().get(0));
 
                 String[] addressesCheckArray = new String[1];
@@ -101,7 +100,7 @@ public class WalletAddressChecker {
                     }
                 }
 
-                if(transactionsForAddress.isEmpty() || (transactionsForAddress.size() == 0 || transactionsForAddress.equals(null))){
+                if(transactionsForAddress == null || transactionsForAddress.isEmpty() || (transactionsForAddress.size() == 0)){
                     //Transactions not found, use this address
                     foundAddress = true;
                 }
@@ -110,11 +109,6 @@ public class WalletAddressChecker {
 
                     String curHash = transactionsForAddress.get(0).getHash();
                     hashStringList.add(curHash);
-
-                    System.out.println("WalletAddressChecker value: "+transactionsForAddress.get(0).getValue());
-                    System.out.println("WalletAddressChecker time: "+transactionsForAddress.get(0).getAttachmentTimestamp());
-                    System.out.println("WalletAddressChecker address: "+transactionsForAddress.get(0).getAddress());
-
                     keyIndex = keyIndex + 1;
                 }
             }
@@ -130,34 +124,27 @@ public class WalletAddressChecker {
         //Check whether pending transactions exist
         containsPendingTransaction = false;
         keyIndexChanged = false;
+        GetInclusionStateResponse inclusionResponse;
         try {
-            GetInclusionStateResponse inclusionResponse = api.getLatestInclusion(hashStringArray);
-            boolean[] states = inclusionResponse.getStates();
-
-            for (boolean state : states) {
-                if(!state){
-                    containsPendingTransaction = true;
-                }
-            }
-        } catch (ArgumentException e) {
+            inclusionResponse = api.getLatestInclusion(hashStringArray);
+        } catch (ArgumentException | IllegalStateException e) {
             e.printStackTrace();
+            return addressList;
         }
 
-        System.out.println("containsPendingTransaction: "+containsPendingTransaction);
+        boolean[] states = inclusionResponse.getStates();
+
+        for (boolean state : states) {
+            if(!state){
+                containsPendingTransaction = true;
+            }
+        }
 
         if(!containsPendingTransaction){
             //all confirmed transactions, ok to change keyIndex
-
             if(keyIndex != getKeyIndex()){
                 keyIndexChanged = true;
-                if(keyIndex == 0){
-                    //Put the initial address to search. No transactions for the seed yet.
-                    putKeyIndex(keyIndex);
-                }
-                else{
-                    //Put the second last address to search
-                    putKeyIndex(keyIndex-1);
-                }
+                putKeyIndex(keyIndex);
             }
         }
 

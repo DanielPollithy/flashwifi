@@ -107,7 +107,6 @@ public class WalletTransferRequest extends AsyncTask<Void, Void, Void> {
         try {
             if(testnet) {
                 //Testnet
-                System.out.println("WalletTransferRequest: Testnet");
                 if(testnetPrivate){
                     sendTransferResponse = api.sendTransfer(appWalletSeed, securityInt, 4, 3, transfers, null, null, false);
                 }
@@ -155,7 +154,6 @@ public class WalletTransferRequest extends AsyncTask<Void, Void, Void> {
         else{
             transferResult = "Transfer error: Send Response not received";
         }
-        System.out.println("WalletTransferRequest - result: "+transferResult);
         return transferResult;
     }
 }

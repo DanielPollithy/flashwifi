@@ -244,13 +244,17 @@ public class BillingServer {
                 e.printStackTrace();
             } finally {
                 try {
-                    socketWrapper.close();
-                } catch (IOException e) {
+                    if (socketWrapper != null) {
+                        socketWrapper.close();
+                    }
+                } catch (Exception e) {
 
                 }
                 try {
-                    serverSocket.close();
-                } catch (IOException e) {
+                    if (serverSocket != null) {
+                        serverSocket.close();
+                    }
+                } catch (Exception e) {
 
                 }
             }

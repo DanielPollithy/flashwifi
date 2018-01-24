@@ -68,6 +68,9 @@
     <string name="channelClosed">The payment channel was closed.</string>
     <string name="initRetransfer">Initializing retransfer</string>
     <string name="welcome">Welcome to the Wifi Iota Hotspot App</string>
+    <string name="notification_doing_nothing">Currently doing nothing</string>
+    <string name="stopAP">Stop Hotspot</string>
+    <string name="startAPText">Start Hotspot</string>
 
 
     <!-- Welcome Slideshow -->

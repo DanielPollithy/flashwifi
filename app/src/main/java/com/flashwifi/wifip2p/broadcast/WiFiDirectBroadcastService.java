@@ -1,11 +1,16 @@
 package com.flashwifi.wifip2p.broadcast;
 import android.app.Activity;
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.DhcpInfo;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiManager;
 import android.net.wifi.p2p.WifiP2pConfig;
@@ -20,9 +25,14 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.preference.PreferenceManager;
+import android.support.v4.app.NotificationCompat;
+import android.text.format.Formatter;
 import android.util.Log;
 
 import com.flashwifi.wifip2p.AddressBalanceTransfer;
+import com.flashwifi.wifip2p.Constants;
+import com.flashwifi.wifip2p.MainActivity;
+import com.flashwifi.wifip2p.R;
 import com.flashwifi.wifip2p.accesspoint.AccessPointTask;
 import com.flashwifi.wifip2p.accesspoint.ConnectTask;
 import com.flashwifi.wifip2p.accesspoint.StopAccessPointTask;
@@ -38,10 +48,14 @@ import com.flashwifi.wifip2p.protocol.NegotiationFinalization;
 import com.flashwifi.wifip2p.protocol.NegotiationOffer;
 import com.flashwifi.wifip2p.protocol.NegotiationOfferAnswer;
 
+import org.apache.commons.lang3.ArrayUtils;
+
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -95,6 +109,57 @@ public class WiFiDirectBroadcastService extends Service {
     boolean apRuns = false;
     ConnectTask connectTask;
     private boolean negotiatorRunning = false;
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent.getAction().equals(Constants.ACTION.STARTFOREGROUND_ACTION)) {
+            Log.i(TAG, "Received Start Foreground Intent ");
+            Intent notificationIntent = new Intent(this, MainActivity.class);
+            notificationIntent.setAction(Constants.ACTION.MAIN_ACTION);
+            notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
+                    notificationIntent, 0);
+/*
+            Intent previousIntent = new Intent(this, WiFiDirectBroadcastService.class);
+            previousIntent.setAction(Constants.ACTION.PREV_ACTION);
+            PendingIntent ppreviousIntent = PendingIntent.getService(this, 0,
+                    previousIntent, 0);
+
+            Intent playIntent = new Intent(this, WiFiDirectBroadcastService.class);
+            playIntent.setAction(Constants.ACTION.PLAY_ACTION);
+            PendingIntent pplayIntent = PendingIntent.getService(this, 0,
+                    playIntent, 0);*/
+
+            Intent stopIntent = new Intent(this, WiFiDirectBroadcastService.class);
+            stopIntent.setAction(Constants.ACTION.STOPFOREGROUND_ACTION);
+            PendingIntent pstopIntent = PendingIntent.getService(this, 0,
+                    stopIntent, 0);
+
+            Bitmap icon = BitmapFactory.decodeResource(getResources(),
+                    R.drawable.icon_tethering_on);
+
+            Notification notification = new NotificationCompat.Builder(this)
+                    .setContentTitle(getString(R.string.app_name))
+                    .setTicker(getString(R.string.app_name))
+                    .setContentText(getString(R.string.notification_doing_nothing))
+                    .setSmallIcon(R.drawable.icon_tethering_on)
+                    .setLargeIcon(
+                            Bitmap.createScaledBitmap(icon, 128, 128, false))
+                    .setContentIntent(pendingIntent)
+                    .setOngoing(true)
+                    .addAction(R.drawable.icon_tethering_off, "Stop",
+                            pstopIntent).build();
+            startForeground(Constants.NOTIFICATION_ID.FOREGROUND_SERVICE,
+                    notification);
+        } else if (intent.getAction().equals(
+                Constants.ACTION.STOPFOREGROUND_ACTION)) {
+            Log.i(TAG, "Received Stop Foreground Intent");
+            stopForeground(true);
+            stopSelf();
+        }
+        return START_STICKY;
+    }
 
     public boolean isSetup() {
         return setup;
@@ -165,9 +230,23 @@ public class WiFiDirectBroadcastService extends Service {
                 @Override
                 public void run() {
                     BillingClient billingClient = new BillingClient(mac, getApplicationContext());
-                    // ToDo: get the AP gateway ip address
+                    // Gget the AP gateway ip address
                     // https://stackoverflow.com/questions/9035784/how-to-know-ip-address-of-the-router-from-code-in-android
-                    billingClient.start("192.168.43.1");
+                    final WifiManager manager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+                    final DhcpInfo dhcp = manager.getDhcpInfo();
+                    byte[] myIPAddress = BigInteger.valueOf(dhcp.gateway).toByteArray();
+                    ArrayUtils.reverse(myIPAddress);
+                    InetAddress myInetIP = null;
+                    String routerIP = null;
+                    try {
+                        myInetIP = InetAddress.getByAddress(myIPAddress);
+                        routerIP = myInetIP.getHostAddress();
+                    } catch (UnknownHostException e) {
+                        e.printStackTrace();
+                        routerIP = "192.168.43.1";
+                    }
+                    Log.d(TAG, "DHCP gateway: " + routerIP);
+                    billingClient.start(routerIP);
                     // ToDo: handle billingServer EXIT CODES
                     // -> close the roaming etc.
                 }
@@ -379,7 +458,7 @@ public class WiFiDirectBroadcastService extends Service {
             stopAllTasks();
             thread.start();
         } else {
-            Log.d(TAG, "startNegotiationClient: BLOCKED due to roaming state");
+            Log.d(TAG, "startNegotiationClient: BLOCKED due to roaming state or negotiator running");
         }
 
 

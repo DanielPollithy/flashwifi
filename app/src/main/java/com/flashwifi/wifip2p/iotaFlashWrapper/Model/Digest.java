@@ -1,5 +1,4 @@
 package com.flashwifi.wifip2p.iotaFlashWrapper.Model;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -17,7 +16,6 @@ public class Digest {
     public int getIndex() {
         return index;
     }
-
     public String getDigest() {
         return digest;
     }

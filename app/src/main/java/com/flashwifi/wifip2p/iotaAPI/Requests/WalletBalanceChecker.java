@@ -10,6 +10,8 @@ import android.preference.PreferenceManager;
 import com.flashwifi.wifip2p.AddressBalanceTransfer;
 import com.flashwifi.wifip2p.R;
 
+import java.text.DateFormat;
+import java.util.Date;
 import java.util.List;
 
 import jota.IotaAPI;
@@ -24,6 +26,7 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
 
     private static final int FUND_WALLET = 0;
     private static final int WITHDRAW_WALLET = 1;
+    private static final int PREF_UPDATE = 2;
 
     private static IotaAPI api;
     private static Context context;
@@ -76,14 +79,13 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
 
     @Override
     protected Void doInBackground(Void... voids) {
+
         if(context != null){
 
             WalletAddressChecker addressChecker = new WalletAddressChecker(context,prefFile);
             List<String> addressList = addressChecker.getAddress(seed);
             boolean containsPendingTransactions = addressChecker.getContainsPendingTransaction();
             boolean keyIndexChanged = addressChecker.getkeyIndexChanged();
-
-            System.out.println("seed: "+seed);
 
             if(addressList != null && addressList.get(0).equals("Unable to resolve host")){
                 AddressBalanceTransfer addressBalanceTransfer = new AddressBalanceTransfer(null,null,"hostError");
@@ -126,10 +128,6 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
 
     public String getBalance(List<String> inAddresses, boolean containsPendingTransactions, boolean keyIndexChanged){
 
-        for (String inAddress : inAddresses) {
-            System.out.println("addressGetBalance: "+inAddress);
-        }
-
         String updatedBalanceString;
         try {
             StopWatch stopWatch = new StopWatch();
@@ -140,11 +138,7 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
 
             GetBalancesAndFormatResponse balanceResponse = api.getBalanceAndFormat(inAddresses, 0, 0, stopWatch, securityInt);
             long total = balanceResponse.getTotalBalance();
-            System.out.println("getTotalBalance: "+total);
-
             long storedBaseBalance = Long.parseLong(getBaseSharedPrefKeyBalance());
-            System.out.println("getBaseSharedPreKeyBalance: "+storedBaseBalance);
-
             long updatedBaseBalance = storedBaseBalance + total;
             updatedBalanceString = Long.toString(updatedBaseBalance);
 
@@ -163,26 +157,35 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
             //No Pending Transactions, new confirmed transactions
             else if(!containsPendingTransactions && keyIndexChanged){
                 putBaseSharedPrefBalance(updatedBalanceString);
-
-                System.out.println("Store new base balance");
-                System.out.println("updated balance: "+updatedBaseBalance);
-
                 updatedBalanceString = Long.toString(updatedBaseBalance);
                 putSharedPrefBalance(updatedBalanceString);
             }
         } catch (ArgumentException | IllegalStateException e) {
             e.printStackTrace();
-            return null;
+            return getSharedPrefKeyBalance()+"i (cached: "+getSharedPrefKeyBalanceDateUpdate()+")";
         }
-        return updatedBalanceString;
+        String currentDateTimeString = DateFormat.getDateTimeInstance().format(new Date());
+        putSharedPrefBalanceDateUpdate(currentDateTimeString);
+        return updatedBalanceString+"i";
+    }
+
+    private void putSharedPrefBalanceDateUpdate(String currentDateTimeString) {
+        SharedPreferences sharedPref = context.getSharedPreferences(
+                prefFile, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putString("balanceDateUpdate", currentDateTimeString);
+        editor.apply();
+    }
+
+    private String getSharedPrefKeyBalanceDateUpdate() {
+        SharedPreferences sharedPref = context.getSharedPreferences(prefFile, Context.MODE_PRIVATE);
+        String defaultValue = "0";
+        String storedBalance = sharedPref.getString("balanceDateUpdate",defaultValue);
+        return storedBalance;
     }
 
     private String getSharedPrefKeyBalance() {
         SharedPreferences sharedPref = context.getSharedPreferences(prefFile, Context.MODE_PRIVATE);
-        int keyIndex = sharedPref.getInt("keyIndex",0);
-
-        System.out.println("KeyIndex: "+keyIndex);
-
         String defaultValue = "0";
         String storedBalance = sharedPref.getString("balance",defaultValue);
         return storedBalance;
@@ -198,10 +201,6 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
 
     private String getBaseSharedPrefKeyBalance() {
         SharedPreferences sharedPref = context.getSharedPreferences(prefFile, Context.MODE_PRIVATE);
-        int keyIndex = sharedPref.getInt("keyIndex",0);
-
-        System.out.println("KeyIndex: "+keyIndex);
-
         String defaultValue = "0";
         String storedBalance = sharedPref.getString("baseBalance",defaultValue);
         return storedBalance;

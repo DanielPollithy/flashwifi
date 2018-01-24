@@ -19,7 +19,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:text="@string/startAP" />
+            android:textOn="@string/stopAP"
+            android:textOff="@string/startAPText" />
 
         <ProgressBar
             android:id="@+id/progressbarAP"
