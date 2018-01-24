@@ -34,8 +34,6 @@ public class HotspotFragment extends Fragment {
 
     private int numberConnectedPeers = 0;
 
-    WiFiDirectBroadcastService mService;
-    boolean mBound = false;
     BroadcastReceiver updateUIReceiver;
 
     public HotspotFragment() {
@@ -73,7 +71,7 @@ public class HotspotFragment extends Fragment {
 
     private void updateUi(Intent intent) {
         Log.d(TAG, "updateUi: Got some network data into the hotspot fragment");
-        String numberAvailableDevices = Integer.toString(mService.getArrayList().size());
+        String numberAvailableDevices = Integer.toString(getmService().getArrayList().size());
         TextView text = (TextView) getActivity().findViewById(R.id.numberPeers);
         text.setVisibility(View.VISIBLE);
         text.setText(String.format("%s peers", numberAvailableDevices));
@@ -81,9 +79,9 @@ public class HotspotFragment extends Fragment {
 
         //if (intent.hasExtra("what") && intent.getExtras().getString("what", "").equals("connectivity_changed")) {
 
-            NetworkInfo network_info = mService.getNetwork_info();
-            WifiP2pInfo p2p_info = mService.getP2p_info();
-            WifiP2pGroup wifiP2pGroup = mService.getP2p_group();
+            NetworkInfo network_info = getmService().getNetwork_info();
+            WifiP2pInfo p2p_info = getmService().getP2p_info();
+            WifiP2pGroup wifiP2pGroup = getmService().getP2p_group();
 
             if (intent.hasExtra("currentDeviceConnected")) {
                 //String macAddress = intent.getExtras().getString("currentDeviceConnected");
@@ -92,11 +90,11 @@ public class HotspotFragment extends Fragment {
 
                     if (p2p_info.isGroupOwner) {
                         Snackbar.make(activity_view, "You are the group owner", Snackbar.LENGTH_LONG).setAction("Action", null).show();
-                        mService.startNegotiationServer(false, null);
+                        getmService().startNegotiationServer(false, null);
                     } else {
                         InetAddress groupOwnerAddress = p2p_info.groupOwnerAddress;
                         Snackbar.make(activity_view, "You are only a member of the group", Snackbar.LENGTH_LONG).setAction("Action", null).show();
-                        mService.startNegotiationClient(groupOwnerAddress, false, null);
+                        getmService().startNegotiationClient(groupOwnerAddress, false, null);
                     }
 
                 }
@@ -111,9 +109,7 @@ public class HotspotFragment extends Fragment {
     @Override
     public void onStop() {
         super.onStop();
-        getActivity().unbindService(mConnection);
         getActivity().unregisterReceiver(updateUIReceiver);
-        mBound = false;
     }
 
     @Override
@@ -129,6 +125,11 @@ public class HotspotFragment extends Fragment {
         initFragment();
     }
 
+    public WiFiDirectBroadcastService getmService() {
+        MainActivity act = (MainActivity) getActivity();
+        return act.getmService();
+    }
+
     private void initFragment(){
         IntentFilter filter = new IntentFilter();
         filter.addAction("com.flashwifi.wifip2p.update_ui");
@@ -138,6 +139,10 @@ public class HotspotFragment extends Fragment {
         updateUIReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
+                if (getActivity() == null) {
+                    Log.d(TAG, "onReceive: getActivity is null");
+                    return;
+                }
                 if (intent.getAction().equals("com.flashwifi.wifip2p.start_roaming")) {
                     String mac = intent.getStringExtra("peer_mac_address");
                     ToggleButton toggle = (ToggleButton) getActivity().findViewById(R.id.startAPButton);
@@ -156,10 +161,6 @@ public class HotspotFragment extends Fragment {
         };
 
         getActivity().registerReceiver(updateUIReceiver, filter);
-
-        // Bind to Service
-        Intent intent = new Intent(getActivity(), WiFiDirectBroadcastService.class);
-        getActivity().bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
 
         initUI();
 
@@ -185,29 +186,13 @@ public class HotspotFragment extends Fragment {
         // ToDo: Move this to a async task
         //boolean status = (isNetworkConnected() && isInternetAvailable());
     }
-
-    private boolean isNetworkConnected() {
-        ConnectivityManager cm = (ConnectivityManager) getActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
-
-        return cm.getActiveNetworkInfo() != null;
-    }
-
-    public boolean isInternetAvailable() {
-        try {
-            InetAddress ipAddr = InetAddress.getByName("google.com");
-            return !ipAddr.getHostAddress().equals("");
-
-        } catch (Exception e) {
-            return false;
-        }
-    }
     
     private void startDiscovery() {
         final View activity_view = getActivity().findViewById(R.id.drawer_layout);
-        if (mBound) {
-            mService.setInRoleConsumer(false);
-            mService.setInRoleHotspot(true);
-            mService.getPeerList(new WifiP2pManager.ActionListener() {
+        if (getmService() != null) {
+            getmService().setInRoleConsumer(false);
+            getmService().setInRoleHotspot(true);
+            getmService().getPeerList(new WifiP2pManager.ActionListener() {
                 @Override
                 public void onSuccess() {
                     // show progress wheel
@@ -228,12 +213,12 @@ public class HotspotFragment extends Fragment {
 
     private void stopDiscovery() {
         final View activity_view = getActivity().findViewById(R.id.drawer_layout);
-        if (mBound) {
-            mService.stopDiscovery(new WifiP2pManager.ActionListener() {
+        if (getmService() != null) {
+            getmService().stopDiscovery(new WifiP2pManager.ActionListener() {
                 @Override
                 public void onSuccess() {
-                    mService.setInRoleConsumer(false);
-                    mService.setInRoleHotspot(false);
+                    getmService().setInRoleConsumer(false);
+                    getmService().setInRoleHotspot(false);
                     Snackbar.make(activity_view, "Stopped Hotspot mode", Snackbar.LENGTH_LONG).setAction("Action", null).show();
                     ProgressBar progressBar = (ProgressBar) getActivity().findViewById(R.id.progressbarAP);
                     progressBar.setVisibility(View.INVISIBLE);
@@ -241,8 +226,8 @@ public class HotspotFragment extends Fragment {
 
                 @Override
                 public void onFailure(int reasonCode) {
-                    mService.setInRoleConsumer(false);
-                    mService.setInRoleHotspot(false);
+                    getmService().setInRoleConsumer(false);
+                    getmService().setInRoleHotspot(false);
                     Snackbar.make(activity_view, "Aaaargh :( Problem stopping discovery", Snackbar.LENGTH_LONG).setAction("Action", null).show();
                     ProgressBar progressBar = (ProgressBar) getActivity().findViewById(R.id.progressbarAP);
                     progressBar.setVisibility(View.INVISIBLE);
@@ -255,12 +240,11 @@ public class HotspotFragment extends Fragment {
     private void initUI() {
         final View activity_view = getActivity().findViewById(R.id.drawer_layout);
         final ToggleButton button = (ToggleButton) getActivity().findViewById(R.id.startAPButton);
-        //button.setChecked(mService.isInRoleHotspot());
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (mBound) {
-                    if (!mService.isSetup()) {
+                if (getmService() != null) {
+                    if (!getmService().isSetup()) {
                         Snackbar.make(activity_view, "Please enable WiFi P2P", Snackbar.LENGTH_LONG).setAction("Action", null).show();
                         button.setChecked(false);
                         return;
@@ -276,23 +260,4 @@ public class HotspotFragment extends Fragment {
             }
         });
     }
-
-    /** Defines callbacks for service binding, passed to bindService() */
-    private ServiceConnection mConnection = new ServiceConnection() {
-
-        @Override
-        public void onServiceConnected(ComponentName className,
-                                       IBinder service) {
-            // We've bound to LocalService, cast the IBinder and get LocalService instance
-            WiFiDirectBroadcastService.LocalBinder binder = (WiFiDirectBroadcastService.LocalBinder) service;
-            mService = binder.getService();
-            mBound = true;
-
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName arg0) {
-            mBound = false;
-        }
-    };
 }

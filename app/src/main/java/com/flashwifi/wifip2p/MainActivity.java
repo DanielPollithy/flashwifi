@@ -1,5 +1,6 @@
 package com.flashwifi.wifip2p;
 
+import android.app.ActivityManager;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.content.BroadcastReceiver;
@@ -71,13 +72,25 @@ public class MainActivity extends AppCompatActivity
                             intent.getStringExtra("key"));
                 } else if (intent.getAction().equals("com.flashwifi.wifip2p.stop_roaming")) {
                     Log.d(TAG, "onReceive: Reset billing state");
-                    mService.resetBillingState();
-                    mService.setInRoleConsumer(false);
-                    mService.setInRoleHotspot(false);
+
                 }
             }
         };
         registerReceiver(updateUIReceiver, filter);
+    }
+
+    public boolean isTheServiceRunning() {
+        return isMyServiceRunning(WiFiDirectBroadcastService.class);
+    }
+
+    private boolean isMyServiceRunning(Class<?> serviceClass) {
+        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -110,7 +123,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void initUi() {
-        final Switch switch_ = (Switch) findViewById(R.id.wifiSwitch);
+        /*final Switch switch_ = (Switch) findViewById(R.id.wifiSwitch);
         switch_.setOnCheckedChangeListener(new Switch.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
@@ -124,7 +137,7 @@ public class MainActivity extends AppCompatActivity
                     mService.disableService();
                 }
             }
-        });
+        });*/
     }
 
     @Override
@@ -153,8 +166,27 @@ public class MainActivity extends AppCompatActivity
 
         PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
 
+        beginForegroundService();
+
         Intent intent2 = new Intent(this, WiFiDirectBroadcastService.class);
         bindService(intent2, mConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    public WiFiDirectBroadcastService getmService() {
+        if (mBound) {
+            return mService;
+        }
+        return null;
+    }
+
+    private void beginForegroundService() {
+        if (!isTheServiceRunning()) {
+            Intent startIntent = new Intent(MainActivity.this, WiFiDirectBroadcastService.class);
+            startIntent.setAction(Constants.ACTION.STARTFOREGROUND_ACTION);
+            startService(startIntent);
+        } else {
+            Log.d(TAG, "beginForegroundService: Service is already running");
+        }
     }
 
     private void initEverything() {
@@ -381,6 +413,7 @@ public class MainActivity extends AppCompatActivity
             WiFiDirectBroadcastService.LocalBinder binder = (WiFiDirectBroadcastService.LocalBinder) service;
             mService = binder.getService();
             mBound = true;
+            mService.enableService();
         }
 
         @Override

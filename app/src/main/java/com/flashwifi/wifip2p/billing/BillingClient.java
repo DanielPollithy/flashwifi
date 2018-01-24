@@ -197,6 +197,7 @@ public class BillingClient {
 
                 if (error_count >= maxErrorCount) {
                     // stop trying to connect
+                    Log.d(TAG, "start: error count too high");
                     state = State.ERROR;
                     sendUpdateUIBroadcastWithMessage("Exit");
                 }

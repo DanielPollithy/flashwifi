@@ -33,6 +33,7 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 
 import com.flashwifi.wifip2p.broadcast.WiFiDirectBroadcastService;
+import com.flashwifi.wifip2p.iotaFlashWrapper.Main;
 
 /**
  * Fragment that appears in the "content_frame", shows a planet
@@ -41,8 +42,6 @@ public class SearchFragment extends Fragment {
 
     public final static String TAG = "SearchActivity";
 
-    WiFiDirectBroadcastService mService;
-    boolean mBound = false;
     BroadcastReceiver updateUIReceiver = null;
 
     ArrayList<String> arrayList;
@@ -62,6 +61,14 @@ public class SearchFragment extends Fragment {
         View rootView = inflater.inflate(R.layout.fragment_search, container, false);
 
         return rootView;
+    }
+
+    public WiFiDirectBroadcastService getmService() {
+        MainActivity act = (MainActivity) getActivity();
+        if (act != null) {
+            return act.getmService();
+        }
+        return null;
     }
 
     @Override
@@ -112,7 +119,7 @@ public class SearchFragment extends Fragment {
     }
 
     private void startNegotiationProtocol(String macAddress){
-        WifiP2pInfo p2p_info = mService.getP2p_info();
+        WifiP2pInfo p2p_info = getmService().getP2p_info();
 
         if (p2p_info.isGroupOwner) {
             startNegotiationProtocolServer(macAddress);
@@ -123,13 +130,13 @@ public class SearchFragment extends Fragment {
 
     private void startNegotiationProtocolServer(String macAddress) {
         // starts the server if necessary
-        WifiP2pInfo p2p_info = mService.getP2p_info();
-        NetworkInfo network_info = mService.getNetwork_info();
+        WifiP2pInfo p2p_info = getmService().getP2p_info();
+        NetworkInfo network_info = getmService().getNetwork_info();
 
         if (network_info.getState() == NetworkInfo.State.CONNECTED) {
             if (p2p_info.isGroupOwner) {
                 Log.d(TAG, "You are the group owner");
-                mService.startNegotiationServer(true, macAddress);
+                getmService().startNegotiationServer(true, macAddress);
                 Log.d(TAG, "SocketServer started");
             }
         }
@@ -137,8 +144,8 @@ public class SearchFragment extends Fragment {
 
     private void startNegotiationProtocolClient(String macAddress){
         // starts the server if necessary
-        WifiP2pInfo p2p_info = mService.getP2p_info();
-        NetworkInfo network_info = mService.getNetwork_info();
+        WifiP2pInfo p2p_info = getmService().getP2p_info();
+        NetworkInfo network_info = getmService().getNetwork_info();
 
         if (network_info.getState() == NetworkInfo.State.CONNECTED) {
             if (!p2p_info.isGroupOwner) {
@@ -146,7 +153,7 @@ public class SearchFragment extends Fragment {
                 // groupOwnerAddress = p2p_info.groupOwnerAddress;
                 InetAddress groupOwnerAddress = p2p_info.groupOwnerAddress;
                 Log.d(TAG, "Group owner address: " + p2p_info.groupOwnerAddress.getHostAddress());
-                mService.startNegotiationClient(groupOwnerAddress, true, macAddress);
+                getmService().startNegotiationClient(groupOwnerAddress, true, macAddress);
                 Log.d(TAG, "Client Socket started");
             }
         }
@@ -155,10 +162,6 @@ public class SearchFragment extends Fragment {
     @Override
     public void onPause() {
         super.onPause();
-        if (mBound) {
-            getActivity().unbindService(mConnection);
-            mBound = false;
-        }
         if (updateUIReceiver != null) {
             getActivity().unregisterReceiver(updateUIReceiver);
             updateUIReceiver = null;
@@ -168,10 +171,6 @@ public class SearchFragment extends Fragment {
     @Override
     public void onStop() {
         super.onStop();
-        if (mBound) {
-            getActivity().unbindService(mConnection);
-            mBound = false;
-        }
         if (updateUIReceiver != null) {
             getActivity().unregisterReceiver(updateUIReceiver);
             updateUIReceiver = null;
@@ -200,6 +199,10 @@ public class SearchFragment extends Fragment {
         updateUIReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
+                if (getActivity() == null) {
+                    Log.d(TAG, "onReceive: getActivity is null");
+                    return;
+                }
                 Log.d("", "onReceive: FRAGMENT HAT WAS");
                 if (intent.getAction().equals("com.flashwifi.wifip2p.start_roaming")) {
                     String mac = intent.getStringExtra("peer_mac_address");
@@ -217,10 +220,6 @@ public class SearchFragment extends Fragment {
         };
         getActivity().registerReceiver(updateUIReceiver, filter);
 
-        // Bind to Service
-        Intent intent = new Intent(getActivity(), WiFiDirectBroadcastService.class);
-        getActivity().bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
-
         view = getActivity().findViewById(R.id.fragment_view);
 
         initUI();
@@ -235,26 +234,20 @@ public class SearchFragment extends Fragment {
         toggle.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(final View view) {
-                if (mBound) {
-                    if (!mService.isSetup()) {
-                        Snackbar.make(view, "Please enable WiFi P2P", Snackbar.LENGTH_LONG).setAction("Action", null).show();
-                        toggle.setChecked(false);
-                        return;
-                    }
+                if (!getmService().isSetup()) {
+                    Snackbar.make(view, "Please enable WiFi P2P", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+                    toggle.setChecked(false);
+                    return;
                 }
                 updateList();
                 if (toggle.isChecked()) {
-                    if (mBound) {
-                        mService.setInRoleHotspot(false);
-                        mService.setInRoleConsumer(true);
-                        startSearching();
-                    }
+                    getmService().setInRoleHotspot(false);
+                    getmService().setInRoleConsumer(true);
+                    startSearching();
                 } else {
-                    if (mBound) {
-                        mService.setInRoleHotspot(false);
-                        mService.setInRoleConsumer(false);
-                        stopSearching();
-                    }
+                    getmService().setInRoleHotspot(false);
+                    getmService().setInRoleConsumer(false);
+                    stopSearching();
                 }
             }
         });
@@ -298,7 +291,7 @@ public class SearchFragment extends Fragment {
 
 
     public void startChat(final String address, String name) {
-        mService.connect(address, new WifiP2pManager.ActionListener() {
+        getmService().connect(address, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
                 Toast.makeText(view.getContext(), "Connected to peer", Toast.LENGTH_SHORT).show();
@@ -315,53 +308,31 @@ public class SearchFragment extends Fragment {
     }
 
     private void stopSearching() {
-        if (mBound) {
-            mService.stopDiscovery(new WifiP2pManager.ActionListener() {
-                @Override
-                public void onSuccess() {
-                    Snackbar.make(view, "Stopped search", Snackbar.LENGTH_LONG).setAction("Action", null).show();
-                }
+        getmService().stopDiscovery(new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+                Snackbar.make(view, "Stopped search", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+            }
 
-                @Override
-                public void onFailure(int reasonCode) {
-                    Snackbar.make(view, "Aaaargh :( problem stopping search!", Snackbar.LENGTH_LONG).setAction("Action", null).show();
-                }
-            });
-        }
+            @Override
+            public void onFailure(int reasonCode) {
+                Snackbar.make(view, "Aaaargh :( problem stopping search!", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+            }
+        });
     }
 
     public void startSearching() {
+        getmService().getPeerList(new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+                Snackbar.make(view, "Successfully searched for peers", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+            }
 
-        if (mBound) {
-            mService.getPeerList(new WifiP2pManager.ActionListener() {
-                @Override
-                public void onSuccess() {
-                    Snackbar.make(view, "Successfully searched for peers", Snackbar.LENGTH_LONG).setAction("Action", null).show();
-                }
+            @Override
+            public void onFailure(int reasonCode) {
+                Snackbar.make(view, "Aaaargh :( Peering problem!", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+            }
+        });
 
-                @Override
-                public void onFailure(int reasonCode) {
-                    Snackbar.make(view, "Aaaargh :( Peering problem!", Snackbar.LENGTH_LONG).setAction("Action", null).show();
-                }
-            });
-        }
     }
-
-    /** Defines callbacks for service binding, passed to bindService() */
-    private ServiceConnection mConnection = new ServiceConnection() {
-
-        @Override
-        public void onServiceConnected(ComponentName className,
-                                       IBinder service) {
-            // We've bound to LocalService, cast the IBinder and get LocalService instance
-            WiFiDirectBroadcastService.LocalBinder binder = (WiFiDirectBroadcastService.LocalBinder) service;
-            mService = binder.getService();
-            mBound = true;
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName arg0) {
-            mBound = false;
-        }
-    };
 }

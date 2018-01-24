@@ -98,7 +98,7 @@
         android:key="pref_key_payment_settings">
 
         <EditTextPreference
-            android:defaultValue="10"
+            android:defaultValue="15"
             android:key="edit_text_buy_price"
             android:inputType="number"
             android:selectAllOnFocus="true"

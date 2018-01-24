@@ -301,11 +301,11 @@ public class Negotiator {
         if (iotaPerMegabyte < 0) {
             return error(R.string.err_sell_price_bad_setting, false);
         }
-        int minMinutes = Integer.valueOf(prefs.getString("edit_text_min_minutes", "-1"));
+        int minMinutes = Integer.valueOf(prefs.getString("edit_text_sell_min_minutes", "-1"));
         if (minMinutes < 0) {
             return error(R.string.err_min_minutes_bad_setting, false);
         }
-        int maxMinutes = Integer.valueOf(prefs.getString("edit_text_max_minutes", "-1"));
+        int maxMinutes = Integer.valueOf(prefs.getString("edit_text_sell_max_minutes", "-1"));
         if (maxMinutes < 0) {
             return error(R.string.err_max_minutes_bad_setting, false);
         }
