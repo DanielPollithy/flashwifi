@@ -148,8 +148,6 @@ public class WalletTestnetTokenGen extends AsyncTask<Void, Void, Void> {
 
     private void transferToWallet(List<String> destAddressses, TokenGenJSONResponse token) {
 
-        System.out.println("2000 seed: "+token.getSeed());
-
         if(destAddressses != null && destAddressses.get(0).equals("Unable to resolve host")){
             //Host Error
             Message completeMessage = settingsFragmentHandler.obtainMessage(TOKEN_TESTNET_RETRIEVE_TASK_COMPLETE, "hostError");
@@ -160,9 +158,6 @@ public class WalletTestnetTokenGen extends AsyncTask<Void, Void, Void> {
             Message completeMessage = settingsFragmentHandler.obtainMessage(TOKEN_TESTNET_STATUS_UPDATE, "Sending");
             completeMessage.sendToTarget();
             String destAddress = destAddressses.get(destAddressses.size()-1);
-
-            System.out.println("DestAddress: "+destAddress);
-            System.out.println("TokenAmt: "+token.getAmount().toString());
 
             WalletTransferRequest transferRequest = new WalletTransferRequest(destAddress,token.getSeed(),token.getAmount().toString(),"","",context,testnetTokenGenHandler);
             transferRequest.execute();

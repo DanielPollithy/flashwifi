@@ -83,8 +83,6 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
             boolean containsPendingTransactions = addressChecker.getContainsPendingTransaction();
             boolean keyIndexChanged = addressChecker.getkeyIndexChanged();
 
-            System.out.println("seed: "+seed);
-
             if(addressList != null && addressList.get(0).equals("Unable to resolve host")){
                 AddressBalanceTransfer addressBalanceTransfer = new AddressBalanceTransfer(null,null,"hostError");
                 Message completeMessage = mHandler.obtainMessage(BALANCE_RETRIEVE_TASK_COMPLETE, addressBalanceTransfer);
@@ -126,10 +124,6 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
 
     public String getBalance(List<String> inAddresses, boolean containsPendingTransactions, boolean keyIndexChanged){
 
-        for (String inAddress : inAddresses) {
-            System.out.println("addressGetBalance: "+inAddress);
-        }
-
         String updatedBalanceString;
         try {
             StopWatch stopWatch = new StopWatch();
@@ -140,11 +134,7 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
 
             GetBalancesAndFormatResponse balanceResponse = api.getBalanceAndFormat(inAddresses, 0, 0, stopWatch, securityInt);
             long total = balanceResponse.getTotalBalance();
-            System.out.println("getTotalBalance: "+total);
-
             long storedBaseBalance = Long.parseLong(getBaseSharedPrefKeyBalance());
-            System.out.println("getBaseSharedPreKeyBalance: "+storedBaseBalance);
-
             long updatedBaseBalance = storedBaseBalance + total;
             updatedBalanceString = Long.toString(updatedBaseBalance);
 
@@ -163,10 +153,6 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
             //No Pending Transactions, new confirmed transactions
             else if(!containsPendingTransactions && keyIndexChanged){
                 putBaseSharedPrefBalance(updatedBalanceString);
-
-                System.out.println("Store new base balance");
-                System.out.println("updated balance: "+updatedBaseBalance);
-
                 updatedBalanceString = Long.toString(updatedBaseBalance);
                 putSharedPrefBalance(updatedBalanceString);
             }
@@ -175,17 +161,6 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
             return null;
         }
         return updatedBalanceString;
-    }
-
-    private String getSharedPrefKeyBalance() {
-        SharedPreferences sharedPref = context.getSharedPreferences(prefFile, Context.MODE_PRIVATE);
-        int keyIndex = sharedPref.getInt("keyIndex",0);
-
-        System.out.println("KeyIndex: "+keyIndex);
-
-        String defaultValue = "0";
-        String storedBalance = sharedPref.getString("balance",defaultValue);
-        return storedBalance;
     }
 
     private void putSharedPrefBalance(String inBalance) {
@@ -199,9 +174,6 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
     private String getBaseSharedPrefKeyBalance() {
         SharedPreferences sharedPref = context.getSharedPreferences(prefFile, Context.MODE_PRIVATE);
         int keyIndex = sharedPref.getInt("keyIndex",0);
-
-        System.out.println("KeyIndex: "+keyIndex);
-
         String defaultValue = "0";
         String storedBalance = sharedPref.getString("baseBalance",defaultValue);
         return storedBalance;
