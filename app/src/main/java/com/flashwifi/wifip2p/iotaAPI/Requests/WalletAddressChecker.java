@@ -79,6 +79,7 @@ public class WalletAddressChecker {
                 addressResponse = api.getNewAddress(seed, securityInt, keyIndex, true, 1, false);
             } catch (ArgumentException e) {
                 e.printStackTrace();
+                return addressList;
             }
 
             if(addressResponse != null) {
@@ -99,7 +100,7 @@ public class WalletAddressChecker {
                     }
                 }
 
-                if(transactionsForAddress.isEmpty() || (transactionsForAddress.size() == 0 || transactionsForAddress.equals(null))){
+                if(transactionsForAddress == null || transactionsForAddress.isEmpty() || (transactionsForAddress.size() == 0)){
                     //Transactions not found, use this address
                     foundAddress = true;
                 }
@@ -123,17 +124,20 @@ public class WalletAddressChecker {
         //Check whether pending transactions exist
         containsPendingTransaction = false;
         keyIndexChanged = false;
+        GetInclusionStateResponse inclusionResponse;
         try {
-            GetInclusionStateResponse inclusionResponse = api.getLatestInclusion(hashStringArray);
-            boolean[] states = inclusionResponse.getStates();
-
-            for (boolean state : states) {
-                if(!state){
-                    containsPendingTransaction = true;
-                }
-            }
-        } catch (ArgumentException e) {
+            inclusionResponse = api.getLatestInclusion(hashStringArray);
+        } catch (ArgumentException | IllegalStateException e) {
             e.printStackTrace();
+            return addressList;
+        }
+
+        boolean[] states = inclusionResponse.getStates();
+
+        for (boolean state : states) {
+            if(!state){
+                containsPendingTransaction = true;
+            }
         }
 
         if(!containsPendingTransaction){

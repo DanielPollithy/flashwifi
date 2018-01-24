@@ -95,11 +95,11 @@ public class WithdrawWalletFragment extends Fragment {
                         transactionInProgress = false;
 
                         if(returnStatus.equals("noError")){
-                            balanceTextView.setText(appWalletBalance + " i");
+                            balanceTextView.setText(appWalletBalance);
                             makeToastFundWalletFragment("Balance updated");
                         }
                         else if (returnStatus.equals("noErrorNoUpdateMessage")){
-                            balanceTextView.setText(appWalletBalance + " i");
+                            balanceTextView.setText(appWalletBalance);
                             clearAllTransferValues();
                             makeFieldsEditable();
                         }

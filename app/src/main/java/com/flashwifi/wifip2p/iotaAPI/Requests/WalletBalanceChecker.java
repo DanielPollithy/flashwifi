@@ -10,6 +10,8 @@ import android.preference.PreferenceManager;
 import com.flashwifi.wifip2p.AddressBalanceTransfer;
 import com.flashwifi.wifip2p.R;
 
+import java.text.DateFormat;
+import java.util.Date;
 import java.util.List;
 
 import jota.IotaAPI;
@@ -158,9 +160,33 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
             }
         } catch (ArgumentException | IllegalStateException e) {
             e.printStackTrace();
-            return null;
+            return getSharedPrefKeyBalance()+"i (cached: "+getSharedPrefKeyBalanceDateUpdate()+")";
         }
-        return updatedBalanceString;
+        String currentDateTimeString = DateFormat.getDateTimeInstance().format(new Date());
+        putSharedPrefBalanceDateUpdate(currentDateTimeString);
+        return updatedBalanceString+"i";
+    }
+
+    private void putSharedPrefBalanceDateUpdate(String currentDateTimeString) {
+        SharedPreferences sharedPref = context.getSharedPreferences(
+                prefFile, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putString("balanceDateUpdate", currentDateTimeString);
+        editor.apply();
+    }
+
+    private String getSharedPrefKeyBalanceDateUpdate() {
+        SharedPreferences sharedPref = context.getSharedPreferences(prefFile, Context.MODE_PRIVATE);
+        String defaultValue = "0";
+        String storedBalance = sharedPref.getString("balanceDateUpdate",defaultValue);
+        return storedBalance;
+    }
+
+    private String getSharedPrefKeyBalance() {
+        SharedPreferences sharedPref = context.getSharedPreferences(prefFile, Context.MODE_PRIVATE);
+        String defaultValue = "0";
+        String storedBalance = sharedPref.getString("balance",defaultValue);
+        return storedBalance;
     }
 
     private void putSharedPrefBalance(String inBalance) {
@@ -173,7 +199,6 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
 
     private String getBaseSharedPrefKeyBalance() {
         SharedPreferences sharedPref = context.getSharedPreferences(prefFile, Context.MODE_PRIVATE);
-        int keyIndex = sharedPref.getInt("keyIndex",0);
         String defaultValue = "0";
         String storedBalance = sharedPref.getString("baseBalance",defaultValue);
         return storedBalance;
