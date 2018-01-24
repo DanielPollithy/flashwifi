@@ -4,6 +4,10 @@ import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.support.annotation.NonNull;
 
+import com.flashwifi.wifip2p.protocol.BillingCloseChannel;
+import com.flashwifi.wifip2p.protocol.BillingCloseChannelAnswer;
+import com.flashwifi.wifip2p.protocol.BillingOpenChannel;
+import com.flashwifi.wifip2p.protocol.BillingOpenChannelAnswer;
 import com.flashwifi.wifip2p.protocol.NegotiationFinalization;
 import com.flashwifi.wifip2p.protocol.NegotiationOffer;
 import com.flashwifi.wifip2p.protocol.NegotiationOfferAnswer;
@@ -17,6 +21,7 @@ public class PeerInformation  {
     private WifiP2pDevice wifiP2pDevice;
     private Date lastUpdate;
     private boolean selected;
+    private String errorMessage = "info";
 
     // age stores how long it has been since the last signal from this peer
     // it is not stored in seconds but in update cycles
@@ -25,6 +30,11 @@ public class PeerInformation  {
     private NegotiationOffer latestNegotiationOffer;
     private NegotiationOfferAnswer latestOfferAnswer;
     private NegotiationFinalization latestFinalization;
+
+    private BillingOpenChannel billingOpenChannel;
+    private BillingOpenChannelAnswer billingOpenChannelAnswer;
+    private BillingCloseChannel billingCloseChannel;
+    private BillingCloseChannelAnswer billingCloseChannelAnswer;
 
     public PeerInformation() {
         selected = false;
@@ -54,6 +64,8 @@ public class PeerInformation  {
     public NegotiationOffer getLatestNegotiationOffer() {
         return latestNegotiationOffer;
     }
+
+
 
     public void setLatestOfferAnswer(NegotiationOfferAnswer latestOfferAnswer) {
         this.latestOfferAnswer = latestOfferAnswer;
@@ -85,5 +97,45 @@ public class PeerInformation  {
 
     public void setSelected(boolean selected) {
         this.selected = selected;
+    }
+
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
+    }
+
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+
+    public BillingOpenChannel getBillingOpenChannel() {
+        return billingOpenChannel;
+    }
+
+    public void setBillingOpenChannel(BillingOpenChannel billingOpenChannel) {
+        this.billingOpenChannel = billingOpenChannel;
+    }
+
+    public BillingOpenChannelAnswer getBillingOpenChannelAnswer() {
+        return billingOpenChannelAnswer;
+    }
+
+    public void setBillingOpenChannelAnswer(BillingOpenChannelAnswer billingOpenChannelAnswer) {
+        this.billingOpenChannelAnswer = billingOpenChannelAnswer;
+    }
+
+    public BillingCloseChannel getBillingCloseChannel() {
+        return billingCloseChannel;
+    }
+
+    public void setBillingCloseChannel(BillingCloseChannel billingCloseChannel) {
+        this.billingCloseChannel = billingCloseChannel;
+    }
+
+    public BillingCloseChannelAnswer getBillingCloseChannelAnswer() {
+        return billingCloseChannelAnswer;
+    }
+
+    public void setBillingCloseChannelAnswer(BillingCloseChannelAnswer billingCloseChannelAnswer) {
+        this.billingCloseChannelAnswer = billingCloseChannelAnswer;
     }
 }

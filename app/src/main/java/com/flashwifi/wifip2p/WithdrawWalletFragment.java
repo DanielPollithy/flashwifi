@@ -20,7 +20,7 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.flashwifi.wifip2p.iotaAPI.Requests.WalletAddressAndBalanceChecker;
+import com.flashwifi.wifip2p.iotaAPI.Requests.WalletBalanceChecker;
 import com.flashwifi.wifip2p.iotaAPI.Requests.WalletTransferRequest;
 
 import jota.error.ArgumentException;
@@ -47,7 +47,7 @@ public class WithdrawWalletFragment extends Fragment {
     private EditText editTextAmount;
     private EditText editTextMessage;
     private EditText editTextTag;
-    private WalletAddressAndBalanceChecker addressAndBalanceChecker;
+    private WalletBalanceChecker addressAndBalanceChecker;
 
     private GifImageView loadingGifImageView;
     private SwipeRefreshLayout mSwipeRefreshLayout;
@@ -94,22 +94,22 @@ public class WithdrawWalletFragment extends Fragment {
                         hideLoadingGIF();
                         transactionInProgress = false;
 
-                        if(returnStatus == "noError"){
-                            balanceTextView.setText(appWalletBalance + " i");
+                        if(returnStatus.equals("noError")){
+                            balanceTextView.setText(appWalletBalance);
                             makeToastFundWalletFragment("Balance updated");
                         }
-                        else if (returnStatus == "noErrorNoUpdateMessage"){
-                            balanceTextView.setText(appWalletBalance + " i");
+                        else if (returnStatus.equals("noErrorNoUpdateMessage")){
+                            balanceTextView.setText(appWalletBalance);
                             clearAllTransferValues();
                             makeFieldsEditable();
                         }
-                        else if (returnStatus == "hostError"){
+                        else if (returnStatus.equals("hostError")){
                             makeToastFundWalletFragment("Unable to reach host (node)");
                         }
-                        else if (returnStatus == "addressError"){
+                        else if (returnStatus.equals("addressError")){
                             makeToastFundWalletFragment("Error getting address");
                         }
-                        else if (returnStatus == "balanceError"){
+                        else if (returnStatus.equals("balanceError")){
                             makeToastFundWalletFragment("Error getting balance");
                         }
                         else{
@@ -198,7 +198,7 @@ public class WithdrawWalletFragment extends Fragment {
 
     private void getBalance(Boolean updateMessage) {
         transactionInProgress = true;
-        addressAndBalanceChecker = new WalletAddressAndBalanceChecker(getActivity(),getActivity().getString(R.string.preference_file_key),appWalletSeed, mHandler,WITHDRAW_WALLET,updateMessage);
+        addressAndBalanceChecker = new WalletBalanceChecker(getActivity(),getActivity().getString(R.string.preference_file_key),appWalletSeed, mHandler,WITHDRAW_WALLET,updateMessage);
         addressAndBalanceChecker.execute();
     }
 

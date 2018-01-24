@@ -1,17 +1,27 @@
 package com.flashwifi.wifip2p;
 
+import android.Manifest;
+import android.app.AppOpsManager;
+import android.app.FragmentManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
+import android.provider.Settings;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.flashwifi.wifip2p.iotaFlashWrapper.Example;
 import com.flashwifi.wifip2p.iotaFlashWrapper.IotaFlashBridge;
@@ -71,6 +81,21 @@ public class HomeActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
 
+
+        ActivityCompat.requestPermissions(HomeActivity.this,
+                new String[]{
+                        Manifest.permission.ACCESS_WIFI_STATE,
+                        Manifest.permission.CHANGE_WIFI_STATE,
+                        Manifest.permission.CHANGE_NETWORK_STATE,
+                        Manifest.permission.INTERNET,
+                        Manifest.permission.ACCESS_NETWORK_STATE,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                        Manifest.permission.READ_PHONE_STATE,
+                        Manifest.permission.READ_EXTERNAL_STORAGE,
+                        Manifest.permission.CAMERA
+                },
+                1);
+
         // iotalibflash
         String iotaflash = readFile("iotaflash");
         String iotaflashhelper = readFile("iotaflashhelper");
@@ -84,6 +109,55 @@ public class HomeActivity extends AppCompatActivity {
             e.printStackTrace();
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case 1: {
+
+                // If request is cancelled, the result arrays are empty.
+                int i = 0;
+                if (grantResults.length > 0) {
+                    boolean ok = true;
+                    for (int grantResult: grantResults) {
+                        if (grantResult != PackageManager.PERMISSION_GRANTED) {
+                            ok = false;
+                            Log.d(TAG, "onRequestPermissionsResult: denied: " + permissions[i]);
+                        }
+                        i++;
+                    }
+                    if (ok) {
+                        Toast.makeText(HomeActivity.this, "Permissions granted", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(HomeActivity.this, "Permissions denied", Toast.LENGTH_SHORT).show();
+                    }
+                    AppOpsManager appOps = (AppOpsManager) getSystemService(Context.APP_OPS_SERVICE);
+                    int mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS,
+                            android.os.Process.myUid(), getPackageName());
+                    if (mode != AppOpsManager.MODE_ALLOWED) {
+                        Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
+                        startActivity(intent);
+                    }
+
+                    int mode2 = appOps.checkOpNoThrow(AppOpsManager.OPSTR_WRITE_SETTINGS,
+                            android.os.Process.myUid(), getPackageName());
+                    if (mode2 != AppOpsManager.MODE_ALLOWED) {
+                        Intent intent = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS);
+                        startActivity(intent);
+                    }
+                } else {
+
+                    // permission denied, boo! Disable the
+                    // functionality that depends on this permission.
+                    Toast.makeText(HomeActivity.this, "Permission denied to read your External storage", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            // other 'case' lines to check for other
+            // permissions this app might request
         }
     }
 
@@ -137,7 +211,10 @@ public class HomeActivity extends AppCompatActivity {
         } else {
             final EditText field = (EditText) findViewById(R.id.password);
             field.setText("");
-            Snackbar.make(view, getString(R.string.wrong_password), Snackbar.LENGTH_LONG).setAction("Action", null).show();
+            Toast toast= Toast.makeText(getApplicationContext(),
+                    getString(R.string.wrong_password), Toast.LENGTH_SHORT);
+            toast.setGravity(Gravity.TOP|Gravity.CENTER_HORIZONTAL, 0, 0);
+            toast.show();
         }
     }
 
@@ -177,9 +254,17 @@ public class HomeActivity extends AppCompatActivity {
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(final View view) {
-                setProgressBar(50);
-                String password = new_password_field.getText().toString();
-                storeNewSeed(seed, password);
+                if (new_password_field.getText().toString().length() > 0) {
+                    setProgressBar(50);
+                    String password = new_password_field.getText().toString();
+                    storeNewSeed(seed, password);
+                } else {
+                    Toast toast= Toast.makeText(getApplicationContext(),
+                            "No blank password allowed", Toast.LENGTH_SHORT);
+                    toast.setGravity(Gravity.TOP|Gravity.CENTER_HORIZONTAL, 0, 0);
+                    toast.show();
+                }
+
             }
         });
     }

@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <PreferenceCategory
+        android:title="WiFi"
+        android:key="pref_key_wifi_settings"
+        android:elevation="10dp">
+
+        <Preference
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:key="pref_key_reset_data_usage"
+            android:title="Reset data usage"/>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="IOTA"
+        android:elevation="10dp"
+        android:animateLayoutChanges="true"
+        android:key="pref_key_IOTA_settings">
+
+
+        <ListPreference
+            android:key="pref_key_security"
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:defaultValue="2"
+            android:entries="@array/securityPref"
+            android:entryValues="@array/securityPref"
+            android:title="Security pk/address" />
+
+        <ListPreference
+            android:key="pref_key_network_timeout"
+            android:entries="@array/networkTimeoutPref"
+            android:entryValues="@array/networkTimeoutPref"
+            android:title="Network timeout" />
+
+        <ListPreference
+            android:key="pref_key_units"
+            android:entries="@array/unitsPref"
+            android:entryValues="@array/unitsPref"
+            android:title="Units" />
+
+
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="pref_key_switch_testnet"
+            android:title="Testnet" />
+
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="pref_key_switch_testnet_private"
+            android:title="Private testnet (recommended)" />
+
+        <Preference
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:key="pref_key_testnet_fund_add"
+            android:title="Add 2000i testnet"/>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="Hotspot payment conditions"
+        android:elevation="10dp"
+        android:key="pref_key_payment_settings">
+
+        <EditTextPreference
+            android:defaultValue="10"
+            android:key="edit_text_sell_price"
+            android:inputType="number"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="Sell price" />
+
+        <EditTextPreference
+            android:defaultValue="15"
+            android:inputType="number"
+            android:key="edit_text_sell_min_minutes"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="Minimum sell duration (minutes)" />
+
+        <EditTextPreference
+            android:defaultValue="100"
+            android:key="edit_text_sell_max_minutes"
+            android:inputType="number"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="Maximum sell duration (minutes)" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="Client payment conditions"
+        android:elevation="10dp"
+        android:key="pref_key_payment_settings">
+
+        <EditTextPreference
+            android:defaultValue="15"
+            android:key="edit_text_buy_price"
+            android:inputType="number"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="Max buy price" />
+
+        <EditTextPreference
+            android:defaultValue="60"
+            android:key="edit_text_client_minutes"
+            android:inputType="number"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="Client roaming duration" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="Wallet"
+        android:elevation="10dp"
+        android:key="pref_key_wallet_settings">
+
+        <Preference
+            android:key="pref_key_reset_password"
+            android:title="Reset Password"/>
+
+        <Preference
+            android:key="pref_key_reset_wallet"
+            android:title="Reset Wallet"/>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="About"
+        android:key="pref_key_about"
+        android:elevation="10dp">
+
+        <Preference
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:key="pref_key_reset_version"
+            android:title="@string/app_version"/>
+
+        <Preference
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:key="pref_key_license"
+            android:title="License"/>
+
+        <Preference
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:key="pref_key_agreement"
+            android:title="Agreement"/>
+
+    </PreferenceCategory>
+
+</PreferenceScreen>

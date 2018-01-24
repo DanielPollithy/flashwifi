@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">WifiP2P</string>
+    <string name="app_version">1.0</string>
     <string name="title_activity_scrolling">ScrollingActivity</string>
     <string name="action_settings">Settings</string>
     <string name="wifi_direct">Wifi Direct Chat</string>
@@ -64,5 +65,11 @@
     <string name="startSearch">Start Search</string>
     <string name="roaming_title">Roaming (This is your hotspot)</string>
     <string name="roaming_title_client">Roaming (You are consuming)</string>
+    <string name="channelClosed">The payment channel was closed.</string>
+    <string name="initRetransfer">Initializing retransfer</string>
+    <string name="welcome">Welcome to the Wifi Iota Hotspot App</string>
+    <string name="notification_doing_nothing">Currently doing nothing</string>
+    <string name="stopAP">Stop Hotspot</string>
+    <string name="startAPText">Start Hotspot</string>
 
 </resources>

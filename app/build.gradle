@@ -5,8 +5,8 @@ android {
     buildToolsVersion '26.0.2'
     defaultConfig {
         applicationId "jenny.daniel.wifip2p"
-        minSdkVersion 22
-        targetSdkVersion 22
+        minSdkVersion 23
+        targetSdkVersion 23
         multiDexEnabled = true
         versionCode 1
         versionName "1.0"
@@ -48,5 +48,6 @@ dependencies {
     compile 'com.github.kenglxn.QRGen:android:2.4.0'
     compile 'me.dm7.barcodescanner:zxing:1.9.8'
     compile 'pl.droidsonroids.gif:android-gif-drawable:1.2.10'
+    compile 'com.google.api-client:google-api-client:1.23.0'
     testCompile 'junit:junit:4.12'
 }

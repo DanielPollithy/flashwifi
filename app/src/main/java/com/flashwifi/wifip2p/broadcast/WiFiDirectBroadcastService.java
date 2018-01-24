@@ -1,9 +1,16 @@
 package com.flashwifi.wifip2p.broadcast;
+import android.app.Activity;
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.DhcpInfo;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiManager;
 import android.net.wifi.p2p.WifiP2pConfig;
@@ -13,25 +20,51 @@ import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.AsyncTask;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
+import android.os.Message;
+import android.preference.PreferenceManager;
+import android.support.v4.app.NotificationCompat;
+import android.text.format.Formatter;
 import android.util.Log;
 
+import com.flashwifi.wifip2p.AddressBalanceTransfer;
+import com.flashwifi.wifip2p.Constants;
+import com.flashwifi.wifip2p.MainActivity;
+import com.flashwifi.wifip2p.R;
 import com.flashwifi.wifip2p.accesspoint.AccessPointTask;
 import com.flashwifi.wifip2p.accesspoint.ConnectTask;
 import com.flashwifi.wifip2p.accesspoint.StopAccessPointTask;
+import com.flashwifi.wifip2p.billing.Accountant;
 import com.flashwifi.wifip2p.billing.BillingClient;
 import com.flashwifi.wifip2p.billing.BillingServer;
 import com.flashwifi.wifip2p.datastore.PeerStore;
+import com.flashwifi.wifip2p.iotaAPI.Requests.WalletTransferRequest;
 import com.flashwifi.wifip2p.negotiation.Negotiator;
+import com.flashwifi.wifip2p.protocol.BillingOpenChannel;
+import com.flashwifi.wifip2p.protocol.BillingOpenChannelAnswer;
 import com.flashwifi.wifip2p.protocol.NegotiationFinalization;
+import com.flashwifi.wifip2p.protocol.NegotiationOffer;
+import com.flashwifi.wifip2p.protocol.NegotiationOfferAnswer;
+
+import org.apache.commons.lang3.ArrayUtils;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import jota.IotaAPI;
+import jota.dto.response.GetBalancesResponse;
+import jota.dto.response.SendTransferResponse;
+import jota.error.ArgumentException;
+import jota.model.Transfer;
 
 public class WiFiDirectBroadcastService extends Service {
     public final static String TAG = "WiFiService";
@@ -75,6 +108,62 @@ public class WiFiDirectBroadcastService extends Service {
     AccessPointTask apTask;
     boolean apRuns = false;
     ConnectTask connectTask;
+    private boolean negotiatorRunning = false;
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent.getAction().equals(Constants.ACTION.STARTFOREGROUND_ACTION)) {
+            Log.i(TAG, "Received Start Foreground Intent ");
+            Intent notificationIntent = new Intent(this, MainActivity.class);
+            notificationIntent.setAction(Constants.ACTION.MAIN_ACTION);
+            notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
+                    notificationIntent, 0);
+/*
+            Intent previousIntent = new Intent(this, WiFiDirectBroadcastService.class);
+            previousIntent.setAction(Constants.ACTION.PREV_ACTION);
+            PendingIntent ppreviousIntent = PendingIntent.getService(this, 0,
+                    previousIntent, 0);
+
+            Intent playIntent = new Intent(this, WiFiDirectBroadcastService.class);
+            playIntent.setAction(Constants.ACTION.PLAY_ACTION);
+            PendingIntent pplayIntent = PendingIntent.getService(this, 0,
+                    playIntent, 0);*/
+
+            Intent stopIntent = new Intent(this, WiFiDirectBroadcastService.class);
+            stopIntent.setAction(Constants.ACTION.STOPFOREGROUND_ACTION);
+            PendingIntent pstopIntent = PendingIntent.getService(this, 0,
+                    stopIntent, 0);
+
+            Bitmap icon = BitmapFactory.decodeResource(getResources(),
+                    R.drawable.icon_tethering_on);
+
+            Notification notification = new NotificationCompat.Builder(this)
+                    .setContentTitle(getString(R.string.app_name))
+                    .setTicker(getString(R.string.app_name))
+                    .setContentText(getString(R.string.notification_doing_nothing))
+                    .setSmallIcon(R.drawable.icon_tethering_on)
+                    .setLargeIcon(
+                            Bitmap.createScaledBitmap(icon, 128, 128, false))
+                    .setContentIntent(pendingIntent)
+                    .setOngoing(true)
+                    .addAction(R.drawable.icon_tethering_off, "Stop",
+                            pstopIntent).build();
+            startForeground(Constants.NOTIFICATION_ID.FOREGROUND_SERVICE,
+                    notification);
+        } else if (intent.getAction().equals(
+                Constants.ACTION.STOPFOREGROUND_ACTION)) {
+            Log.i(TAG, "Received Stop Foreground Intent");
+            stopForeground(true);
+            stopSelf();
+        }
+        return START_STICKY;
+    }
+
+    public boolean isSetup() {
+        return setup;
+    }
 
     public void enableWiFi() {
         WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
@@ -94,15 +183,21 @@ public class WiFiDirectBroadcastService extends Service {
         }
     }
 
-    public void startBillingServer(){
+    public void resetBillingState() {
+        billingClientIsRunning = false;
+        billingServerIsRunning = false;
+    }
+
+    public void startBillingServer(String mac){
         if (!billingServerIsRunning) {
             billingServerIsRunning = true;
 
             Runnable task = new Runnable() {
                 @Override
                 public void run() {
+                    Log.d(TAG, "run: instantiate billing server");
                     // ToDo: remove magic numbers
-                    BillingServer billingServer = new BillingServer(100, 20, getApplicationContext());
+                    BillingServer billingServer = new BillingServer(mac, getApplicationContext());
 
                     try {
                         billingServer.start();
@@ -115,13 +210,17 @@ public class WiFiDirectBroadcastService extends Service {
             };
             Log.d(TAG, "startBillingServer");
             Thread thread = new Thread(task);
+            //asyncTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, params);
+            //AsyncTask.execute(thread);
             threads.add(thread);
-            AsyncTask.execute(thread);
+            thread.start();
+        } else {
+            Log.d(TAG, "startBillingServer: blocked");
         }
     }
 
 
-    public void startBillingClient() {
+    public void startBillingClient(String mac) {
         if (!billingClientIsRunning) {
             billingClientIsRunning = true;
 
@@ -130,18 +229,34 @@ public class WiFiDirectBroadcastService extends Service {
             Runnable task = new Runnable() {
                 @Override
                 public void run() {
-                    // ToDo: remove magic numbers
-                    BillingClient billingClient = new BillingClient(getApplicationContext());
-                    // ToDo: get the AP gateway ip address
+                    BillingClient billingClient = new BillingClient(mac, getApplicationContext());
+                    // Gget the AP gateway ip address
                     // https://stackoverflow.com/questions/9035784/how-to-know-ip-address-of-the-router-from-code-in-android
-                    billingClient.start("192.168.43.1");
+                    final WifiManager manager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+                    final DhcpInfo dhcp = manager.getDhcpInfo();
+                    byte[] myIPAddress = BigInteger.valueOf(dhcp.gateway).toByteArray();
+                    ArrayUtils.reverse(myIPAddress);
+                    InetAddress myInetIP = null;
+                    String routerIP = null;
+                    try {
+                        myInetIP = InetAddress.getByAddress(myIPAddress);
+                        routerIP = myInetIP.getHostAddress();
+                    } catch (UnknownHostException e) {
+                        e.printStackTrace();
+                        routerIP = "192.168.43.1";
+                    }
+                    Log.d(TAG, "DHCP gateway: " + routerIP);
+                    billingClient.start(routerIP);
                     // ToDo: handle billingServer EXIT CODES
                     // -> close the roaming etc.
                 }
             };
             Thread thread = new Thread(task);
             threads.add(thread);
-            AsyncTask.execute(thread);
+            thread.start();
+            //AsyncTask.execute(thread);
+        } else {
+            Log.d(TAG, "startBillingClient: blocked");
         }
     }
 
@@ -214,27 +329,45 @@ public class WiFiDirectBroadcastService extends Service {
         }
     }
 
+
     public void startNegotiationServer(final boolean isClient, String macAddress) {
         Runnable task = new Runnable() {
             @Override
             public void run() {
-                Negotiator negotiator = new Negotiator(isClient, getWFDMacAddress());
+                Negotiator negotiator = new Negotiator(isClient,
+                        getWFDMacAddress(),
+                        PreferenceManager.getDefaultSharedPreferences(getApplicationContext()),
+                        getBaseContext()
+                        );
+
                 String peer_mac_address = null;
-                while (!isRoaming && enabled && peer_mac_address == null) {
+                boolean restartAfterwards = true;
+                int error_count = 0;
+                int max_error_count = 10;
+                Negotiator.NegotiationReturn ret = null;
+                while (!isRoaming && enabled && peer_mac_address == null && restartAfterwards && (error_count < max_error_count)) {
+                    Log.d(TAG, String.format("%d/%d errors", error_count, max_error_count));
                     Log.d(TAG, "run: " + enabled);
-                    peer_mac_address = negotiator.workAsServer();
-                    // ToDo: use other broadcast for this
-                    // sendUpdateUIBroadcast();
+                    ret = negotiator.workAsServer();
+                    peer_mac_address = ret.mac;
+                    restartAfterwards = ret.restartAfterwards;
+                    if (ret.code != 0) {
+                        sendUpdateUIBroadcastWithMessage(getString(ret.code));
+                        if (restartAfterwards) {
+                            error_count++;
+                        }
+                    }
                     try {
                         Thread.sleep(2000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
+                        error_count++;
                     }
                     if (peer_mac_address == null) {
                         deletePersistentGroups();
                     }
                 }
-                if (peer_mac_address != null) {
+                if (peer_mac_address != null && ret != null && ret.code == 0) {
                     // block the discovery mode due to switch to roaming state
                     setRoaming(true);
                     // tell the UI
@@ -242,15 +375,22 @@ public class WiFiDirectBroadcastService extends Service {
                     String ssid = negFin.getHotspotName();
                     String key = negFin.getHotspotPassword();
                     sendStartRoamingBroadcast(peer_mac_address, ssid, key);
+                } else if (peer_mac_address != null) {
+                    PeerStore.getInstance().unselectAll();
                 }
+                negotiatorRunning = false;
             }
 
 
         };
-        if (!isRoaming()) {
+        if (!isRoaming() && !negotiatorRunning) {
+            negotiatorRunning = true;
             Thread thread = new Thread(task);
             threads.add(thread);
-            AsyncTask.execute(thread);
+            //AsyncTask.execute(thread);
+            stopAllTasks();
+            thread.start();
+            //stopDiscovery(null);
         } else {
             Log.d(TAG, "startNegServer: BLOCKED due to roaming state");
         }
@@ -269,12 +409,24 @@ public class WiFiDirectBroadcastService extends Service {
         Runnable task = new Runnable() {
             @Override
             public void run() {
-                Negotiator negotiator = new Negotiator(isClient, getWFDMacAddress());
+                Negotiator negotiator = new Negotiator(
+                        isClient,
+                        getWFDMacAddress(),
+                        PreferenceManager.getDefaultSharedPreferences(getApplicationContext()),
+                        getBaseContext()
+                );
                 String peer_mac_address = null;
-                while (!isRoaming && enabled && peer_mac_address == null) {
+                boolean restartAfterwards = true;
+                Negotiator.NegotiationReturn negotiationReturn = null;
+                while (!isRoaming && enabled && peer_mac_address == null && restartAfterwards && negotiatorRunning) {
                     Log.d(TAG, "run: " + enabled);
                     System.out.println(" *******+ work as client *******");
-                    peer_mac_address = negotiator.workAsClient(address.getHostAddress());
+                    negotiationReturn = negotiator.workAsClient(address.getHostAddress());
+                    peer_mac_address = negotiationReturn.mac;
+                    restartAfterwards = negotiationReturn.restartAfterwards;
+                    if (negotiationReturn.code != 0) {
+                        sendUpdateUIBroadcastWithMessage(getString(negotiationReturn.code));
+                    }
                     try {
                         Thread.sleep(2000);
                     } catch (InterruptedException e) {
@@ -284,7 +436,7 @@ public class WiFiDirectBroadcastService extends Service {
                         deletePersistentGroups();
                     }
                 }
-                if (peer_mac_address != null) {
+                if (peer_mac_address != null && negotiationReturn != null && negotiationReturn.code == 0) {
                     // block the discovery mode due to switch to roaming state
                     setRoaming(true);
                     // tell the UI
@@ -292,15 +444,21 @@ public class WiFiDirectBroadcastService extends Service {
                     String ssid = negFin.getHotspotName();
                     String key = negFin.getHotspotPassword();
                     sendStartRoamingBroadcast(peer_mac_address, ssid, key);
+                } else {
+                    Log.d(TAG, "run: could not start roaming");
                 }
+                PeerStore.getInstance().unselectAll();
+                negotiatorRunning = false;
             }
         };
-        if (!isRoaming()) {
+        if (!isRoaming() && !negotiatorRunning) {
+            negotiatorRunning = true;
             Thread thread = new Thread(task);
             threads.add(thread);
-            AsyncTask.execute(thread);
+            stopAllTasks();
+            thread.start();
         } else {
-            Log.d(TAG, "startNegotiationClient: BLOCKED due to roaming state");
+            Log.d(TAG, "startNegotiationClient: BLOCKED due to roaming state or negotiator running");
         }
 
 
@@ -385,8 +543,10 @@ public class WiFiDirectBroadcastService extends Service {
     }
 
     public void startDiscoveryMode(WifiP2pManager.ActionListener action_listener) {
-        mManager.discoverPeers(mChannel, action_listener);
-        discoveryModeActive = true;
+        if (setup) {
+            mManager.discoverPeers(mChannel, action_listener);
+            discoveryModeActive = true;
+        }
     }
 
     public boolean isInRoleHotspot() {
@@ -410,10 +570,179 @@ public class WiFiDirectBroadcastService extends Service {
     }
 
     public void setRoaming(boolean roaming) {
-        if (roaming) {
+        if (!roaming) {
             stopAllTasks();
         }
         isRoaming = roaming;
+    }
+
+    public void freezeWiFiP2P() {
+
+    }
+
+    public void fundChannel(String address) {
+        // get the necessary data
+        NegotiationOffer offer = PeerStore.getInstance().getLatestNegotiationOffer(address);
+        NegotiationOfferAnswer offerAnser = PeerStore.getInstance().getLatestNegotiationOfferAnswer(address);
+        NegotiationFinalization finalization = PeerStore.getInstance().getLatestFinalization(address);
+        BillingOpenChannel openChannel = PeerStore.getInstance().getPeer(address).getBillingOpenChannel();
+        BillingOpenChannelAnswer openChannelAnswer = PeerStore.getInstance().getPeer(address).getBillingOpenChannelAnswer();
+
+        String multisigAddress = finalization.getDepositAddressFlashChannel();
+
+        int timeoutClientSeconds = openChannel.getTimeoutMinutesClient();
+        int timeoutHotspotSeconds = openChannelAnswer.getTimeoutMinutesHotspot() * 60;
+        int timeout = (isInRoleHotspot()) ? timeoutHotspotSeconds : timeoutClientSeconds;
+
+        int clientDeposit = finalization.getDepositClientFlashChannelInIota();
+        int hotspotDeposit = finalization.getDepositServerFlashChannelInIota();
+        int deposit = (isInRoleHotspot()) ? hotspotDeposit : clientDeposit;
+
+        int depositTogether = clientDeposit + hotspotDeposit;
+
+        String seed = Accountant.getInstance().getSeed();
+
+        Log.d(TAG, "fundChannel: Let's fund " + multisigAddress);
+
+
+        Runnable task = () -> {
+            Log.d(TAG, "run: fund multisig address");
+
+            boolean fundDone = false;
+            boolean fundIsThere = false;
+
+            int fundErrorCount = 0;
+            int maxFundErrors = 10;
+
+            SharedPreferences prefManager = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+            boolean testnet = prefManager.getBoolean("pref_key_switch_testnet",false);
+
+            IotaAPI api;
+
+            if(testnet){
+                //Testnet node:
+                api = new IotaAPI.Builder()
+                        .protocol("https")
+                        .host("testnet140.tangle.works")
+                        .port("443")
+                        .build();
+            }
+            else{
+                //Mainnet node:
+                api = new IotaAPI.Builder()
+                        .protocol("http")
+                        .host("node.iotawallet.info")
+                        .port("14265")
+                        .build();
+            }
+
+            long start = System.currentTimeMillis() / 1000L;
+
+            while (((System.currentTimeMillis()/1000L) - start < timeout || !fundDone || !fundIsThere) && fundErrorCount < maxFundErrors) {
+                SendTransferResponse sendTransferResponse = null;
+                if (!fundDone) {
+                    Log.d(TAG, "fundChannel: DEPOSIT::" + Integer.toString(deposit));
+                    try {
+                        List<Transfer> transfers = new ArrayList<>();
+                        transfers.add(new Transfer(multisigAddress, deposit, "", ""));
+
+                        if(testnet) {
+                            Log.d(TAG, "fundChannel: fund on testnet");
+                            sendTransferResponse = api.sendTransfer(seed, 2, 4, 9, transfers, null, null, false);
+                        }
+                        else{
+                            Log.d(TAG, "fundChannel: fund on mainnet");
+                            sendTransferResponse = api.sendTransfer(seed, 2, 4, 18, transfers, null, null, false);
+                        }
+                    } catch (ArgumentException | IllegalAccessError | IllegalStateException e) {
+                        String transferResult = "";
+                        if (e instanceof ArgumentException) {
+                            if (e.getMessage().contains("Sending to a used address.") || e.getMessage().contains("Private key reuse detect!") || e.getMessage().contains("Send to inputs!")) {
+                                transferResult = "Sending to a used address/Private key reuse detect. Error Occurred.";
+                            }
+                            else if(e.getMessage().contains("Failed to connect to node")){
+                                transferResult = "Failed to connect to node";
+                            }
+                            else{
+                                transferResult = "Network Error: Attaching new address failed or Transaction failed";
+                            }
+                        }
+                        if (e instanceof IllegalAccessError) {
+                            transferResult = "Local POW needs to be enabled";
+                        }
+                        fundErrorCount++;
+                        Log.d(TAG, "fundChannel: " + transferResult);
+                    }
+
+                    if(sendTransferResponse != null){
+                        Boolean[] transferSuccess = sendTransferResponse.getSuccessfully();
+
+                        Boolean success = true;
+                        for (Boolean status : transferSuccess) {
+                            if(status.equals(false)){
+                                success = false;
+                                fundErrorCount++;
+                                break;
+                            }
+                        }
+                        if(success){
+                            Log.d(TAG, "fundChannel: successfully transferred my part");
+                            fundDone = true;
+                        }
+                    }
+
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                } else if (fundDone && !fundIsThere) {
+                    // now check the balance until we get it
+                    // check the funding
+                    Log.d(TAG, "fundChannel: checking the balance of the root...");
+                    List<String> addresses = new ArrayList<String>();
+                    addresses.add(multisigAddress);
+                    GetBalancesResponse response = null;
+                    try {
+                        response = api.getBalances(100, addresses);
+                    } catch (ArgumentException e) {
+                        e.printStackTrace();
+                    }
+                    if (response != null) {
+                        if (response.getBalances().length > 0) {
+                            long balance = Integer.parseInt(response.getBalances()[0]);
+                            Log.d(TAG, "fundChannel: Found balance " + response.getBalances()[0]);
+                            if (balance > depositTogether) {
+                                Log.d(TAG, "fundChannel: balance is enough on both sides");
+                                fundIsThere = true;
+                            }
+                        }
+                    }
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                }
+                
+            }
+            if (fundErrorCount < maxFundErrors) {
+                Log.d(TAG, "fundChannel: channel funded");
+                sendUpdateRoamingBroadcastWithMessage("Channel funded");
+            } else {
+                Log.d(TAG, "fundChannel: too many fund errors");
+            }
+
+
+        };
+
+        Log.d(TAG, "startFunding");
+        Thread thread = new Thread(task);
+        threads.add(thread);
+        thread.start();
+
     }
 
 
@@ -454,7 +783,9 @@ public class WiFiDirectBroadcastService extends Service {
     }
 
     public void getPeerList(WifiP2pManager.ActionListener action_listener) {
-        mManager.discoverPeers(mChannel, action_listener);
+        if (setup) {
+            mManager.discoverPeers(mChannel, action_listener);
+        }
     }
 
     public void stopDiscovery(WifiP2pManager.ActionListener action_listener) {
@@ -504,6 +835,13 @@ public class WiFiDirectBroadcastService extends Service {
         Intent local = new Intent();
         local.putExtra("message", message);
         local.setAction("com.flashwifi.wifip2p.update_ui");
+        this.sendBroadcast(local);
+    }
+
+    private void sendUpdateRoamingBroadcastWithMessage(String message){
+        Intent local = new Intent();
+        local.putExtra("message", message);
+        local.setAction("com.flashwifi.wifip2p.update_roaming");
         this.sendBroadcast(local);
     }
 

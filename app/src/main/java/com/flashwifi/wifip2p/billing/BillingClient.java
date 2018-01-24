@@ -1,9 +1,12 @@
 package com.flashwifi.wifip2p.billing;
 
+import android.accounts.Account;
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
+import com.flashwifi.wifip2p.datastore.PeerInformation;
+import com.flashwifi.wifip2p.datastore.PeerStore;
 import com.flashwifi.wifip2p.negotiation.SocketWrapper;
 import com.flashwifi.wifip2p.protocol.BillMessage;
 import com.flashwifi.wifip2p.protocol.BillMessageAnswer;
@@ -11,6 +14,9 @@ import com.flashwifi.wifip2p.protocol.BillingCloseChannel;
 import com.flashwifi.wifip2p.protocol.BillingCloseChannelAnswer;
 import com.flashwifi.wifip2p.protocol.BillingOpenChannel;
 import com.flashwifi.wifip2p.protocol.BillingOpenChannelAnswer;
+import com.flashwifi.wifip2p.protocol.NegotiationFinalization;
+import com.flashwifi.wifip2p.protocol.NegotiationOffer;
+import com.flashwifi.wifip2p.protocol.NegotiationOfferAnswer;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -30,11 +36,13 @@ import java.net.UnknownHostException;
 public class BillingClient {
     private static final String TAG = "BillingClient";
     private final Gson gson;
+    private final String mac;
     private State state = State.NOT_PAIRED;
     private Socket socket;
     private SocketWrapper socketWrapper;
     private static final int PORT = 9199;
     private static final int clientTimeoutMillis = 2 * 60 * 1000;
+    private static final int maxErrorCount = 5;
 
     private BillingOpenChannel billingOpenChannel;
     private BillingOpenChannelAnswer billingOpenChannelAnswer;
@@ -49,15 +57,18 @@ public class BillingClient {
         context.sendBroadcast(local);
     }
 
-    public BillingClient(Context context){
+    public BillingClient(String mac, Context context){
         this.context = context;
+        this.mac = mac;
         gson = new GsonBuilder().create();
     }
 
 
 
     public void start(String serverIPAddress) {
-        while (state != State.CLOSED) {
+        int error_count = 0;
+
+        while (state != State.CLOSED && state != State.ERROR) {
             try {
                 // create client socket that connects to server
                 socket = new Socket(serverIPAddress, PORT);
@@ -74,17 +85,39 @@ public class BillingClient {
                     String hotspotStateLine = socketWrapper.getLineThrowing();
                     if (hotspotStateLine.contains("INITIAL") || hotspotStateLine.contains("NOT_PAIRED")) {
                         // ask the hotspot to open the flash channel
+
+                        // get the negotiated data
+                        NegotiationOffer offer = PeerStore.getInstance().getLatestNegotiationOffer(mac);
+                        NegotiationOfferAnswer answer = PeerStore.getInstance().getLatestNegotiationOfferAnswer(mac);
+                        NegotiationFinalization finalization = PeerStore.getInstance().getLatestFinalization(mac);
+                        // get the necessary values
+                        // ToDo: replace magic number with setting
+                        int totalMegabytes = 100;
+                        int treeDepth = 8;
                         String[] digests = new String[]{"1234", "2345", "3456"};
-                        billingOpenChannel = new BillingOpenChannel(100, 100, "clientAddress", 8, digests, 20 * 60 * 1000);
+                        int timeoutMinutesClient = 20 * 60 * 1000;
+
+                        int iotaPerMegabyte = offer.getIotaPerMegabyte();
+                        String clientRefundAddress = finalization.getClientRefundAddress();
+                        int totalMinutes = answer.getDuranceInMinutes();
+
+                        billingOpenChannel = new BillingOpenChannel(totalMegabytes, iotaPerMegabyte, clientRefundAddress, treeDepth, digests, timeoutMinutesClient, totalMinutes);
+                        PeerStore.getInstance().setLatestBillingOpenChannel(mac, billingOpenChannel);
                         String billingOpenChannelString = gson.toJson(billingOpenChannel);
                         socketWrapper.sendLine(billingOpenChannelString);
                         // receive the hotspot details for the flash channel
                         String billingOpenChannelAnswerString = socketWrapper.getLineThrowing();
                         billingOpenChannelAnswer = gson.fromJson(billingOpenChannelAnswerString, BillingOpenChannelAnswer.class);
+                        PeerStore.getInstance().setLatestBillingOpenChannelAnswer(mac, billingOpenChannelAnswer);
                         // now create the flash channel on our side
-                        Accountant.getInstance().start(billingOpenChannel.getTotalMegabytes(), billingOpenChannel.getTimeoutMinutesClient());
+                        Accountant.getInstance().start(billingOpenChannel.getTotalMegabytes(), billingOpenChannel.getTimeoutMinutesClient(), billingOpenChannel.getTotalMinutes(), billingOpenChannelAnswer.getClientDepositIota(),
+                                billingOpenChannel.getIotaPerMegabyte());
                         sendUpdateUIBroadcastWithMessage("Channel established");
                         state = State.ROAMING;
+
+                        // start the task to fund the channel
+                        sendUpdateUIBroadcastWithMessage("Start Channel funding");
+
                     } else {
                         // what to do if the hotspot already created stuff and was in roaming mode
                         // ToDo: ^^^^^
@@ -106,7 +139,7 @@ public class BillingClient {
                         // ToDo: flash object -> diff()
                         // ToDo: sign flash transaction
                         sendUpdateUIBroadcastWithMessage("Billing");
-                        latestBillAnswer = new BillMessageAnswer("id", true, "", false);
+                        latestBillAnswer = new BillMessageAnswer("id", true, "", Accountant.getInstance().isCloseAfterwards());
                         latestBillAnswerString = gson.toJson(latestBillAnswer);
                         socketWrapper.sendLine(latestBillAnswerString);
 
@@ -128,16 +161,47 @@ public class BillingClient {
                     String billingCloseChannelAnswerString = gson.toJson(billingCloseChannelAnswer);
                     socketWrapper.sendLine(billingCloseChannelAnswerString);
 
+                    sendUpdateUIBroadcastWithMessage("Channel closed");
+
                     state = State.CLOSED;
                 }
 
 
             } catch (SocketException e) {
                 e.printStackTrace();
+                sendUpdateUIBroadcastWithMessage("Socket exception");
+                error_count++;
             } catch (UnknownHostException e) {
+                sendUpdateUIBroadcastWithMessage("UnknownHostException exception");
                 e.printStackTrace();
+                error_count++;
             } catch (IOException e) {
+                sendUpdateUIBroadcastWithMessage("IOException");
                 e.printStackTrace();
+                error_count++;
+            } finally {
+                if (socket != null) {
+                    try {
+                        socketWrapper.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                // sleep in finally case 5 seconds
+                try {
+                    Thread.sleep(1000*5);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                if (error_count >= maxErrorCount) {
+                    // stop trying to connect
+                    Log.d(TAG, "start: error count too high");
+                    state = State.ERROR;
+                    sendUpdateUIBroadcastWithMessage("Exit");
+                }
+
             }
         }
     }
@@ -146,6 +210,7 @@ public class BillingClient {
         NOT_PAIRED,
         ROAMING,
         CLOSE,
-        CLOSED
+        CLOSED,
+        ERROR
     }
 }

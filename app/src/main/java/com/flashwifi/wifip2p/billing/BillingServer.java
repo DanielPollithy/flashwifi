@@ -1,9 +1,16 @@
 package com.flashwifi.wifip2p.billing;
 
+import android.app.usage.NetworkStats;
+import android.app.usage.NetworkStatsManager;
 import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.wifi.WifiManager;
+import android.os.RemoteException;
+import android.text.format.Formatter;
 import android.util.Log;
 
+import com.flashwifi.wifip2p.datastore.PeerStore;
 import com.flashwifi.wifip2p.negotiation.SocketWrapper;
 import com.flashwifi.wifip2p.protocol.BillMessage;
 import com.flashwifi.wifip2p.protocol.BillMessageAnswer;
@@ -11,14 +18,20 @@ import com.flashwifi.wifip2p.protocol.BillingCloseChannel;
 import com.flashwifi.wifip2p.protocol.BillingCloseChannelAnswer;
 import com.flashwifi.wifip2p.protocol.BillingOpenChannel;
 import com.flashwifi.wifip2p.protocol.BillingOpenChannelAnswer;
+import com.flashwifi.wifip2p.protocol.NegotiationFinalization;
+import com.flashwifi.wifip2p.protocol.NegotiationOffer;
+import com.flashwifi.wifip2p.protocol.NegotiationOfferAnswer;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+
+import static android.content.Context.WIFI_SERVICE;
 
 /**
  * 1) This class keeps the socket connection alive.
@@ -32,6 +45,10 @@ import java.net.UnknownHostException;
 public class BillingServer {
     private static final String TAG = "BillingServer";
     private final Gson gson;
+    private final String mac;
+    private final String hotspotRefundAddress;
+    private final String channelRootAddress;
+    private final String[] digests;
     private State state = State.NOT_PAIRED;
     private ServerSocket serverSocket;
     private Socket socket;
@@ -40,6 +57,7 @@ public class BillingServer {
     private static final int serverTimeoutMillis = 2 * 60 * 1000;
 
     Context context;
+    NetworkStatsManager networkStatsManager;
 
     private void sendUpdateUIBroadcastWithMessage(String message){
         Intent local = new Intent();
@@ -48,16 +66,43 @@ public class BillingServer {
         context.sendBroadcast(local);
     }
 
-    public BillingServer(int bookedMegabytes, int timeoutMinutes, Context context){
+    public BillingServer(String mac, Context context){
         this.context = context;
-        Accountant.getInstance().start(bookedMegabytes,timeoutMinutes);
+        this.mac = mac;
+
+        // get the negotiated data
+        NegotiationOffer offer = PeerStore.getInstance().getLatestNegotiationOffer(mac);
+        NegotiationOfferAnswer answer = PeerStore.getInstance().getLatestNegotiationOfferAnswer(mac);
+        NegotiationFinalization finalization = PeerStore.getInstance().getLatestFinalization(mac);
+        // get the necessary values
+        // ToDo: replace magic number with setting
+        int totalMegabytes = 100;
+        int treeDepth = 8;
+        this.digests = new String[]{"1234", "2345", "3456"};
+        int timeoutMinutesServer = 20 * 60 * 1000;
+
+        this.hotspotRefundAddress = finalization.getHotspotRefundAddress();
+        this.channelRootAddress = finalization.getDepositAddressFlashChannel();
+
+
+        int iotaPerMegabyte = offer.getIotaPerMegabyte();
+        int iotaDepositClient = totalMegabytes * iotaPerMegabyte;
+        String clientRefundAddress = finalization.getClientRefundAddress();
+        int totalMinutes = answer.getDuranceInMinutes();
+
+        Accountant.getInstance().start(totalMegabytes, timeoutMinutesServer, totalMinutes, iotaDepositClient, iotaPerMegabyte);
         gson = new GsonBuilder().create();
+        networkStatsManager = (NetworkStatsManager) context.getSystemService(Context.NETWORK_STATS_SERVICE);
     }
 
     public void start() throws IOException {
         // 0) create deadline guard
         createDeadlineGuard();
         // 1) create a socket
+
+        Log.d(TAG, "start: Billing server has been started");
+
+        // ToDo: receive end of roaming broadcast
 
         while (state != State.CLOSED) {
             try {
@@ -86,11 +131,20 @@ public class BillingServer {
                     // receive the BillingOpenChannel message
                     String billingOpenChannelString = socketWrapper.getLineThrowing();
                     BillingOpenChannel billingOpenChannel = gson.fromJson(billingOpenChannelString, BillingOpenChannel.class);
-
+                    PeerStore.getInstance().setLatestBillingOpenChannel(mac, billingOpenChannel);
                     // answer with billingOpenChannelAnswerString
+
+
                     // ToDo: create the flash channel
-                    String[] myDigests = new String[]{"1234", "2345", "3456"};
-                    BillingOpenChannelAnswer billingOpenChannelAnswer = new BillingOpenChannelAnswer(0, 0, "", "", myDigests);
+
+                    
+                    BillingOpenChannelAnswer billingOpenChannelAnswer = new BillingOpenChannelAnswer(
+                            Accountant.getInstance().getTotalIotaDeposit(),
+                            Accountant.getInstance().getTotalIotaDeposit(),
+                            hotspotRefundAddress,
+                            channelRootAddress,
+                            digests);
+                    PeerStore.getInstance().setLatestBillingOpenChannelAnswer(mac, billingOpenChannelAnswer);
                     String billingOpenChannelAnswerString = gson.toJson(billingOpenChannelAnswer);
                     socketWrapper.sendLine(billingOpenChannelAnswerString);
 
@@ -98,6 +152,9 @@ public class BillingServer {
 
                     // OK
                     state = State.ROAMING;
+
+                    // start funding
+                    sendUpdateUIBroadcastWithMessage("Start Channel funding");
                 }
 
                 if (state == State.ROAMING) {
@@ -117,10 +174,23 @@ public class BillingServer {
                         Log.d(TAG, "start: Good morning!");
                         // create new bill
                         // ToDo: integrate real network data
-                        // ToDo: calculate time correctly
-                        b = Accountant.getInstance().createBill(0,0,1);
+                        NetworkStats.Bucket bucket;
+                        long total_bytes;
+                        try {
+                            bucket = networkStatsManager.querySummaryForDevice(ConnectivityManager.TYPE_WIFI,
+                                    "",
+                                    Accountant.getInstance().getLastTime() * 1000,
+                                    System.currentTimeMillis());
+                            long bytes_received = bucket.getRxBytes();
+                            long bytes_transmitted = bucket.getTxBytes();
+                            total_bytes = bytes_received + bytes_transmitted;
+                        } catch (RemoteException e) {
+                            Log.d(TAG, "start: Can't get the network traffic.");
+                            total_bytes = 0;
+                        }
+                        b = Accountant.getInstance().createBill((int)total_bytes);
                         // ToDo: integrate real flash channel
-                        latestBill = new BillMessage(b, "", false);
+                        latestBill = new BillMessage(b, "<flash obj>", Accountant.getInstance().isCloseAfterwards());
                         latestBillString = gson.toJson(latestBill);
                         socketWrapper.sendLine(latestBillString);
 
@@ -136,11 +206,14 @@ public class BillingServer {
                         if (latestBill.isCloseAfterwards() || latestBillAnswer.isCloseAfterwards()) {
                             state = State.CLOSE;
                         }
+
+                        sendUpdateUIBroadcastWithMessage("Billing");
                     }
 
                 }
 
                 if (state == State.CLOSE) {
+                    Log.d(TAG, "start: state is CLOSE now");
                     // ToDo: handle the final deposit of the flash channel
                     // ToDo: sign the transaction
                     BillingCloseChannel billingCloseChannel = new BillingCloseChannel(0,0,0,0,"", "", "");
@@ -150,6 +223,9 @@ public class BillingServer {
                     String billingCloseChannelAnswerString = socketWrapper.getLineThrowing();
                     BillingCloseChannelAnswer billingCloseChannelAnswer = gson.fromJson(billingCloseChannelAnswerString, BillingCloseChannelAnswer.class);
                     // ToDo: validate the signature
+
+                    // change the ui
+                    sendUpdateUIBroadcastWithMessage("Channel closed");
                     state = State.CLOSED;
                 }
 
@@ -158,17 +234,34 @@ public class BillingServer {
                     boolean attached = false;
                     while (!attached) {
                         Log.d(TAG, "start: Attach to tangle please");
+                        Thread.sleep(5000);
                     }
                     state = State.FULLY_ATTACHED;
                 }
             } catch (IOException e) {
-
+                e.printStackTrace();
             } catch (InterruptedException e) {
                 e.printStackTrace();
+            } finally {
+                try {
+                    if (socketWrapper != null) {
+                        socketWrapper.close();
+                    }
+                } catch (Exception e) {
+
+                }
+                try {
+                    if (serverSocket != null) {
+                        serverSocket.close();
+                    }
+                } catch (Exception e) {
+
+                }
             }
         }
 
     }
+
 
     private void createDeadlineGuard() {
         // this method measures the time and stops the connection if

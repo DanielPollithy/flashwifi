@@ -6,6 +6,8 @@ public class NegotiationFinalization {
     private String hotspotName;
     private String hotspotPassword;
     private String depositAddressFlashChannel;
+    private String clientRefundAddress;
+    private String hotspotRefundAddress;
     private int depositServerFlashChannelInIota;
     private int depositClientFlashChannelInIota;
     private String flashObject;
@@ -26,5 +28,29 @@ public class NegotiationFinalization {
 
     public String getHotspotPassword() {
         return hotspotPassword;
+    }
+
+    public String getDepositAddressFlashChannel() {
+        return depositAddressFlashChannel;
+    }
+
+    public int getDepositServerFlashChannelInIota() {
+        return depositServerFlashChannelInIota;
+    }
+
+    public int getDepositClientFlashChannelInIota() {
+        return depositClientFlashChannelInIota;
+    }
+
+    public String getFlashObject() {
+        return flashObject;
+    }
+
+    public String getClientRefundAddress() {
+        return clientRefundAddress;
+    }
+
+    public String getHotspotRefundAddress() {
+        return hotspotRefundAddress;
     }
 }

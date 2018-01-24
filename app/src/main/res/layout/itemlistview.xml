@@ -34,7 +34,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="left"
-                    android:layout_marginRight="50dp"
+                    android:layout_weight="1"
+                    android:layout_marginRight="20dp"
                     android:text="Device name"
                     android:textAppearance="@style/TextAppearance.AppCompat.Headline" />
 
@@ -61,27 +62,29 @@
                 <TextView android:layout_height="wrap_content"
                     android:layout_width="wrap_content"
                     android:textColor="#000000"
-                    android:gravity="right"
+                    android:layout_weight="1"
                     android:id="@+id/description"
                     android:text="description"
                     android:layout_marginRight="20dp"/>
 
-                <TextView android:textColor="#000000"
-                    android:id="@+id/ipAddr"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="ipAddr"
-                    android:layout_marginRight="20dp"/>
-
                 <TextView android:layout_height="wrap_content"
                     android:layout_width="wrap_content"
-                    android:layout_weight="1"
+                    android:layout_weight="0"
                     android:textColor="#000000"
                     android:id="@+id/iotaPrice"
                     android:text="iotaPrice" />
 
 
             </LinearLayout>
+
+            <ProgressBar
+                android:id="@+id/progressConnection"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:indeterminate="true"
+                android:visibility="gone"
+                />
 
 
 
