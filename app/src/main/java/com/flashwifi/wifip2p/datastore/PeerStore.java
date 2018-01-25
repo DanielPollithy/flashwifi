@@ -1,5 +1,7 @@
 package com.flashwifi.wifip2p.datastore;
 
+import android.util.Log;
+
 import com.flashwifi.wifip2p.protocol.BillingCloseChannel;
 import com.flashwifi.wifip2p.protocol.BillingCloseChannelAnswer;
 import com.flashwifi.wifip2p.protocol.BillingOpenChannel;
@@ -22,7 +24,20 @@ public class PeerStore {
 
     private HashMap<String, PeerInformation> peers = new HashMap<String, PeerInformation>();
 
-    public static PeerStore getInstance() {
+    private NegotiationOffer storedNegotiationOffer = null;
+    private NegotiationOfferAnswer storedNegotiationOfferAnswer = null;
+    private NegotiationFinalization storedNegotiationFinalization = null;
+
+    private BillingOpenChannel storedBillingOpenChannel = null;
+    private BillingOpenChannelAnswer storedBillingOpenChannelAnswer = null;
+
+    private boolean debug = true;
+
+    private String lastMAC = null;
+
+
+
+    public static synchronized PeerStore getInstance() {
         return ourInstance;
     }
 
@@ -30,7 +45,7 @@ public class PeerStore {
         // ToDo: load and store stuff in SQLite or gson JSON
     }
 
-    public void clear() {
+    public synchronized void clear() {
         peers.clear();
     }
 
@@ -39,7 +54,7 @@ public class PeerStore {
      *
      * @return was the peer created?
      */
-    public boolean updateOrCreate(PeerInformation peer) {
+    public synchronized boolean updateOrCreate(PeerInformation peer) {
         String macAddress = peer.getWifiP2pDevice().deviceAddress;
         boolean exists = peers.containsKey(macAddress);
 
@@ -55,7 +70,7 @@ public class PeerStore {
         return !exists;
     }
 
-    public ArrayList<PeerInformation> getPeerArrayList() {
+    public synchronized ArrayList<PeerInformation> getPeerArrayList() {
         ArrayList<PeerInformation> ary = new ArrayList<>(peers.values());
         Collections.sort(ary, new Comparator<PeerInformation>() {
             @Override
@@ -70,13 +85,13 @@ public class PeerStore {
     /**
      * This sets an old flag to all the peers
      */
-    public void makeNewGeneration() {
+    public synchronized void makeNewGeneration() {
         for (PeerInformation peer : peers.values()) {
             peer.incrementAge();
         }
     }
 
-    private PeerInformation getOrCreatePeer(String address_) {
+    private synchronized PeerInformation getOrCreatePeer(String address_) {
         address_ = address_.toLowerCase();
         if (peers.containsKey(address_)) {
             return peers.get(address_);
@@ -87,74 +102,94 @@ public class PeerStore {
         return temp;
     }
 
-    public void setLatestOffer(String macAddress, NegotiationOffer offer) {
+    public synchronized void setLatestOffer(String macAddress, NegotiationOffer offer) {
+        storedNegotiationOffer = offer;
         getOrCreatePeer(macAddress.toLowerCase()).setLatestOffer(offer);
     }
 
-    public void setErrorMessage(String macAddress, String msg) {
+    public synchronized void setErrorMessage(String macAddress, String msg) {
         getOrCreatePeer(macAddress.toLowerCase()).setErrorMessage(msg);
     }
 
-    public void setSelected(String macAddress, boolean selected) {
+    public synchronized void setSelected(String macAddress, boolean selected) {
         getOrCreatePeer(macAddress.toLowerCase()).setSelected(selected);
     }
 
-    public void unselectAll() {
+    public synchronized void unselectAll() {
         for (PeerInformation p: peers.values()) {
             p.setSelected(false);
         }
     }
 
-    public void setLatestOfferAnswer(String macAddress, NegotiationOfferAnswer answer) {
+    public synchronized void setLatestOfferAnswer(String macAddress, NegotiationOfferAnswer answer) {
+        storedNegotiationOfferAnswer = answer;
         getOrCreatePeer(macAddress.toLowerCase()).setLatestOfferAnswer(answer);
     }
 
-    public void setLatestFinalization(String macAddress, NegotiationFinalization finalization) {
+    public synchronized void setLatestFinalization(String macAddress, NegotiationFinalization finalization) {
+        lastMAC = macAddress;
+        storedNegotiationFinalization = finalization;
         getOrCreatePeer(macAddress.toLowerCase()).setLatestFinalization(finalization);
     }
 
-    public NegotiationFinalization getLatestFinalization(String macAddress) {
+    public synchronized NegotiationFinalization getLatestFinalization(String macAddress) {
         if (peers.containsKey(macAddress.toLowerCase())) {
             return peers.get(macAddress.toLowerCase()).getLatestFinalization();
         }
-        return null;
+        return storedNegotiationFinalization;
     }
 
-    public NegotiationOffer getLatestNegotiationOffer(String macAddress) {
+    public synchronized NegotiationOffer getLatestNegotiationOffer(String macAddress) {
         if (peers.containsKey(macAddress.toLowerCase())) {
             return peers.get(macAddress.toLowerCase()).getLatestNegotiationOffer();
         }
-        return null;
+        return storedNegotiationOffer;
     }
 
-    public NegotiationOfferAnswer getLatestNegotiationOfferAnswer(String macAddress) {
+    public synchronized NegotiationOfferAnswer getLatestNegotiationOfferAnswer(String macAddress) {
         if (peers.containsKey(macAddress.toLowerCase())) {
             return peers.get(macAddress.toLowerCase()).getLatestOfferAnswer();
         }
-        return null;
+        return storedNegotiationOfferAnswer;
     }
 
-    public void setIPAddress(String macAddress, InetAddress IPAddress) {
+    public synchronized void setIPAddress(String macAddress, InetAddress IPAddress) {
         getOrCreatePeer(macAddress.toLowerCase()).setIPAddress(IPAddress.getHostAddress());
     }
 
-    public void setLatestBillingOpenChannel(String macAddress, BillingOpenChannel o) {
+    public synchronized void setLatestBillingOpenChannel(String macAddress, BillingOpenChannel o) {
+        storedBillingOpenChannel = o;
         getOrCreatePeer(macAddress.toLowerCase()).setBillingOpenChannel(o);
     }
 
-    public void setLatestBillingOpenChannelAnswer(String macAddress, BillingOpenChannelAnswer o) {
+    public synchronized void setLatestBillingOpenChannelAnswer(String macAddress, BillingOpenChannelAnswer o) {
+        storedBillingOpenChannelAnswer = o;
         getOrCreatePeer(macAddress.toLowerCase()).setBillingOpenChannelAnswer(o);
     }
 
-    public void setLatestBillingCloseChannel(String macAddress, BillingCloseChannel o) {
+    public synchronized BillingOpenChannel getLatestBillingOpenChannel(String macAddress) {
+        if (peers.containsKey(macAddress.toLowerCase())) {
+            return peers.get(macAddress.toLowerCase()).getBillingOpenChannel();
+        }
+        return storedBillingOpenChannel;
+    }
+
+    public synchronized BillingOpenChannelAnswer getLatestBillingOpenChannelAnswer(String macAddress) {
+        if (peers.containsKey(macAddress.toLowerCase())) {
+            return peers.get(macAddress.toLowerCase()).getBillingOpenChannelAnswer();
+        }
+        return storedBillingOpenChannelAnswer;
+    }
+
+    public synchronized void setLatestBillingCloseChannel(String macAddress, BillingCloseChannel o) {
         getOrCreatePeer(macAddress.toLowerCase()).setBillingCloseChannel(o);
     }
 
-    public void setLatestBillingCloseChannelAnswer(String macAddress, BillingCloseChannelAnswer o) {
+    public synchronized void setLatestBillingCloseChannelAnswer(String macAddress, BillingCloseChannelAnswer o) {
         getOrCreatePeer(macAddress.toLowerCase()).setBillingCloseChannelAnswer(o);
     }
 
-    public PeerInformation getPeer(String address) {
+    public synchronized PeerInformation getPeer(String address) {
         address = address.toLowerCase();
         if (peers.containsKey(address)) {
             return peers.get(address);

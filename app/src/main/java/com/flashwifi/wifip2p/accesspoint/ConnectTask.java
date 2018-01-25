@@ -2,6 +2,7 @@ package com.flashwifi.wifip2p.accesspoint;
 
 import android.content.Context;
 import android.content.Intent;
+import android.net.wifi.SupplicantState;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
@@ -58,29 +59,69 @@ public class ConnectTask extends AsyncTask<Object, Void, String> {
         int netId = wifiManager.addNetwork(wifiConfig);
         
         boolean connected = false;
+
+        int max_tries = 10;
         
-        while (!connected) {
+        while (!connected && max_tries > 0) {
+            max_tries--;
             Log.d(TAG, "doInBackground: try to find the network");
             List<WifiConfiguration> list = wifiManager.getConfiguredNetworks();
+            WifiInfo wifiInfo;
             for( WifiConfiguration i : list ) {
                 if(i.SSID != null && i.SSID.equals("\"" + ssid + "\"")) {
                     Log.d(TAG, "doInBackground: found it!!!");
                     wifiManager.disconnect();
                     wifiManager.disableNetwork(old_network_id);
+                    wifiManager.reconnect();
                     boolean worked = wifiManager.enableNetwork(i.networkId, true);
                     if (worked) {
-                        Log.d(TAG, "doInBackground: WORKED enableNetwork");
-                        sendUpdateUIBroadcastWithMessage("AP SUCCESS");
+                        connected = true;
+                        boolean connected_to_it = false;
+                        String new_ssid;
+                        Log.d(TAG, "New network added!");
+                        int max_seconds = 10;
+                        boolean wrong_network = false;
+                        while (!connected_to_it && max_seconds > 0 && !wrong_network) {
+                            Log.d(TAG, "try to connect to hotspot");
+                            wifiInfo = wifiManager.getConnectionInfo();
+                            if (wifiInfo.getSupplicantState() == SupplicantState.COMPLETED) {
+                                new_ssid = wifiInfo.getSSID();
+                                if (new_ssid.contains(ssid)) {
+                                    connected_to_it = true;
+                                    Log.d(TAG, "doInBackground: WORKED enableNetwork");
+                                    sendUpdateUIBroadcastWithMessage("AP SUCCESS");
+                                } else {
+                                    Log.d(TAG, "WRONG NETWORK");
+                                    sendUpdateUIBroadcastWithMessage("AP FAILED");
+                                    wrong_network = true;
+                                }
+                            }
+                            try {
+                                Thread.sleep(100);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                            max_seconds--;
+                            if (max_seconds == 0) {
+                                Log.d(TAG, "TRIED TOO LONG TO CONNECT TO HOTSPOT -> stop");
+                                connected = false;
+                                sendUpdateUIBroadcastWithMessage("AP FAILED");
+                            }
+                        }
+
                     } else {
                         Log.d(TAG, "doInBackground: Error connecting to the network");
-                        sendUpdateUIBroadcastWithMessage("AP FAILED");
+                        Log.d(TAG, "doInBackground: Let's try it again");
+                        //sendUpdateUIBroadcastWithMessage("AP FAILED");
                     }
-                    wifiManager.reconnect();
-
-                    connected = true;
-                    break;
                 }
             }
+            if (max_tries == 0) {
+                Log.d(TAG, "doInBackground: Error connecting to the network");
+                Log.d(TAG, "doInBackground: THIS WAS THE LAST TRY");
+                sendUpdateUIBroadcastWithMessage("AP FAILED");
+            }
+
         }
 
         /*Log.d(TAG, "doInBackground: now wait");

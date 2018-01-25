@@ -104,7 +104,7 @@ public class RoamingActivity extends AppCompatActivity {
                     apConnected.setChecked(true);
                     mService.resetBillingState();
                     // when the AP is setup we can start the server
-                    startBillingProtocol();
+                    startBillingProtocol(5000);
                 } else if (message.equals("AP FAILED")) {
                     apConnected.setChecked(false);
                     Toast.makeText(getApplicationContext(), "Could not create Access point", Toast.LENGTH_LONG).show();
@@ -192,8 +192,15 @@ public class RoamingActivity extends AppCompatActivity {
 
     }
 
-    private void startBillingProtocol() {
+    private void startBillingProtocol(int milliseconds_sleep) {
         // setup the flash channel etc...
+        try {
+            Log.d(TAG, "startBillingProtocol: wait for some milliseconds");
+            Thread.sleep(milliseconds_sleep);
+            Log.d(TAG, "startBillingProtocol: now let's go");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         if (mService.isInRoleHotspot()) {
             mService.startBillingServer(address);
         } else {
