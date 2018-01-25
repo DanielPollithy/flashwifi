@@ -4,6 +4,25 @@ Share remaining data from your android phone as a hotspot and get paid in iota.
 
 [WiFiota Promotional Website](https://tobywoerthle.github.io/flashWiFiSite/)
 
+# Installation
+
+## Required permissions explanation:
+
+* Photos, media, and files:
+* Make and manage phone calls:
+* Take and record video:
+
+* Modify system settings:
+* Apps with usage access:
+
+## Requirements
+
+Minimum Required Android Code Name/Version/API Level: **Marshmallow / 6.0 / API level 23**
+
+## How to install
+
+TODO
+
 # How does it work?
 
 ## Iota setup
@@ -71,7 +90,5 @@ We wrapped the iota.flash.js with additional javascript bridges and connected th
 * [ ] Implement iota.flash.js in Java
 * [ ] Build a hardware prototype for Wifiota hotspot (Raspy + data plan + battery)
 * [ ] Extend the protocol to multiple parties, endless roaming and backoffice functions to close conflicts after physical contacts isn't possible anymore
-
-
 
 Total: 17d
