@@ -165,6 +165,25 @@ public class MainActivity extends AppCompatActivity
         password = intent.getStringExtra("password");
         seed = intent.getStringExtra("seed");
 
+        /*
+        // iotalibflash
+        String iotaflash = readFile("iotaflash");
+        String iotaflashhelper = readFile("iotaflashhelper");
+
+        try {
+            IotaFlashBridge.boot(iotaflash, iotaflashhelper);
+            Example.setup();
+            Example.transaction(Example.one, Example.two);
+            Example.transaction(Example.two, Example.one);
+            Example.transaction(Example.one, Example.two);
+            Example.transaction(Example.one, Example.two);
+            Example.close(Example.one, Example.two);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }*/
+
         setBalanceHandler();
         Accountant.getInstance().setSeed(seed);
 
@@ -231,6 +250,16 @@ public class MainActivity extends AppCompatActivity
         super.onStop();
     }
 
+    public MenuItem getMenuItem(int i) {
+        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
+
+        Menu menu = navigationView.getMenu();
+        MenuItem item = menu.getItem(i);
+        item.setChecked(true);
+
+        return item;
+    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -261,9 +290,9 @@ public class MainActivity extends AppCompatActivity
 
         if (id == R.id.nav_search) {
             // Handle the camera action
-            startSearchFragment();
+            return startSearchFragment();
         } else if (id == R.id.nav_start) {
-            startHotspotFragment();
+            return startHotspotFragment();
 //        } else if (id == R.id.nav_itp) {
 //
         } else if (id == R.id.nav_fund) {
@@ -307,11 +336,23 @@ public class MainActivity extends AppCompatActivity
         balanceChecker.execute();
     }
 
-    public void startSearchFragment() {
+    public void startStartFragment() {
+        Fragment fragment = new StartFragment();
+
+        // Insert the fragment by replacing any existing fragment
+        FragmentManager fragmentManager = getFragmentManager();
+        fragmentManager.beginTransaction()
+                .replace(R.id.content_frame, fragment)
+                .commit();
+    }
+
+    public boolean startSearchFragment() {
         if (mBound && mService.isInRoleHotspot()) {
             Toast.makeText(this, "Can't start search because you are hotspot", Toast.LENGTH_SHORT).show();
+            return false;
         } else if (!settingsAreReady()) {
             Toast.makeText(this, "Navigate to settings and assign all variables", Toast.LENGTH_SHORT).show();
+            return false;
         } else {
             Fragment fragment = new SearchFragment();
             if (mBound) {
@@ -323,6 +364,9 @@ public class MainActivity extends AppCompatActivity
             fragmentManager.beginTransaction()
                     .replace(R.id.content_frame, fragment)
                     .commit();
+            DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+            drawer.closeDrawer(GravityCompat.START);
+            return true;
         }
 
     }
@@ -350,11 +394,13 @@ public class MainActivity extends AppCompatActivity
 
     }
 
-    public void startHotspotFragment() {
+    public boolean startHotspotFragment() {
         if (mBound && mService.isInRoleConsumer()) {
             Toast.makeText(this, "Can't start hotspot because you are searching", Toast.LENGTH_SHORT).show();
+            return false;
         } else if (!settingsAreReady()) {
             Toast.makeText(this, "Navigate to settings and assign all variables", Toast.LENGTH_SHORT).show();
+            return false;
         } else {
             Fragment fragment = new HotspotFragment();
             Bundle args = new Bundle();
@@ -367,6 +413,9 @@ public class MainActivity extends AppCompatActivity
             fragmentManager.beginTransaction()
                     .replace(R.id.content_frame, fragment)
                     .commit();
+            DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+            drawer.closeDrawer(GravityCompat.START);
+            return true;
         }
     }
 
@@ -381,7 +430,6 @@ public class MainActivity extends AppCompatActivity
         if (mBound) {
             mService.changeApplicationState(WiFiDirectBroadcastService.State.FUND_WALLET);
         }
-
         // Insert the fragment by replacing any existing fragment
         FragmentManager fragmentManager = getFragmentManager();
         fragmentManager.beginTransaction()
