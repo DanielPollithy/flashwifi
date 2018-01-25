@@ -10,7 +10,7 @@ android {
         applicationId "jenny.daniel.wifip2p"
         minSdkVersion 23
         targetSdkVersion 23
-        multiDexEnabled = false
+        multiDexEnabled = true
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"

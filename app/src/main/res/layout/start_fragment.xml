@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/main_content"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:baselineAligned="false"
+    android:orientation="vertical"
+    android:background="#dc8282">
+
+    <RelativeLayout
+        android:id="@+id/search_hotspot"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#cccccc">
+
+        <ImageView
+            android:id="@+id/image1"
+            android:layout_width="75dp"
+            android:layout_height="75dp"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:layout_marginStart="39dp"
+            android:background="@drawable/ic_search"
+            android:backgroundTint="#000000" />
+
+        <TextView
+            android:id="@+id/text1_1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@+id/image1"
+            android:layout_marginStart="42dp"
+            android:layout_toEndOf="@+id/image1"
+            android:text="Search"
+            android:textColor="#000000"
+            android:textSize="30sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignStart="@+id/text1_1"
+            android:layout_below="@+id/text1_1"
+            android:text="Hotspot"
+            android:textColor="#000000"
+            android:textSize="30sp" />
+
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/open_hotspot"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#a1a0a0">
+
+        <ImageView
+            android:layout_width="75dp"
+            android:layout_height="75dp"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:layout_marginStart="39dp"
+            android:background="@drawable/ic_wifi_tethering"
+            android:backgroundTint="#000000"
+            android:id="@+id/image2" />
+
+        <TextView
+            android:id="@+id/text1_2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@+id/image2"
+            android:layout_marginStart="42dp"
+            android:layout_toEndOf="@+id/image2"
+            android:text="Open"
+            android:textColor="#000000"
+            android:textSize="30sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignStart="@+id/text1_2"
+            android:layout_below="@+id/text1_2"
+            android:text="Hotspot"
+            android:textColor="#000000"
+            android:textSize="30sp" />
+
+    </RelativeLayout>
+
+</LinearLayout>
+

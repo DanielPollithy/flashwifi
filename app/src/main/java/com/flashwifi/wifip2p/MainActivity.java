@@ -202,6 +202,8 @@ public class MainActivity extends AppCompatActivity
 
         Intent intent2 = new Intent(this, WiFiDirectBroadcastService.class);
         bindService(intent2, mConnection, Context.BIND_AUTO_CREATE);
+
+        startStartFragment();
     }
 
     public WiFiDirectBroadcastService getmService() {
@@ -238,6 +240,16 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+    public MenuItem getMenuItem(int i) {
+        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
+
+        Menu menu = navigationView.getMenu();
+        MenuItem item = menu.getItem(i);
+        item.setChecked(true);
+
+        return item;
+    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -268,9 +280,9 @@ public class MainActivity extends AppCompatActivity
 
         if (id == R.id.nav_search) {
             // Handle the camera action
-            startSearchFragment();
+            return startSearchFragment();
         } else if (id == R.id.nav_start) {
-            startHotspotFragment();
+            return startHotspotFragment();
 //        } else if (id == R.id.nav_itp) {
 //
         } else if (id == R.id.nav_fund) {
@@ -314,11 +326,23 @@ public class MainActivity extends AppCompatActivity
         balanceChecker.execute();
     }
 
-    public void startSearchFragment() {
+    public void startStartFragment() {
+        Fragment fragment = new StartFragment();
+
+        // Insert the fragment by replacing any existing fragment
+        FragmentManager fragmentManager = getFragmentManager();
+        fragmentManager.beginTransaction()
+                .replace(R.id.content_frame, fragment)
+                .commit();
+    }
+
+    public boolean startSearchFragment() {
         if (mBound && mService.isInRoleHotspot()) {
             Toast.makeText(this, "Can't start search because you are hotspot", Toast.LENGTH_SHORT).show();
+            return false;
         } else if (!settingsAreReady()) {
             Toast.makeText(this, "Navigate to settings and assign all variables", Toast.LENGTH_SHORT).show();
+            return false;
         } else {
             Fragment fragment = new SearchFragment();
 
@@ -327,6 +351,9 @@ public class MainActivity extends AppCompatActivity
             fragmentManager.beginTransaction()
                     .replace(R.id.content_frame, fragment)
                     .commit();
+            DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+            drawer.closeDrawer(GravityCompat.START);
+            return true;
         }
 
     }
@@ -354,11 +381,13 @@ public class MainActivity extends AppCompatActivity
         startActivity(intent);
     }
 
-    public void startHotspotFragment() {
+    public boolean startHotspotFragment() {
         if (mBound && mService.isInRoleConsumer()) {
             Toast.makeText(this, "Can't start hotspot because you are searching", Toast.LENGTH_SHORT).show();
+            return false;
         } else if (!settingsAreReady()) {
             Toast.makeText(this, "Navigate to settings and assign all variables", Toast.LENGTH_SHORT).show();
+            return false;
         } else {
             Fragment fragment = new HotspotFragment();
             Bundle args = new Bundle();
@@ -368,6 +397,9 @@ public class MainActivity extends AppCompatActivity
             fragmentManager.beginTransaction()
                     .replace(R.id.content_frame, fragment)
                     .commit();
+            DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+            drawer.closeDrawer(GravityCompat.START);
+            return true;
         }
     }
 
