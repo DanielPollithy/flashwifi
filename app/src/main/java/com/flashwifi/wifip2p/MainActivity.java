@@ -214,6 +214,7 @@ public class MainActivity extends AppCompatActivity
         } else {
             // INITIAL CREATION OF ACTIVITY
             updateBalance();
+            startStartFragment();
         }
     }
 
