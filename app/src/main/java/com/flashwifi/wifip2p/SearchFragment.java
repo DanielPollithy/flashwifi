@@ -33,7 +33,6 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 
 import com.flashwifi.wifip2p.broadcast.WiFiDirectBroadcastService;
-import com.flashwifi.wifip2p.iotaFlashWrapper.Main;
 
 /**
  * Fragment that appears in the "content_frame", shows a planet

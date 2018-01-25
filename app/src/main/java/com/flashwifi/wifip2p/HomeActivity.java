@@ -57,7 +57,6 @@ public class HomeActivity extends AppCompatActivity {
             } finally {
                 p_is.close();
             }
-            Log.e("TAG", m_sb.toString());
             return m_sb.toString();
         } else {
             return "";
@@ -103,6 +102,9 @@ public class HomeActivity extends AppCompatActivity {
         try {
             IotaFlashBridge.boot(iotaflash, iotaflashhelper);
             Example.setup();
+            Example.transaction(Example.one, Example.two);
+            Example.transaction(Example.two, Example.one);
+            Example.transaction(Example.one, Example.two);
             Example.transaction(Example.one, Example.two);
             Example.close(Example.one, Example.two);
         } catch (IOException e) {

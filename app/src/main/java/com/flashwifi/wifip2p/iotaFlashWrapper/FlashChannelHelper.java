@@ -99,7 +99,7 @@ public class FlashChannelHelper {
 
         // Build flash trees
         for (int i = 1; i < mulitisigs.size(); i++) {
-            System.out.println(mulitisigs.get(i - 1).toString() + " -> "  + mulitisigs.get(i).toString());
+            // System.out.println(mulitisigs.get(i - 1).toString() + " -> "  + mulitisigs.get(i).toString());
             mulitisigs.get(i - 1).push(mulitisigs.get(i));
         }
         user.getFlash().setRoot(mulitisigs.remove(0));
@@ -112,6 +112,10 @@ public class FlashChannelHelper {
             Log.d("[ERROR]", "Failed to get root address");
             return "";
         }
+    }
+
+    public String getRootAddress() {
+        return user.getFlash().getRoot().getAddress();
     }
 
 
@@ -165,7 +169,15 @@ public class FlashChannelHelper {
         return user;
     }
 
+    public int totalUsersCount() {
+        return user.getFlash().getSignersCount();
+    }
+
     public String getSettlementAddress() {
         return user.getFlash().getSettlementAddresses().get(user.getUserIndex());
+    }
+
+    public double getOutput() {
+        return Helpers.getBalanceOfUser(user);
     }
 }

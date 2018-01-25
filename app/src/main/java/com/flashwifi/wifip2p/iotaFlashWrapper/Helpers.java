@@ -41,7 +41,7 @@ public class Helpers {
      */
     public static ArrayList<Bundle> createTransaction(ArrayList<Transfer> transfers, CreateTransactionHelperObject toUse, UserObject user) {
         // System.out.println("Creating a transaction of" + transfers.getValue() + " to " + transfers.getAddress());
-        System.out.println("[INFO]: using address "  + toUse.getAddress().getAddress() + ", with boundle count" + toUse.getAddress().getBundles().size());
+        System.out.println("[INFO]: using address "  + toUse.getAddress().getAddress() + ", with boundle count " + toUse.getAddress().getBundles().size());
 
 
         FlashObject flash = user.getFlash();
@@ -230,8 +230,8 @@ public class Helpers {
             multisig.setSigningIndex(currentUser.getUserIndex() * digest.getSecurity());
             multisig.setSecuritySum(securitySum);
             multisig.setSecurity(digest.getSecurity());
-
-            System.out.println("Creating address " + multisig.getAddress() + " index" + multisig.getIndex() + " signingIndex: " + multisig.getSigningIndex());
+            System.out.println("[INFO] new multisig " + multisig.getAddress());
+            // System.out.println("Creating address " + multisig.getAddress() + " index" + multisig.getIndex() + " signingIndex: " + multisig.getSigningIndex());
 
             multisigs.add(multisig);
         }

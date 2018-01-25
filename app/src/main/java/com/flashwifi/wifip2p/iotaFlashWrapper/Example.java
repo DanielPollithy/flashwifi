@@ -12,6 +12,8 @@ import com.flashwifi.wifip2p.iotaFlashWrapper.Model.Transfer;
 import java.util.ArrayList;
 import java.util.List;
 
+import jota.model.Transaction;
+
 /**
  * Created by wlad on 24.01.18.
  */
@@ -34,14 +36,14 @@ public class Example {
         // Create a second user
         // Here i needed a second instance so I left the public in the constructor of FlashChannelHelper
         two = new FlashChannelHelper();
-        two.setupUser(0, "IUQDBHFDXK9EHKC9VUHCUXDLICLRANNDHYRMDYFCGSZMROWCZBLBNRKXWBSWZYDMLLHIHMP9ZPOPIFUSW", 0, 1);
+        two.setupUser(1, "IUQDBHFDXK9EHKC9VUHCUXDLICLRANNDHYRMDYFCGSZMROWCZBLBNRKXWBSWZYDMLLHIHMP9ZPOPIFUSW", 0, 1);
         two.setupFlash(deposits, depth);
 
         // The addresses must be exchanged over the network.
         // When done setup the settlementAddresses.
         ArrayList<String> settlementAddresses = new ArrayList<>();
-        settlementAddresses.add("EYUSQTMUVAFUGXMJEJYRHVMSCUBDXXKOEPFWPKVJJIY9DDTQJGJRZJTMPZAVBAICZBRGSTBOGCQR9Y9P9");
-        settlementAddresses.add("EYUSQTMUVAFUGXMJEJYRHVMSCUBDXXKOEPFWPKVJJIY9DDTQJGJRZJTMPZAVBAICZBRGSTBOGCQR9Y9P9");
+        settlementAddresses.add("RDNUSLPNOQUGDIZVOINTYRIRRIJMLODOC9ZTQU9KQSCDXPVSBILXUE9AHEOA9MNYZWNSECAVPQ9QSAHCN");
+        settlementAddresses.add("IUQDBHFDXK9EHKC9VUHCUXDLICLRANNDHYRMDYFCGSZMROWCZBLBNRKXWBSWZYDMLLHIHMP9ZPOPIFUSW");
 
         // Set the addresses
         one.setupSettlementAddresses(settlementAddresses);
@@ -64,7 +66,9 @@ public class Example {
         // After this the root must be set. You can check for it using this call.
         Log.d("[ROOT ADDR]", one.getRootAddressWithChecksum());
 
+
         // Now the setup is ready
+        Log.d("[SUCCESS]", "demo setup completed");
     }
 
     public static void transaction(FlashChannelHelper sender, FlashChannelHelper reciever) {
@@ -87,15 +91,15 @@ public class Example {
             digestPairs.add(recieverDigests);
 
             // Now each party must generate the digests.
-            Multisig updatedAddress = one.updateTreeWithDigests(digestPairs, helper.getAddress());
+            Multisig updatedAddress = sender.updateTreeWithDigests(digestPairs, helper.getAddress());
 
             // Since the other user does not have the address to use (the object reference). We search for it.
-            Multisig extansionMultisigTwo =  two.getMultisigByAddress(helper.getAddress().getAddress());
+            Multisig extansionMultisigTwo =  reciever.getMultisigByAddress(helper.getAddress().getAddress());
             if (extansionMultisigTwo == null) {
                 Log.d("[ERROR]", "Could not find attachment address for tree expansion.");
             }
 
-            two.updateTreeWithDigests(digestPairs, extansionMultisigTwo);
+            reciever.updateTreeWithDigests(digestPairs, extansionMultisigTwo);
 
             // Now the sender just has to update the helper objects multisig address. I will optimize this in the future.
             helper.setAddress(updatedAddress);
@@ -116,15 +120,17 @@ public class Example {
         // But if we want to be sure we need to check both bundles and all transactions.
 
         // User two generates signatures if all is okay.
-        ArrayList<Signature> receiverSignatures = two.createSignaturesForBundles(senderBundles);
+        ArrayList<Signature> receiverSignatures = reciever.createSignaturesForBundles(senderBundles);
 
         // Now both just have to apply the signatures and check if all is good.
         ArrayList<Bundle> senderSignedBundles = IotaFlashBridge.appliedSignatures(senderBundles, receiverSignatures);
         ArrayList<Bundle> receiverSignedBundles = IotaFlashBridge.appliedSignatures(senderBundles, receiverSignatures);
 
         // Now if all is good just apply. In future I will throw a error on invalid signing.
-        one.applyTransfers(senderSignedBundles);
-        two.applyTransfers(receiverSignedBundles);
+        sender.applyTransfers(senderSignedBundles);
+        reciever.applyTransfers(receiverSignedBundles);
+
+        Log.d("[SUCCESS]", "demo transaction completed");
     }
 
     /**
@@ -155,15 +161,15 @@ public class Example {
             digestPairs.add(recieverDigests);
 
             // Now each party must generate the digests.
-            Multisig updatedAddress = one.updateTreeWithDigests(digestPairs, helper.getAddress());
+            Multisig updatedAddress = sender.updateTreeWithDigests(digestPairs, helper.getAddress());
 
             // Since the other user does not have the address to use (the object reference). We search for it.
-            Multisig extansionMultisigTwo =  two.getMultisigByAddress(helper.getAddress().getAddress());
+            Multisig extansionMultisigTwo =  reciever.getMultisigByAddress(helper.getAddress().getAddress());
             if (extansionMultisigTwo == null) {
                 Log.d("[ERROR]", "Could not find attachment address for tree expansion.");
             }
 
-            two.updateTreeWithDigests(digestPairs, extansionMultisigTwo);
+            reciever.updateTreeWithDigests(digestPairs, extansionMultisigTwo);
 
             // Now the sender just has to update the helper objects multisig address. I will optimize this in the future.
             helper.setAddress(updatedAddress);
@@ -181,18 +187,74 @@ public class Example {
         // But if we want to be sure we need to check both bundles and all transactions.
 
         // User two generates signatures if all is okay.
-        ArrayList<Signature> receiverSignatures = two.createSignaturesForBundles(senderBundles);
+        ArrayList<Signature> receiverSignatures = reciever.createSignaturesForBundles(senderBundles);
 
         // Now both just have to apply the signatures and check if all is good.
         ArrayList<Bundle> senderSignedBundles = IotaFlashBridge.appliedSignatures(senderBundles, receiverSignatures);
         ArrayList<Bundle> receiverSignedBundles = IotaFlashBridge.appliedSignatures(senderBundles, receiverSignatures);
 
         // Now if all is good just apply. In future I will throw a error on invalid signing.
-        one.applyTransfers(senderSignedBundles);
-        two.applyTransfers(receiverSignedBundles);
+        sender.applyTransfers(senderSignedBundles);
+        reciever.applyTransfers(receiverSignedBundles);
+
+        // Check if bundle is valid before attaching.
+        if (senderBundles.size() <= 0) {
+            Log.e("[ERROR]", "Invalid closing bundle length");
+            return;
+        }
+
+        // Check if bundle has correct transactions count.
+        if (senderBundles.get(0).getTransactions().size() != 4) {
+            Log.e("[ERROR]", "Invalid closing transactions count should be 4 is" + senderBundles.get(0).getTransactions().size());
+        }
+
+        // Check if transactions are going to correct addresses
+        Transaction userOneTransaction = senderBundles.get(0).getTransactions().get(sender.getUser().getUserIndex());
+        if (!userOneTransaction.getAddress().equals(sender.getSettlementAddress())) {
+            Log.e("[ERROR]", "Invalid closing bundle user one output address");
+            return;
+        }
+
+        if (userOneTransaction.getValue() != sender.getOutput()) {
+            Log.e("[ERROR]", "Invalid output amount for user one");
+            return;
+        }
+
+        // Check user two outputs
+        Transaction userTwoTransaction = senderBundles.get(0).getTransactions().get(reciever.getUser().getUserIndex());
+        if (!userTwoTransaction.getAddress().equals(reciever.getSettlementAddress())) {
+            Log.e("[ERROR]", "Invalid closing bundle user one output address");
+            return;
+        }
+
+        if (userTwoTransaction.getValue() != reciever.getOutput()) {
+            Log.e("[ERROR]", "Invalid output amount for user one");
+            return;
+        }
+
+        // Check if the origin is correct.
+        Transaction rootMultisigTransaction = senderBundles.get(0).getTransactions().get(reciever.totalUsersCount());
+        if (!rootMultisigTransaction.getAddress().equals(sender.getRootAddress())) {
+            Log.e("[ERROR]", "Invalid flash channel root in output");
+            return;
+        }
+
+        // Check if money adds up.
+        if (rootMultisigTransaction.getValue() != -reciever.getUser().getFlash().getBalance()) {
+            Log.e("[ERROR]", "Invalid flash channel root in output amount. Is" + rootMultisigTransaction.getValue() + " should be " + -reciever.getUser().getFlash().getBalance());
+            return;
+        }
+
+        Log.d("[SUCCESS]", "Output bundles passed all tests, ready to attach");
 
         // And here we attach the bundle to the tangle. We can check the response bundles since we may need to rebroadcast them.
         // As far as I understand only one needs to send them.
         List<Bundle> attachedBundles = Helpers.POWClosedBundle(senderSignedBundles, 4, 13);
+
+        if (attachedBundles.size() != senderBundles.size() && attachedBundles.size() > 0) {
+            Log.d("[SUCCESS]", "demo channel closed. Attached hash " + attachedBundles.get(0).getTransactions().get(0).getHash());
+        } else {
+            Log.d("[ERROR]", "attachment failed. Nothing attached. ");
+        }
     }
 }
