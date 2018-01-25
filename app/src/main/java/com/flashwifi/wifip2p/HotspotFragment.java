@@ -79,26 +79,7 @@ public class HotspotFragment extends Fragment {
 
         //if (intent.hasExtra("what") && intent.getExtras().getString("what", "").equals("connectivity_changed")) {
 
-            NetworkInfo network_info = getmService().getNetwork_info();
-            WifiP2pInfo p2p_info = getmService().getP2p_info();
-            WifiP2pGroup wifiP2pGroup = getmService().getP2p_group();
 
-            if (intent.hasExtra("currentDeviceConnected")) {
-                //String macAddress = intent.getExtras().getString("currentDeviceConnected");
-                if (network_info.getState() == NetworkInfo.State.CONNECTED) {
-                    // ToDo: look for the other device and make sure we are only two
-
-                    if (p2p_info.isGroupOwner) {
-                        Snackbar.make(activity_view, "You are the group owner", Snackbar.LENGTH_LONG).setAction("Action", null).show();
-                        getmService().startNegotiationServer(false, null);
-                    } else {
-                        InetAddress groupOwnerAddress = p2p_info.groupOwnerAddress;
-                        Snackbar.make(activity_view, "You are only a member of the group", Snackbar.LENGTH_LONG).setAction("Action", null).show();
-                        getmService().startNegotiationClient(groupOwnerAddress, false, null);
-                    }
-
-                }
-            }
 
 
 

@@ -12,6 +12,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.DhcpInfo;
 import android.net.NetworkInfo;
+import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
@@ -53,6 +54,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.UnknownHostException;
@@ -109,6 +111,7 @@ public class WiFiDirectBroadcastService extends Service {
     boolean apRuns = false;
     ConnectTask connectTask;
     private boolean negotiatorRunning = false;
+    private String ownMacAddressStore = null;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -237,6 +240,7 @@ public class WiFiDirectBroadcastService extends Service {
                     byte[] myIPAddress = BigInteger.valueOf(dhcp.gateway).toByteArray();
                     ArrayUtils.reverse(myIPAddress);
                     InetAddress myInetIP = null;
+                    Inet6Address myInet6IP = null;
                     String routerIP = null;
                     try {
                         myInetIP = InetAddress.getByAddress(myIPAddress);
@@ -246,7 +250,7 @@ public class WiFiDirectBroadcastService extends Service {
                         routerIP = "192.168.43.1";
                     }
                     Log.d(TAG, "DHCP gateway: " + routerIP);
-                    billingClient.start(routerIP);
+                    billingClient.start(routerIP, myInetIP);
                     // ToDo: handle billingServer EXIT CODES
                     // -> close the roaming etc.
                 }
@@ -294,32 +298,38 @@ public class WiFiDirectBroadcastService extends Service {
     }
 
     public String getWFDMacAddress(){
+        Log.d(TAG, "getWFDMacAddress: GET MAC ADRESS =========================");
+        if (ownMacAddressStore != null) {
+            return ownMacAddressStore;
+        }
         try {
             List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
             for (NetworkInterface ntwInterface : interfaces) {
 
+                byte[] byteMac = ntwInterface.getHardwareAddress();
+                if (byteMac==null){
+                    return null;
+                }
+                StringBuilder strBuilder = new StringBuilder();
+                for (int i=0; i<byteMac.length; i++) {
+                    strBuilder.append(String.format("%02X:", byteMac[i]));
+                }
+
+                if (strBuilder.length()>0){
+                    strBuilder.deleteCharAt(strBuilder.length()-1);
+                }
+
+                Log.d(TAG, "getWFDMacAddress: " + strBuilder.toString());
+
                 if (ntwInterface.getName().equalsIgnoreCase("p2p0")) {
-                    byte[] byteMac = ntwInterface.getHardwareAddress();
-                    if (byteMac==null){
-                        return null;
-                    }
-                    StringBuilder strBuilder = new StringBuilder();
-                    for (int i=0; i<byteMac.length; i++) {
-                        strBuilder.append(String.format("%02X:", byteMac[i]));
-                    }
-
-                    if (strBuilder.length()>0){
-                        strBuilder.deleteCharAt(strBuilder.length()-1);
-                    }
-
-                    return strBuilder.toString();
+                    this.ownMacAddressStore = strBuilder.toString();
                 }
 
             }
         } catch (Exception e) {
             Log.d(TAG, e.getMessage());
         }
-        return null;
+        return this.ownMacAddressStore;
     }
 
     private void stopAllTasks() {
@@ -374,6 +384,7 @@ public class WiFiDirectBroadcastService extends Service {
                     NegotiationFinalization negFin = PeerStore.getInstance().getLatestFinalization(peer_mac_address);
                     String ssid = negFin.getHotspotName();
                     String key = negFin.getHotspotPassword();
+                    Log.d(TAG, "YYY: " + peer_mac_address);
                     sendStartRoamingBroadcast(peer_mac_address, ssid, key);
                 } else if (peer_mac_address != null) {
                     PeerStore.getInstance().unselectAll();
@@ -443,6 +454,7 @@ public class WiFiDirectBroadcastService extends Service {
                     NegotiationFinalization negFin = PeerStore.getInstance().getLatestFinalization(peer_mac_address);
                     String ssid = negFin.getHotspotName();
                     String key = negFin.getHotspotPassword();
+                    Log.d(TAG, "ZZZ: " + peer_mac_address);
                     sendStartRoamingBroadcast(peer_mac_address, ssid, key);
                 } else {
                     Log.d(TAG, "run: could not start roaming");
@@ -585,13 +597,21 @@ public class WiFiDirectBroadcastService extends Service {
         NegotiationOffer offer = PeerStore.getInstance().getLatestNegotiationOffer(address);
         NegotiationOfferAnswer offerAnser = PeerStore.getInstance().getLatestNegotiationOfferAnswer(address);
         NegotiationFinalization finalization = PeerStore.getInstance().getLatestFinalization(address);
-        BillingOpenChannel openChannel = PeerStore.getInstance().getPeer(address).getBillingOpenChannel();
-        BillingOpenChannelAnswer openChannelAnswer = PeerStore.getInstance().getPeer(address).getBillingOpenChannelAnswer();
+        BillingOpenChannel openChannel = PeerStore.getInstance().getLatestBillingOpenChannel(address);
+        BillingOpenChannelAnswer openChannelAnswer = PeerStore.getInstance().getLatestBillingOpenChannelAnswer(address);
 
         String multisigAddress = finalization.getDepositAddressFlashChannel();
+        int timeoutClientSeconds, timeoutHotspotSeconds;
 
-        int timeoutClientSeconds = openChannel.getTimeoutMinutesClient();
-        int timeoutHotspotSeconds = openChannelAnswer.getTimeoutMinutesHotspot() * 60;
+        // ToDo: Fix this bug!
+        // openChannel should not be null here
+        if (openChannel != null) {
+            timeoutClientSeconds = openChannel.getTimeoutMinutesClient();
+            timeoutHotspotSeconds = openChannelAnswer.getTimeoutMinutesHotspot() * 60;
+        } else {
+            timeoutClientSeconds = 3;
+            timeoutHotspotSeconds = 3 * 60;
+        }
         int timeout = (isInRoleHotspot()) ? timeoutHotspotSeconds : timeoutClientSeconds;
 
         int clientDeposit = finalization.getDepositClientFlashChannelInIota();
@@ -807,6 +827,22 @@ public class WiFiDirectBroadcastService extends Service {
         if (p2p_info.groupFormed) {
             currentDeviceConnected = p2p_info.groupOwnerAddress.getHostAddress();
             sendUpdateUIBroadcastNewConnection();
+            NetworkInfo network_info = getNetwork_info();
+            WifiP2pInfo p2p_info = getP2p_info();
+            WifiP2pGroup wifiP2pGroup = getP2p_group();
+
+            if (network_info.getState() == NetworkInfo.State.CONNECTED) {
+                // ToDo: look for the other device and make sure we are only two
+                if (p2p_info.isGroupOwner) {
+                    //Snackbar.make(activity_view, "You are the group owner", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+                    startNegotiationServer(false, wifiP2pGroup.getOwner().deviceAddress);
+                } else {
+                    InetAddress groupOwnerAddress = p2p_info.groupOwnerAddress;
+                    //Snackbar.make(activity_view, "You are only a member of the group", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+                    startNegotiationClient(groupOwnerAddress, false, null);
+                }
+
+            }
         }
     }
 

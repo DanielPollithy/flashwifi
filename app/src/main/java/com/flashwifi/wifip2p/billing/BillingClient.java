@@ -3,6 +3,8 @@ package com.flashwifi.wifip2p.billing;
 import android.accounts.Account;
 import android.content.Context;
 import android.content.Intent;
+import android.net.wifi.WifiManager;
+import android.text.format.Formatter;
 import android.util.Log;
 
 import com.flashwifi.wifip2p.datastore.PeerInformation;
@@ -21,9 +23,14 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.Enumeration;
+
+import static android.content.Context.WIFI_SERVICE;
 
 /**
  * 1) This class keeps the socket connection alive.
@@ -65,17 +72,24 @@ public class BillingClient {
 
 
 
-    public void start(String serverIPAddress) {
+    public void start(String serverIPAddress, InetAddress inetAddress) {
         int error_count = 0;
 
         while (state != State.CLOSED && state != State.ERROR) {
             try {
                 // create client socket that connects to server
-                socket = new Socket(serverIPAddress, PORT);
+                Log.d(TAG, "try to connect to 192.168.43.1 PORT " + Integer.toString(PORT));
+                socket = new Socket("192.168.43.1", PORT);
                 socket.setSoTimeout(clientTimeoutMillis);
+                Log.d(TAG, "connection is established");
+
+
 
                 // wrap the socket
                 socketWrapper = new SocketWrapper(socket);
+                Log.d(TAG, "socket wrapped");
+
+                Log.d(TAG, "We are in state: " + state);
 
                 if (state == State.NOT_PAIRED) {
                     // send current state
@@ -87,10 +101,11 @@ public class BillingClient {
                         // ask the hotspot to open the flash channel
 
                         // get the negotiated data
+                        // get the necessary values
                         NegotiationOffer offer = PeerStore.getInstance().getLatestNegotiationOffer(mac);
                         NegotiationOfferAnswer answer = PeerStore.getInstance().getLatestNegotiationOfferAnswer(mac);
                         NegotiationFinalization finalization = PeerStore.getInstance().getLatestFinalization(mac);
-                        // get the necessary values
+
                         // ToDo: replace magic number with setting
                         int totalMegabytes = 100;
                         int treeDepth = 8;
@@ -177,6 +192,9 @@ public class BillingClient {
                 error_count++;
             } catch (IOException e) {
                 sendUpdateUIBroadcastWithMessage("IOException");
+                e.printStackTrace();
+                error_count++;
+            } catch (Exception e) {
                 e.printStackTrace();
                 error_count++;
             } finally {

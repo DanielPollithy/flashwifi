@@ -46,7 +46,7 @@ public class SettingsFragment extends PreferenceFragment implements SharedPrefer
         addPreferencesFromResource(R.xml.preferences);
 
         // Set version text
-        Preference version = findPreference("pref_key_reset_version");
+        Preference version = findPreference("pref_key_app_version");
         String curTitle = version.getTitle().toString();
         version.setTitle("Version: "+curTitle);
 
@@ -165,14 +165,47 @@ public class SettingsFragment extends PreferenceFragment implements SharedPrefer
                 }
                 break;
             case "pref_key_reset_password":
-                makeToastSettingsFragment( "Reset Password");
                 askPassword();
                 break;
             case "pref_key_reset_wallet":
-                makeToastSettingsFragment("Reset Wallet.");
+                makeToastSettingsFragment("To reset wallet please uninstall and re-install app.");
+                break;
+            case "pref_key_license":
+                showLicense();
+                break;
+            case "pref_key_agreement":
+                showAgreement();
                 break;
         }
         return super.onPreferenceTreeClick(preferenceScreen, preference);
+    }
+
+    private void showLicense() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+        builder.setTitle("License");
+        builder.setView(R.layout.license_dialog);
+        builder.setNegativeButton("Close", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                // dismiss dialog
+                dialogInterface.dismiss();
+            }
+        });
+        builder.show();
+    }
+
+    private void showAgreement() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+        builder.setTitle("Agreement");
+        builder.setView(R.layout.agreement_dialog);
+        builder.setNegativeButton("Close", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                // dismiss dialog
+                dialogInterface.dismiss();
+            }
+        });
+        builder.show();
     }
 
     private void askPassword() {

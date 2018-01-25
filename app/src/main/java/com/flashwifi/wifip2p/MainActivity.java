@@ -285,7 +285,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void updateBalance() {
-        WalletBalanceChecker balanceChecker = new WalletBalanceChecker(this,this.getString(R.string.preference_file_key),seed, balanceHandler,PREF_UPDATE,true);
+        WalletBalanceChecker balanceChecker = new WalletBalanceChecker(this,this.getString(R.string.preference_file_key), seed, balanceHandler,PREF_UPDATE,true);
         balanceChecker.execute();
     }
 

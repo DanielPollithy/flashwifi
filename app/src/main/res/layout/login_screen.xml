@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingTop="56dp"
+    android:paddingLeft="24dp"
+    android:paddingRight="24dp"
+    android:background="@color/screen1"
+    android:gravity="center_horizontal"
+
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <ImageView android:background="@drawable/ic_app_logo"
+        android:layout_width="150dp"
+        android:layout_height="150dp"
+        android:layout_marginBottom="40dp"
+        android:layout_marginTop="40dp"
+        android:layout_gravity="center_horizontal" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Enter your Password to continue:"
+        android:textColor="@android:color/white"
+        android:textSize="20dp"
+        android:layout_marginTop="50dp"/>
+
+
+    <EditText
+        android:id="@+id/password"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:ems="10"
+        android:hint="Password"
+        android:inputType="textPassword"
+        android:textAlignment="viewStart"
+        android:textColor="#ffffff"
+        android:textColorHint="#b7b7b7"
+        android:backgroundTint="#898989"/>
+
+
+    </LinearLayout>

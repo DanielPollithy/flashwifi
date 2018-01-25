@@ -26,10 +26,12 @@ import com.google.gson.GsonBuilder;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.Enumeration;
 
 import static android.content.Context.WIFI_SERVICE;
 
@@ -70,6 +72,8 @@ public class BillingServer {
         this.context = context;
         this.mac = mac;
 
+        Log.d(TAG, "BillingServer: MAC of other part: " + mac);
+
         // get the negotiated data
         NegotiationOffer offer = PeerStore.getInstance().getLatestNegotiationOffer(mac);
         NegotiationOfferAnswer answer = PeerStore.getInstance().getLatestNegotiationOfferAnswer(mac);
@@ -79,7 +83,7 @@ public class BillingServer {
         int totalMegabytes = 100;
         int treeDepth = 8;
         this.digests = new String[]{"1234", "2345", "3456"};
-        int timeoutMinutesServer = 20 * 60 * 1000;
+        int timeoutMinutesServer = 2 * 60 * 1000;
 
         this.hotspotRefundAddress = finalization.getHotspotRefundAddress();
         this.channelRootAddress = finalization.getDepositAddressFlashChannel();
@@ -102,7 +106,8 @@ public class BillingServer {
 
         Log.d(TAG, "start: Billing server has been started");
 
-        // ToDo: receive end of roaming broadcast
+        int max_errors = 1;
+        int errors = 0;
 
         while (state != State.CLOSED) {
             try {
@@ -238,10 +243,21 @@ public class BillingServer {
                     }
                     state = State.FULLY_ATTACHED;
                 }
+            } catch (SocketException e) {
+                e.printStackTrace();
+                sendUpdateUIBroadcastWithMessage("Socket exception");
+                errors++;
             } catch (IOException e) {
                 e.printStackTrace();
+                sendUpdateUIBroadcastWithMessage("IOException");
+                errors++;
             } catch (InterruptedException e) {
+                sendUpdateUIBroadcastWithMessage("InterruptedException");
                 e.printStackTrace();
+                errors++;
+            } catch (Exception e) {
+                e.printStackTrace();
+                errors++;
             } finally {
                 try {
                     if (socketWrapper != null) {
@@ -257,6 +273,11 @@ public class BillingServer {
                 } catch (Exception e) {
 
                 }
+            }
+            if (errors >= max_errors) {
+                Log.d(TAG, "start: error count too high");
+                state = State.ERROR;
+                sendUpdateUIBroadcastWithMessage("Exit");
             }
         }
 

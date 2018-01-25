@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!--
     <PreferenceCategory
         android:title="WiFi"
         android:key="pref_key_wifi_settings"
@@ -13,6 +14,7 @@
             android:title="Reset data usage"/>
 
     </PreferenceCategory>
+    -->
 
     <PreferenceCategory
         android:title="IOTA"
@@ -30,17 +32,21 @@
             android:entryValues="@array/securityPref"
             android:title="Security pk/address" />
 
+        <!--
         <ListPreference
             android:key="pref_key_network_timeout"
             android:entries="@array/networkTimeoutPref"
             android:entryValues="@array/networkTimeoutPref"
             android:title="Network timeout" />
+        -->
 
+        <!--
         <ListPreference
             android:key="pref_key_units"
             android:entries="@array/unitsPref"
             android:entryValues="@array/unitsPref"
             android:title="Units" />
+        -->
 
 
         <SwitchPreference
@@ -138,7 +144,7 @@
         <Preference
             android:divider="@null"
             android:dividerHeight="0dp"
-            android:key="pref_key_reset_version"
+            android:key="pref_key_app_version"
             android:title="@string/app_version"/>
 
         <Preference

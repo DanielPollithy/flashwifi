@@ -1,52 +1,94 @@
 # flashwifi
 
-## What is this?
+Share remaining data from your android phone as a hotspot and get paid in iota.
 
-[WiFiota](https://tobywoerthle.github.io/flashWiFiSite/)
+[WiFiota Promotional Website](https://tobywoerthle.github.io/flashWiFiSite/)
 
-## ToDos
+# Installation
 
-Iota stuff: 2.5d 
-- [x] Address generation TOBY
-- [ ] Address storage TOBY
-- [x] Withdrawal and deposit for the internal wallet 0.75d TOBY
-- [ ] Attach/close flash channel to tangle (deposit to root of tree) -> "api.sendTransfer" 0.75d DANIEL
-- [x] UI 1.0d TOBY
+## Required permissions explanation:
 
-Flash channel: 1d WLAD
-- [x] J2V8 interfaces… 1d WLAD
-- [ ] overwrite flash object  0.25d  WLAD
-- [ ] close channel  0.25d WLAD
-- [x] Create flash channel 0.75d WLAD
-- [ ] integrate into repo 0.5d WLAD
+* Photos, media, and files:
+* Make and manage phone calls:
+* Take and record video:
 
-Billing protocol: 2d DANIEL
-- [ ] general stuff 0.5d DANIEL
-- [ ] integrate flash channel 0.5d DANIEL
-- [ ] UI 1.0 d DANIEL
+* Modify system settings:
+* Apps with usage access:
 
-Network monitoring: 2d TOBY
-- [ ] Client and server measure data usage TOBY
-- [ ] Build sweet graph TOBY
+## Requirements
 
-WiFi direct discovery: 1d
-- [ ] Negotiation protocol 0.5d DANIEL
-- [ ] Password generation, open hotspot, close hotspot on timeout etc. 0.5d  DANIEL
+Minimum Required Android Code Name/Version/API Level: **Marshmallow / 6.0 / API level 23**
 
-Frontends: 6.5d
-- [ ] Initial setup view (seed generation, set password): 0.5d DANIEL
-<!-- - [ ] Pricing calculation view (input data plan and price => select Iota/Mb) 0.5d WLAD -->
-- [ ] Settings (security, hotspot price per megabyte, client max price per megabyte, tangle attachment timeout, make new setup, change password) 1.5d TOBY
-- [ ] Search hotspot: 0.5d DANIEL
-- [x] Start hotspot: 0.5d DANIEL
-- [x] Fund wallet: 1d TOBY
-- [x] Withdraw from wallet (+QR code) 0.5 d TOBY
-- [ ] Tethering status (-> fixed Notification with stop button) 1d WLAD
-- [ ] UI bugs (back button) 1d
+## How to install
 
-Other stuff 2.5d
-- [ ] Videos: 2d WLAD + TOBY + DANIEL 
-- [ ] Website: 0.5d WLAD
+TODO
+
+# How does it work?
+
+## Iota setup
+
+The app creates a seed for a user and stores it with a password in SharedEncryptedPreferences.
+There are withdraw and deposit views, which can be used to interact with the seed (send and receive funds).
+The balance of the wallet can be viewed and is cached.
+
+A private testnode is used by default but a mainnet (live) node can be set.
+
+When using the testnet, 2000i can be generated and automatically sent to the wallet for testing purposes. See Settings > Add 2000i testnet.
+
+## Discovery
+
+This uses WiFi P2P. The consumer selects a peer manually (-> in the future there will be automatic service discovery).
+Two devices then open a wifi direct group and start the **Negotiation Protocol**
+
+## Negotiation Protocol
+
+The devices communicate with each other: how much data they want to share or consume and
+whether they can agree upon a price and duration.
+
+* If they come to an agreement, the future hotspot generates a random SSID like "Iotidy-<random number>".
+* The future hostpot device also generates a random number which is used as the WiFi password
+* The hotspot sends the password to the consumer and now they start the Billing Protocol
+
+ToDo: Add full protocol
+
+## Billing Protocol
+
+The hotspot is created and the device providing the hotspot starts a new ServerSocket.
+Once the consumer is connected to the hotspot, they try to connect to the gateway and
+start the Billing Protocol.
+
+* "Hello I am Client and I am in state NOT_PAIRED"
+* "Hello, Client! I am Hotspot and I am in state NOT_PAIRED"
+...
+
+(ToDo: add full protocol)
+
+### Payment
+
+Every minute a bill is exchanged which contains information about used megabytes and duration(s).
+A **IOTA FLASH CHANNEL** is established between the two (-> in the future more than two parties will be supported).
+Every minute can be associated with a token transfer in the channel.
+
+* Signing a transfer signifies agreement to the the bill
+* The funding of the channel results in shared risk between both parties so they have no incentive to leave early
+* Time guards track whether timing constraints weren't fulfilled (channel not funded, no peers...)
+
+### End
+
+Every bill can contain a "closeAfterwards" flag, which ends the whole process with a short exchange of data for the consumer.
+The hotspot still has to attach the flash channel to the tangle.
+
+# Good to know
+The WiFi P2P roles in a WiFi group are not fixed. Therefore, each time, either the future hotspot or consumer can act as server or client.
+
+We wrapped the iota.flash.js with additional javascript bridges and connected them to the **Jota - iota java lib**. The javascript code for the flash channel is executed within J2V8.
+
+
+# Next big steps
+
+* [ ] Implement an automatic Wifiota hotspot discovery
+* [ ] Implement iota.flash.js in Java
+* [ ] Build a hardware prototype for Wifiota hotspot (Raspy + data plan + battery)
+* [ ] Extend the protocol to multiple parties, endless roaming and backoffice functions to close conflicts after physical contacts isn't possible anymore
 
 Total: 17d
-

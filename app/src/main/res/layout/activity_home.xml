@@ -49,10 +49,10 @@
             />
 
         <Button
+            android:id="@+id/decryptTheSeedButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/decryptTheSeed"
-            android:id="@+id/decryptTheSeedButton"
             android:visibility="invisible" />
 
         <Button
@@ -66,10 +66,10 @@
             android:id="@+id/seedTextView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_margin="20dp"
             android:background="#FFFFFF"
             android:text=""
             android:textColor="#111111"
-            android:layout_margin="20dp"
             android:textSize="20sp"
             android:visibility="invisible" />
 
