@@ -71,9 +71,9 @@ public class MainActivity extends AppCompatActivity
                 } catch (Exception e) {
                 }
                 if (intent.getAction().equals("com.flashwifi.wifip2p.start_roaming")) {
-                    startRoamingView(intent.getStringExtra("peer_mac_address"),
+                    /*startRoamingView(intent.getStringExtra("peer_mac_address"),
                             intent.getStringExtra("ssid"),
-                            intent.getStringExtra("key"));
+                            intent.getStringExtra("key"));*/
                 } else if (intent.getAction().equals("com.flashwifi.wifip2p.stop_roaming")) {
                     Log.d(TAG, "onReceive: Reset billing state");
 
@@ -99,14 +99,22 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     protected void onPause() {
-        super.onPause();
-        //unbindWifiBroadcast();
+        unbindWifiBroadcast();
         unsubscribeFromBroadcast();
+        super.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        // ToDo: remove intent receivers of
+        super.onDestroy();
     }
 
     private void unbindWifiBroadcast() {
-        try {unregisterReceiver(updateUIReceiver);
+        try {
+            unregisterReceiver(updateUIReceiver);
             unbindService(mConnection);
+            mBound = false;
         }
         catch(IllegalArgumentException e) {
         }
@@ -158,8 +166,6 @@ public class MainActivity extends AppCompatActivity
         seed = intent.getStringExtra("seed");
 
         setBalanceHandler();
-        updateBalance();
-
         Accountant.getInstance().setSeed(seed);
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -177,6 +183,19 @@ public class MainActivity extends AppCompatActivity
 
         Intent intent2 = new Intent(this, WiFiDirectBroadcastService.class);
         bindService(intent2, mConnection, Context.BIND_AUTO_CREATE);
+
+        if (intent.getAction() != null) {
+            if (intent.getAction().equals(Constants.ACTION.HOTSPOT)) {
+                startHotspotFragment();
+            } else if (intent.getAction().equals(Constants.ACTION.SEARCH)) {
+                startSearchFragment();
+            } else {
+                Log.d(TAG, "onCreate: UNKWNOWN ACTION FOR MAIN");
+            }
+        } else {
+            // INITIAL CREATION OF ACTIVITY
+            updateBalance();
+        }
     }
 
     public WiFiDirectBroadcastService getmService() {
@@ -188,8 +207,11 @@ public class MainActivity extends AppCompatActivity
 
     private void beginForegroundService() {
         if (!isTheServiceRunning()) {
+            Log.d(TAG, "beginForegroundService: The foreground service was not running");
             Intent startIntent = new Intent(MainActivity.this, WiFiDirectBroadcastService.class);
             startIntent.setAction(Constants.ACTION.STARTFOREGROUND_ACTION);
+            startIntent.putExtra("seed", seed);
+            startIntent.putExtra("password", password);
             startService(startIntent);
         } else {
             Log.d(TAG, "beginForegroundService: Service is already running");
@@ -203,14 +225,10 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     protected void onStop() {
-        super.onStop();
+        unbindWifiBroadcast();
+        unsubscribeFromBroadcast();
 
-        try {unregisterReceiver(updateUIReceiver);
-            unbindService(mConnection);
-        }
-        catch(IllegalArgumentException e) {
-            System.out.println(e);
-        }
+        super.onStop();
     }
 
     @Override
@@ -296,6 +314,9 @@ public class MainActivity extends AppCompatActivity
             Toast.makeText(this, "Navigate to settings and assign all variables", Toast.LENGTH_SHORT).show();
         } else {
             Fragment fragment = new SearchFragment();
+            if (mBound) {
+                mService.changeApplicationState(WiFiDirectBroadcastService.State.SEARCH);
+            }
 
             // Insert the fragment by replacing any existing fragment
             FragmentManager fragmentManager = getFragmentManager();
@@ -322,11 +343,11 @@ public class MainActivity extends AppCompatActivity
             });
         }
 
-        Intent intent = new Intent(this, RoamingActivity.class);
-        intent.putExtra("address", macAddress);
-        intent.putExtra("key", key);
-        intent.putExtra("ssid", ssid);
-        startActivity(intent);
+        if (mBound) {
+            mService.changeApplicationState(WiFiDirectBroadcastService.State.ROAMING);
+        }
+
+
     }
 
     public void startHotspotFragment() {
@@ -338,6 +359,9 @@ public class MainActivity extends AppCompatActivity
             Fragment fragment = new HotspotFragment();
             Bundle args = new Bundle();
 
+            if (mBound) {
+                mService.changeApplicationState(WiFiDirectBroadcastService.State.HOTSPOT);
+            }
             // Insert the fragment by replacing any existing fragment
             FragmentManager fragmentManager = getFragmentManager();
             fragmentManager.beginTransaction()
@@ -354,6 +378,10 @@ public class MainActivity extends AppCompatActivity
         fragment.setArguments(bundle);
         fragment.setRetainInstance(true);
 
+        if (mBound) {
+            mService.changeApplicationState(WiFiDirectBroadcastService.State.FUND_WALLET);
+        }
+
         // Insert the fragment by replacing any existing fragment
         FragmentManager fragmentManager = getFragmentManager();
         fragmentManager.beginTransaction()
@@ -369,6 +397,10 @@ public class MainActivity extends AppCompatActivity
         fragment.setArguments(bundle);
         fragment.setRetainInstance(true);
 
+        if (mBound) {
+            mService.changeApplicationState(WiFiDirectBroadcastService.State.WITHDRAW_WALLET);
+        }
+
         // Insert the fragment by replacing any existing fragment
         FragmentManager fragmentManager = getFragmentManager();
         fragmentManager.beginTransaction()
@@ -383,6 +415,9 @@ public class MainActivity extends AppCompatActivity
         fragment.setArguments(bundle);
         fragment.setRetainInstance(true);
 
+        if (mBound) {
+            mService.changeApplicationState(WiFiDirectBroadcastService.State.SETTINGS);
+        }
         // Insert the fragment by replacing any existing fragment
         FragmentManager fragmentManager = getFragmentManager();
         fragmentManager.beginTransaction()

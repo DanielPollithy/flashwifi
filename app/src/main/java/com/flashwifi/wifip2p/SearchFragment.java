@@ -107,7 +107,8 @@ public class SearchFragment extends Fragment {
 
         if (what != null && what.equals("connectivity_changed")) {
             String currentDeviceConnected = intent.getStringExtra("currentDeviceConnected");
-            startNegotiationProtocol(currentDeviceConnected);
+            Log.d(TAG, "updateUi: ------------------------_> I was wrong");
+            //startNegotiationProtocol(currentDeviceConnected);
         }
 
         if (message != null && message.equals("error")) {
@@ -117,63 +118,33 @@ public class SearchFragment extends Fragment {
         }
     }
 
-    private void startNegotiationProtocol(String macAddress){
-        WifiP2pInfo p2p_info = getmService().getP2p_info();
 
-        if (p2p_info.isGroupOwner) {
-            startNegotiationProtocolServer(macAddress);
-        } else {
-            startNegotiationProtocolClient(macAddress);
-        }
-    }
-
-    private void startNegotiationProtocolServer(String macAddress) {
-        // starts the server if necessary
-        WifiP2pInfo p2p_info = getmService().getP2p_info();
-        NetworkInfo network_info = getmService().getNetwork_info();
-
-        if (network_info.getState() == NetworkInfo.State.CONNECTED) {
-            if (p2p_info.isGroupOwner) {
-                Log.d(TAG, "You are the group owner");
-                getmService().startNegotiationServer(true, macAddress);
-                Log.d(TAG, "SocketServer started");
-            }
-        }
-    }
-
-    private void startNegotiationProtocolClient(String macAddress){
-        // starts the server if necessary
-        WifiP2pInfo p2p_info = getmService().getP2p_info();
-        NetworkInfo network_info = getmService().getNetwork_info();
-
-        if (network_info.getState() == NetworkInfo.State.CONNECTED) {
-            if (!p2p_info.isGroupOwner) {
-                Log.d(TAG, "You are a member of the group");
-                // groupOwnerAddress = p2p_info.groupOwnerAddress;
-                InetAddress groupOwnerAddress = p2p_info.groupOwnerAddress;
-                Log.d(TAG, "Group owner address: " + p2p_info.groupOwnerAddress.getHostAddress());
-                getmService().startNegotiationClient(groupOwnerAddress, true, macAddress);
-                Log.d(TAG, "Client Socket started");
-            }
-        }
-    }
 
     @Override
     public void onPause() {
-        super.onPause();
         if (updateUIReceiver != null) {
             getActivity().unregisterReceiver(updateUIReceiver);
             updateUIReceiver = null;
         }
+        super.onPause();
     }
 
     @Override
     public void onStop() {
-        super.onStop();
         if (updateUIReceiver != null) {
             getActivity().unregisterReceiver(updateUIReceiver);
             updateUIReceiver = null;
         }
+        super.onStop();
+    }
+
+    @Override
+    public void onDestroy() {
+        if (updateUIReceiver != null) {
+            getActivity().unregisterReceiver(updateUIReceiver);
+            updateUIReceiver = null;
+        }
+        super.onDestroy();
     }
 
     @Override
@@ -195,29 +166,33 @@ public class SearchFragment extends Fragment {
         filter.addAction("com.flashwifi.wifip2p.start_roaming");
         filter.addAction("com.flashwifi.wifip2p.stop_roaming");
 
-        updateUIReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                if (getActivity() == null) {
-                    Log.d(TAG, "onReceive: getActivity is null");
-                    return;
+        if (updateUIReceiver == null) {
+
+            updateUIReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    if (getActivity() == null) {
+                        Log.d(TAG, "onReceive: getActivity is null");
+                        return;
+                    }
+                    Log.d("", "onReceive: FRAGMENT HAT WAS");
+                    if (intent.getAction().equals("com.flashwifi.wifip2p.start_roaming")) {
+                        String mac = intent.getStringExtra("peer_mac_address");
+                        ToggleButton toggle = (ToggleButton) getActivity().findViewById(R.id.startSearchButton);
+                        toggle.setChecked(false);
+                    } else if (intent.getAction().equals("com.flashwifi.wifip2p.stop_roaming")) {
+                        PeerStore.getInstance().clear();
+                        busy = false;
+                        ToggleButton toggle = (ToggleButton) getActivity().findViewById(R.id.startSearchButton);
+                        toggle.setChecked(false);
+                    } else {
+                        updateUi(intent);
+                    }
                 }
-                Log.d("", "onReceive: FRAGMENT HAT WAS");
-                if (intent.getAction().equals("com.flashwifi.wifip2p.start_roaming")) {
-                    String mac = intent.getStringExtra("peer_mac_address");
-                    ToggleButton toggle = (ToggleButton) getActivity().findViewById(R.id.startSearchButton);
-                    toggle.setChecked(false);
-                } else if (intent.getAction().equals("com.flashwifi.wifip2p.stop_roaming")) {
-                    PeerStore.getInstance().clear();
-                    busy = false;
-                    ToggleButton toggle = (ToggleButton) getActivity().findViewById(R.id.startSearchButton);
-                    toggle.setChecked(false);
-                } else {
-                    updateUi(intent);
-                }
-            }
-        };
-        getActivity().registerReceiver(updateUIReceiver, filter);
+            };
+            getActivity().registerReceiver(updateUIReceiver, filter);
+
+        }
 
         view = getActivity().findViewById(R.id.fragment_view);
 
@@ -287,23 +262,8 @@ public class SearchFragment extends Fragment {
         });
     }
 
-
-
     public void startChat(final String address, String name) {
-        getmService().connect(address, new WifiP2pManager.ActionListener() {
-            @Override
-            public void onSuccess() {
-                Toast.makeText(view.getContext(), "Connected to peer", Toast.LENGTH_SHORT).show();
-                // start the protocol
-                startNegotiationProtocol(address);
-                busy = true;
-            }
-            @Override
-            public void onFailure(int reason) {
-                Toast.makeText(view.getContext(), "Error connecting to peer", Toast.LENGTH_SHORT).show();
-                busy = false;
-            }
-        });
+        getmService().connect(address, null);
     }
 
     private void stopSearching() {

@@ -25,6 +25,9 @@ public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
 
     private WifiP2pManager mManager;
     private WifiP2pManager.Channel mChannel;
+    WifiP2pInfo p2p_info;
+    NetworkInfo network_info;
+    WifiP2pGroup p2p_group;
 
     private WiFiDirectBroadcastService service;
 
@@ -90,22 +93,33 @@ public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
         } else if (WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
             Log.d(TAG, "onReceive: WIFI_P2P_CONNECTION_CHANGED_ACTION");
             // Respond to new connection or disconnections
-            WifiP2pInfo p2p_info = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_INFO);
-            NetworkInfo network_info = intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
-            WifiP2pGroup p2p_group = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP);
+            p2p_info = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_INFO);
+            network_info = intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
+            p2p_group = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP);
+            service.setP2PGroup(p2p_group);
             Log.d(TAG, "p2p_info: " + p2p_info);
             Log.d(TAG, "network_info: " + network_info);
             Log.d(TAG, "p2p_group: " + p2p_group);
 
             Log.d(TAG, "onReceive: " + network_info.getState().toString());
-            service.setConnectionStateChanged(p2p_info, network_info, p2p_group);
 
-            mManager.requestConnectionInfo(mChannel, new WifiP2pManager.ConnectionInfoListener() {
-                @Override
-                public void onConnectionInfoAvailable(WifiP2pInfo wifiP2pInfo) {
-                    service.setNewIncomingConnection(wifiP2pInfo);
-                }
-            });
+            if (p2p_group != null && p2p_group.getOwner() != null) {
+                service.setConnectionStateChanged(p2p_info, network_info, p2p_group);
+                mManager.requestConnectionInfo(mChannel, new WifiP2pManager.ConnectionInfoListener() {
+                    @Override
+                    public void onConnectionInfoAvailable(WifiP2pInfo wifiP2pInfo) {
+                        System.out.println("=====================<<<OOO>>>==================");
+                        String ownerMac = p2p_group.getOwner().deviceAddress;
+                        String clientMac = null;
+                        if (p2p_group.getClientList().isEmpty()) {
+                            Log.d(TAG, "onConnectionInfoAvailable: NOOOOOO CLIENTS????");
+                        } else {
+                            clientMac = ((WifiP2pDevice) p2p_group.getClientList().toArray()[0]).deviceAddress;
+                        }
+                        service.setNewIncomingConnection(wifiP2pInfo, ownerMac, clientMac);
+                    }
+                });
+            }
 
         } else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
             Log.d(TAG, "onReceive: WIFI_P2P_THIS_DEVICE_CHANGED_ACTION");

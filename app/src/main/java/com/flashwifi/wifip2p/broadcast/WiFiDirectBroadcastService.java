@@ -1,6 +1,7 @@
 package com.flashwifi.wifip2p.broadcast;
 import android.app.Activity;
 import android.app.Notification;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -26,14 +27,17 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.preference.PreferenceManager;
+import android.support.annotation.NonNull;
 import android.support.v4.app.NotificationCompat;
 import android.text.format.Formatter;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.flashwifi.wifip2p.AddressBalanceTransfer;
 import com.flashwifi.wifip2p.Constants;
 import com.flashwifi.wifip2p.MainActivity;
 import com.flashwifi.wifip2p.R;
+import com.flashwifi.wifip2p.RoamingActivity;
 import com.flashwifi.wifip2p.accesspoint.AccessPointTask;
 import com.flashwifi.wifip2p.accesspoint.ConnectTask;
 import com.flashwifi.wifip2p.accesspoint.StopAccessPointTask;
@@ -93,7 +97,7 @@ public class WiFiDirectBroadcastService extends Service {
     ArrayList<String> arrayList = new ArrayList<>();
     WifiP2pInfo p2p_info;
     NetworkInfo network_info;
-    WifiP2pGroup p2p_group;
+    WifiP2pGroup p2p_group = null;
     ArrayList<String> receivedMessages = new ArrayList<>();
 
     // async task store
@@ -113,48 +117,20 @@ public class WiFiDirectBroadcastService extends Service {
     private boolean negotiatorRunning = false;
     private String ownMacAddressStore = null;
 
+    private State applicationState = State.READY;
+    private String password;
+    private String seed;
+    private boolean busy;
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent.getAction().equals(Constants.ACTION.STARTFOREGROUND_ACTION)) {
             Log.i(TAG, "Received Start Foreground Intent ");
-            Intent notificationIntent = new Intent(this, MainActivity.class);
-            notificationIntent.setAction(Constants.ACTION.MAIN_ACTION);
-            notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                    | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
-                    notificationIntent, 0);
-/*
-            Intent previousIntent = new Intent(this, WiFiDirectBroadcastService.class);
-            previousIntent.setAction(Constants.ACTION.PREV_ACTION);
-            PendingIntent ppreviousIntent = PendingIntent.getService(this, 0,
-                    previousIntent, 0);
+            password = intent.getStringExtra("password");
+            seed = intent.getStringExtra("seed");
 
-            Intent playIntent = new Intent(this, WiFiDirectBroadcastService.class);
-            playIntent.setAction(Constants.ACTION.PLAY_ACTION);
-            PendingIntent pplayIntent = PendingIntent.getService(this, 0,
-                    playIntent, 0);*/
-
-            Intent stopIntent = new Intent(this, WiFiDirectBroadcastService.class);
-            stopIntent.setAction(Constants.ACTION.STOPFOREGROUND_ACTION);
-            PendingIntent pstopIntent = PendingIntent.getService(this, 0,
-                    stopIntent, 0);
-
-            Bitmap icon = BitmapFactory.decodeResource(getResources(),
-                    R.drawable.icon_tethering_on);
-
-            Notification notification = new NotificationCompat.Builder(this)
-                    .setContentTitle(getString(R.string.app_name))
-                    .setTicker(getString(R.string.app_name))
-                    .setContentText(getString(R.string.notification_doing_nothing))
-                    .setSmallIcon(R.drawable.icon_tethering_on)
-                    .setLargeIcon(
-                            Bitmap.createScaledBitmap(icon, 128, 128, false))
-                    .setContentIntent(pendingIntent)
-                    .setOngoing(true)
-                    .addAction(R.drawable.icon_tethering_off, "Stop",
-                            pstopIntent).build();
             startForeground(Constants.NOTIFICATION_ID.FOREGROUND_SERVICE,
-                    notification);
+                    getMyActivityNotification(getString(R.string.ready)));
         } else if (intent.getAction().equals(
                 Constants.ACTION.STOPFOREGROUND_ACTION)) {
             Log.i(TAG, "Received Stop Foreground Intent");
@@ -162,6 +138,81 @@ public class WiFiDirectBroadcastService extends Service {
             stopSelf();
         }
         return START_STICKY;
+    }
+
+    private Intent getNotificationIntent() {
+        Intent notificationIntent = null;
+        if  (applicationState == State.HOTSPOT)  {
+            notificationIntent = new Intent(this, MainActivity.class);
+            notificationIntent.setAction(Constants.ACTION.HOTSPOT);
+            notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        } else if (applicationState == State.SEARCH) {
+            notificationIntent = new Intent(this, MainActivity.class);
+            notificationIntent.setAction(Constants.ACTION.SEARCH);
+            notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        } else if (applicationState == State.P2P_CONNECTING) {
+            Log.d(TAG, "getMyActivityNotification: please wait ");
+            // ToDo: show progress bar
+        } else if (applicationState == State.ROAMING) {
+            notificationIntent = new Intent(this, RoamingActivity.class);
+            notificationIntent.setAction(Constants.ACTION.ROAMING);
+            notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        }
+        else {
+            notificationIntent = new Intent(this, MainActivity.class);
+            notificationIntent.setAction(Constants.ACTION.MAIN_ACTION);
+            notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        }
+        notificationIntent.putExtra("password", password);
+        notificationIntent.putExtra("seed", seed);
+        return notificationIntent;
+    }
+
+    private Notification getMyActivityNotification(String text){
+        CharSequence title = getText(R.string.app_name);
+
+        // what to do on click?
+        Intent notificationIntent = getNotificationIntent();
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
+
+        Intent stopIntent = new Intent(this, WiFiDirectBroadcastService.class);
+        stopIntent.setAction(Constants.ACTION.STOPFOREGROUND_ACTION);
+        PendingIntent pstopIntent = PendingIntent.getService(this, 0,
+                stopIntent, 0);
+
+        Bitmap icon = BitmapFactory.decodeResource(getResources(),
+                R.drawable.icon_tethering_on);
+
+        return new NotificationCompat.Builder(this)
+                .setContentTitle(title)
+                .setTicker(getString(R.string.app_name))
+                .setContentText(text)
+                .setSmallIcon(R.drawable.icon_tethering_on)
+                .setLargeIcon(
+                        Bitmap.createScaledBitmap(icon, 128, 128, false))
+                .setContentIntent(pendingIntent)
+                .setOngoing(true)
+                .addAction(R.drawable.icon_tethering_off, "Stop",
+                        pstopIntent).build();
+    }
+
+    /**
+     * This is the method that can be called to update the Notification
+     */
+    private void updateNotification(String text) {
+        Notification notification = getMyActivityNotification(text);
+
+        NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        mNotificationManager.notify(Constants.NOTIFICATION_ID.FOREGROUND_SERVICE, notification);
+    }
+
+    public void changeApplicationState(State state) {
+        this.applicationState = state;
+        updateNotification(state.toString());
     }
 
     public boolean isSetup() {
@@ -177,6 +228,18 @@ public class WiFiDirectBroadcastService extends Service {
         }
     }
 
+    public void startRoaming(String macAddress, String key, String ssid, String seed, String password) {
+        Intent intent = new Intent(this, RoamingActivity.class);
+        intent.putExtra("address", macAddress);
+        intent.putExtra("key", key);
+        intent.putExtra("ssid", ssid);
+        intent.putExtra("seed", seed);
+        intent.putExtra("password", password);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        changeApplicationState(State.ROAMING);
+        startActivity(intent);
+    }
+
     public void disableWiFi() {
         WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
 
@@ -186,12 +249,14 @@ public class WiFiDirectBroadcastService extends Service {
         }
     }
 
+
+
     public void resetBillingState() {
         billingClientIsRunning = false;
         billingServerIsRunning = false;
     }
 
-    public void startBillingServer(String mac){
+    public void startBillingServer(@NonNull String mac){
         if (!billingServerIsRunning) {
             billingServerIsRunning = true;
 
@@ -199,7 +264,6 @@ public class WiFiDirectBroadcastService extends Service {
                 @Override
                 public void run() {
                     Log.d(TAG, "run: instantiate billing server");
-                    // ToDo: remove magic numbers
                     BillingServer billingServer = new BillingServer(mac, getApplicationContext());
 
                     try {
@@ -207,7 +271,6 @@ public class WiFiDirectBroadcastService extends Service {
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
-                    // ToDo: handle billingServer EXIT CODES
                     // -> close the roaming etc.
                 }
             };
@@ -340,14 +403,16 @@ public class WiFiDirectBroadcastService extends Service {
     }
 
 
-    public void startNegotiationServer(final boolean isClient, String macAddress) {
+    public void startNegotiationServer(final boolean isClient, String macAddress, String peerMac) {
         Runnable task = new Runnable() {
             @Override
             public void run() {
-                Negotiator negotiator = new Negotiator(isClient,
-                        getWFDMacAddress(),
+                Negotiator negotiator = new Negotiator(
+                        isClient,
+                        macAddress,
                         PreferenceManager.getDefaultSharedPreferences(getApplicationContext()),
-                        getBaseContext()
+                        getBaseContext(),
+                        peerMac
                         );
 
                 String peer_mac_address = null;
@@ -408,6 +473,9 @@ public class WiFiDirectBroadcastService extends Service {
     }
 
     private void sendStartRoamingBroadcast(String peer_mac_address, String ssid, String key) {
+        startRoaming(peer_mac_address, key, ssid, seed, password);
+
+
         Intent local = new Intent();
         local.setAction("com.flashwifi.wifip2p.start_roaming");
         local.putExtra("peer_mac_address", peer_mac_address);
@@ -416,15 +484,16 @@ public class WiFiDirectBroadcastService extends Service {
         this.sendBroadcast(local);
     }
 
-    public void startNegotiationClient(final InetAddress address, final boolean isClient, String macAddress) {
+    public void startNegotiationClient(final InetAddress address, final boolean isClient, String macAddress, String peerMacAddress) {
         Runnable task = new Runnable() {
             @Override
             public void run() {
                 Negotiator negotiator = new Negotiator(
                         isClient,
-                        getWFDMacAddress(),
+                        macAddress,
                         PreferenceManager.getDefaultSharedPreferences(getApplicationContext()),
-                        getBaseContext()
+                        getBaseContext(),
+                        peerMacAddress
                 );
                 String peer_mac_address = null;
                 boolean restartAfterwards = true;
@@ -765,6 +834,14 @@ public class WiFiDirectBroadcastService extends Service {
 
     }
 
+    public void setP2PGroup(WifiP2pGroup p2PGroup) {
+        this.p2p_group = p2PGroup;
+    }
+
+    public void setBusy(boolean busy) {
+        this.busy = busy;
+    }
+
 
     /**
      * Class used for the client Binder.  Because we know this service always
@@ -821,7 +898,7 @@ public class WiFiDirectBroadcastService extends Service {
         sendUpdateUIBroadcast();
     }
 
-    public void setNewIncomingConnection(WifiP2pInfo wifiP2pInfo){
+    public void setNewIncomingConnection(WifiP2pInfo wifiP2pInfo, String ownerMac, String clientMac){
         // This method is called when a new device connected to this one
         this.p2p_info = wifiP2pInfo;
         if (p2p_info.groupFormed) {
@@ -829,17 +906,14 @@ public class WiFiDirectBroadcastService extends Service {
             sendUpdateUIBroadcastNewConnection();
             NetworkInfo network_info = getNetwork_info();
             WifiP2pInfo p2p_info = getP2p_info();
-            WifiP2pGroup wifiP2pGroup = getP2p_group();
 
             if (network_info.getState() == NetworkInfo.State.CONNECTED) {
                 // ToDo: look for the other device and make sure we are only two
                 if (p2p_info.isGroupOwner) {
-                    //Snackbar.make(activity_view, "You are the group owner", Snackbar.LENGTH_LONG).setAction("Action", null).show();
-                    startNegotiationServer(false, wifiP2pGroup.getOwner().deviceAddress);
+                    startNegotiationServer(isInRoleConsumer(), ownerMac, clientMac);
                 } else {
                     InetAddress groupOwnerAddress = p2p_info.groupOwnerAddress;
-                    //Snackbar.make(activity_view, "You are only a member of the group", Snackbar.LENGTH_LONG).setAction("Action", null).show();
-                    startNegotiationClient(groupOwnerAddress, false, null);
+                    startNegotiationClient(groupOwnerAddress, isInRoleConsumer(), clientMac, ownerMac);
                 }
 
             }
@@ -881,14 +955,103 @@ public class WiFiDirectBroadcastService extends Service {
         this.sendBroadcast(local);
     }
 
+    // groupOwnerIntent determines how much you want to become the group onwer
+    // 0 means little and 15 means a lot
+    // https://stackoverflow.com/questions/18703881/how-to-make-a-specific-group-owner-in-wifi-direct-android
     public void connect(String address, WifiP2pManager.ActionListener actionListener) {
-        WifiP2pDevice device;
-        WifiP2pConfig config = new WifiP2pConfig();
-        config.deviceAddress = address;
-        // groupOwnerIntent determines how much you want to become the group onwer
-        // 0 means little and 15 means a lot
-        // https://stackoverflow.com/questions/18703881/how-to-make-a-specific-group-owner-in-wifi-direct-android
-        config.groupOwnerIntent = 0;
-        mManager.connect(mChannel, config, actionListener);
+        if (!busy) {
+            busy = true;
+
+            Runnable task = new Runnable() {
+                @Override
+                public void run() {
+                    Log.d(TAG, "run: connect");
+                    WifiP2pConfig config = new WifiP2pConfig();
+                    config.deviceAddress = address;
+                    config.groupOwnerIntent = 0;
+                    mManager.connect(mChannel, config, new WifiP2pManager.ActionListener() {
+                        @Override
+                        public void onSuccess() {
+                            Toast.makeText(getApplicationContext(), "Connected to peer", Toast.LENGTH_SHORT).show();
+                            // start the protocol
+                            /*WifiP2pInfo p2p_info = getP2p_info();
+                            NetworkInfo network_info = getNetwork_info();
+
+                            Log.d(TAG, "onSuccess: Connection was successful");
+                            int max_tries = 10;
+
+                            while (busy && max_tries > 0) {
+                                max_tries --;
+                                int finalMax_tries = max_tries;
+                                mManager.requestGroupInfo(mChannel, new WifiP2pManager.GroupInfoListener() {
+                                    @Override
+                                    public void onGroupInfoAvailable(WifiP2pGroup wifiP2pGroup) {
+
+                                        if (wifiP2pGroup == null || wifiP2pGroup.getClientList().size() == 0 || wifiP2pGroup.getOwner() == null) {
+                                            Log.d(TAG, "onGroupInfoAvailable: NOOOOOO CLIENTS????");
+                                            Toast.makeText(getApplicationContext(), "The P2P group is missing owner or members", Toast.LENGTH_SHORT).show();
+                                        } else {
+                                            Log.d(TAG, wifiP2pGroup.toString());
+                                            String clientMac = ((WifiP2pDevice) wifiP2pGroup.getClientList().toArray()[0]).deviceAddress;
+                                            String ownerMac = wifiP2pGroup.getOwner().deviceAddress;
+
+                                            busy = false;
+
+                                            if (p2p_info.isGroupOwner) {
+                                                Log.d(TAG, "You are the group owner");
+                                                startNegotiationServer(true, ownerMac, address);
+                                                Log.d(TAG, "SocketServer started");
+                                            } else {
+                                                Log.d(TAG, "You are a member of the group");
+                                                // groupOwnerAddress = p2p_info.groupOwnerAddress;
+                                                InetAddress groupOwnerAddress = p2p_info.groupOwnerAddress;
+                                                Log.d(TAG, "Group owner address: " + p2p_info.groupOwnerAddress.getHostAddress());
+                                                startNegotiationClient(groupOwnerAddress, true, clientMac, address);
+                                                Log.d(TAG, "Client Socket started");
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+                            busy = false;
+                            Log.d(TAG, "onSuccess: done with connecting");*/
+                        }
+                        @Override
+                        public void onFailure(int reason) {
+                            Toast.makeText(getApplicationContext(), "Error connecting to peer", Toast.LENGTH_SHORT).show();
+                            busy = false;
+                        }
+                    });
+                }
+            };
+            Log.d(TAG, "start connect thread");
+            Thread thread = new Thread(task);
+            //asyncTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, params);
+            //AsyncTask.execute(thread);
+            threads.add(thread);
+            thread.start();
+        } else {
+            Log.d(TAG, "connecting blocked due to business");
+        }
+
+
+
+
+    }
+
+    public enum State {
+        READY,
+        SEARCH,
+        HOTSPOT,
+        P2P_CONNECTING,
+        NEGOTIATING,
+        ROAMING,
+
+
+        FUND_WALLET,
+        WITHDRAW_WALLET,
+        SETTINGS
+
+
     }
 }

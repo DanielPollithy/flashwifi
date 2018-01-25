@@ -71,12 +71,13 @@ public class HotspotFragment extends Fragment {
 
     private void updateUi(Intent intent) {
         Log.d(TAG, "updateUi: Got some network data into the hotspot fragment");
-        String numberAvailableDevices = Integer.toString(getmService().getArrayList().size());
-        TextView text = (TextView) getActivity().findViewById(R.id.numberPeers);
-        text.setVisibility(View.VISIBLE);
-        text.setText(String.format("%s peers", numberAvailableDevices));
-        final View activity_view = getActivity().findViewById(R.id.drawer_layout);
-
+        if (getmService() != null) {
+            String numberAvailableDevices = Integer.toString(getmService().getArrayList().size());
+            TextView text = (TextView) getActivity().findViewById(R.id.numberPeers);
+            text.setVisibility(View.VISIBLE);
+            text.setText(String.format("%s peers", numberAvailableDevices));
+            final View activity_view = getActivity().findViewById(R.id.drawer_layout);
+        }
         //if (intent.hasExtra("what") && intent.getExtras().getString("what", "").equals("connectivity_changed")) {
 
 

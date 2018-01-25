@@ -107,7 +107,11 @@ public class RoamingActivity extends AppCompatActivity {
                     startBillingProtocol(5000);
                 } else if (message.equals("AP FAILED")) {
                     apConnected.setChecked(false);
-                    Toast.makeText(getApplicationContext(), "Could not create Access point", Toast.LENGTH_LONG).show();
+                    Toast.makeText(getApplicationContext(), "Connect to AP failed", Toast.LENGTH_LONG).show();
+                    exitRoaming();
+                } else if (message.equals("AP CREATION FAILED")) {
+                    apConnected.setChecked(false);
+                    Toast.makeText(getApplicationContext(), "Create AP failed", Toast.LENGTH_LONG).show();
                     exitRoaming();
                 } else if (message.equals("AP STOPPED")) {
                     apConnected.setChecked(false);
@@ -201,6 +205,9 @@ public class RoamingActivity extends AppCompatActivity {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+
+        Log.d(TAG, "startBillingProtocol: with MAC <<<<<<<<<< " + address);
+
         if (mService.isInRoleHotspot()) {
             mService.startBillingServer(address);
         } else {
@@ -230,20 +237,11 @@ public class RoamingActivity extends AppCompatActivity {
         Intent intent = getIntent();
         name = intent.getStringExtra("name");
         address = intent.getStringExtra("address");
+        Log.d(TAG, "onCreate: Roaming activity got peer address: " + address);
         NegotiationFinalization negFin = PeerStore.getInstance().getLatestFinalization(address);
         ssid = negFin.getHotspotName();
         key = negFin.getHotspotPassword();
 
-        initUI();
-
-    }
-
-    private void cancelNotification() {
-
-    }
-
-
-    private void initUI() {
 
     }
 
@@ -308,16 +306,19 @@ public class RoamingActivity extends AppCompatActivity {
     private void exitRoaming() {
         Accountant.getInstance().setCloseAfterwards(true);
         endRoamingFlag = true;
-        cancelNotification();
+
         if (mService.isInRoleHotspot()){
             mService.stopAP();
         } else {
             mService.disconnectAP();
         }
+
         mService.setRoaming(false);
         mService.resetBillingState();
         mService.setInRoleConsumer(false);
         mService.setInRoleHotspot(false);
+        mService.setBusy(false);
+        mService.changeApplicationState(WiFiDirectBroadcastService.State.READY);
 
         PeerStore.getInstance().clear();
 

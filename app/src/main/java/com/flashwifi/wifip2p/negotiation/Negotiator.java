@@ -18,9 +18,12 @@ import com.google.gson.GsonBuilder;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class Negotiator {
@@ -28,7 +31,8 @@ public class Negotiator {
     private static final int PORT = 9898;
     private static final int clientTimeoutMillis = 5000;
     private static final int serverTimeoutMillis = 5000;
-    private final String ownMacAddress;
+    private final String peerMac;
+    private String ownMacAddress;
 
     private SocketWrapper socketWrapper;
 
@@ -40,8 +44,8 @@ public class Negotiator {
     // consumer as in consumer-hotspot
     private boolean isConsumer;
 
-    String mac = null;
-    String peer_mac_address = null;
+    private String mac = null;
+    private String peer_mac_address = null;
 
     private Gson gson;
     private SharedPreferences prefs;
@@ -78,7 +82,9 @@ public class Negotiator {
         context.sendBroadcast(local);
     }
 
-    public Negotiator(boolean isConsumer, String ownMacAddress, SharedPreferences prefs, Context context) {
+    public Negotiator(boolean isConsumer, String ownMacAddress, SharedPreferences prefs, Context context,
+                      String peerMac) {
+        this.peerMac = peerMac;
         this.isConsumer = isConsumer;
         gson = new GsonBuilder().create();
         this.ownMacAddress = ownMacAddress;
@@ -110,8 +116,10 @@ public class Negotiator {
 
             // Whether we want to provide a hotspot or use one
             if (isConsumer) {
+                Log.d(TAG, "workAsClient: runConsumerProtocol");
                 negReturn = runConsumerProtocol(serverIPAddress);
             } else {
+                Log.d(TAG, "workAsClient: runHotspotProtocol");
                 negReturn = runHotspotProtocol(serverIPAddress);
             }
 
@@ -220,6 +228,7 @@ public class Negotiator {
         consumer_state = ConsumerState.WAIT_FOR_OFFER;
 
         // RECEIVE OFFER
+        Log.d(TAG, "runConsumerProtocol: wait for getline");
         String offerString = socketWrapper.getLine();
         if (offerString == null || offerString.contains("java.net.SocketException")) {
             return error(R.string.err_no_offer_received, true);
@@ -229,6 +238,9 @@ public class Negotiator {
         consumer_state = ConsumerState.CHECK_OFFER;
         NegotiationOffer offer = gson.fromJson(offerString, NegotiationOffer.class);
         String otherMac = offer.getHotspotMac();
+        if (otherMac == null) {
+            otherMac = this.peerMac;
+        }
         // Write offer to the PeerStore
         PeerStore.getInstance().setLatestOffer(otherMac, offer);
 
@@ -327,6 +339,10 @@ public class Negotiator {
         // Parse the answer
         NegotiationOfferAnswer answer = gson.fromJson(answerString, NegotiationOfferAnswer.class);
         String otherMac = answer.getConsumerMac();
+        if (otherMac == null) {
+            Log.d(TAG, "runHotspotProtocol: using fallback MAC " + this.peerMac);
+            otherMac = this.peerMac;
+        }
         peer_mac_address = otherMac;
         PeerStore.getInstance().setLatestOffer(otherMac, offer);
         PeerStore.getInstance().setLatestOfferAnswer(otherMac, answer);

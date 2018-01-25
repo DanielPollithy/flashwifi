@@ -109,7 +109,7 @@ public class BillingServer {
         int max_errors = 1;
         int errors = 0;
 
-        while (state != State.CLOSED) {
+        while (state != State.CLOSED && state != State.ERROR && errors < max_errors) {
             try {
                 // create server socket
                 serverSocket = new ServerSocket(PORT);
