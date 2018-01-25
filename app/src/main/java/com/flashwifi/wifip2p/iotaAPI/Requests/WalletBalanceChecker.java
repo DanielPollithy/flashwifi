@@ -166,7 +166,15 @@ public class WalletBalanceChecker extends AsyncTask<Void, Void, Void> {
         }
         String currentDateTimeString = DateFormat.getDateTimeInstance().format(new Date());
         putSharedPrefBalanceDateUpdate(currentDateTimeString);
-        return updatedBalanceString+"i";
+
+        if(containsPendingTransactions){
+            updatedBalanceString = updatedBalanceString+"i (+ pending transactions)";
+        }
+        else{
+            updatedBalanceString = updatedBalanceString+"i" ;
+        }
+
+        return updatedBalanceString;
     }
 
     private void putSharedPrefBalanceDateUpdate(String currentDateTimeString) {

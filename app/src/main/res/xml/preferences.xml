@@ -30,17 +30,21 @@
             android:entryValues="@array/securityPref"
             android:title="Security pk/address" />
 
+        <!--
         <ListPreference
             android:key="pref_key_network_timeout"
             android:entries="@array/networkTimeoutPref"
             android:entryValues="@array/networkTimeoutPref"
             android:title="Network timeout" />
+        -->
 
+        <!--
         <ListPreference
             android:key="pref_key_units"
             android:entries="@array/unitsPref"
             android:entryValues="@array/unitsPref"
             android:title="Units" />
+        -->
 
 
         <SwitchPreference
@@ -138,7 +142,7 @@
         <Preference
             android:divider="@null"
             android:dividerHeight="0dp"
-            android:key="pref_key_reset_version"
+            android:key="pref_key_app_version"
             android:title="@string/app_version"/>
 
         <Preference
