@@ -55,6 +55,8 @@ public class MainActivity extends AppCompatActivity
     boolean doubleBackToExitPressedOnce = false;
 
     BroadcastReceiver updateUIReceiver;
+    private boolean startHotspotFragmentAfterwards = false;
+    private boolean startSearchFragmentAfterwards = false;
 
     private void subscribeToBroadcasts() {
         IntentFilter filter = new IntentFilter();
@@ -205,9 +207,9 @@ public class MainActivity extends AppCompatActivity
 
         if (intent.getAction() != null) {
             if (intent.getAction().equals(Constants.ACTION.HOTSPOT)) {
-                startHotspotFragment();
+                startHotspotFragmentAfterwards = true;
             } else if (intent.getAction().equals(Constants.ACTION.SEARCH)) {
-                startSearchFragment();
+                startSearchFragmentAfterwards = true;
             } else {
                 Log.d(TAG, "onCreate: UNKWNOWN ACTION FOR MAIN");
             }
@@ -356,9 +358,6 @@ public class MainActivity extends AppCompatActivity
             return false;
         } else {
             Fragment fragment = new SearchFragment();
-            if (mBound) {
-                mService.changeApplicationState(WiFiDirectBroadcastService.State.SEARCH);
-            }
 
             // Insert the fragment by replacing any existing fragment
             FragmentManager fragmentManager = getFragmentManager();
@@ -387,12 +386,6 @@ public class MainActivity extends AppCompatActivity
                 }
             });
         }
-
-        if (mBound) {
-            mService.changeApplicationState(WiFiDirectBroadcastService.State.ROAMING);
-        }
-
-
     }
 
     public boolean startHotspotFragment() {
@@ -406,9 +399,6 @@ public class MainActivity extends AppCompatActivity
             Fragment fragment = new HotspotFragment();
             Bundle args = new Bundle();
 
-            if (mBound) {
-                mService.changeApplicationState(WiFiDirectBroadcastService.State.HOTSPOT);
-            }
             // Insert the fragment by replacing any existing fragment
             FragmentManager fragmentManager = getFragmentManager();
             fragmentManager.beginTransaction()
@@ -510,6 +500,13 @@ public class MainActivity extends AppCompatActivity
             mService = binder.getService();
             mBound = true;
             mService.enableService();
+            if (startHotspotFragmentAfterwards) {
+                startHotspotFragmentAfterwards = false;
+                startHotspotFragment();
+            } else if (startSearchFragmentAfterwards) {
+                startSearchFragmentAfterwards = false;
+                startSearchFragment();
+            }
         }
 
         @Override

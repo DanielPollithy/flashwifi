@@ -205,6 +205,10 @@ public class SearchFragment extends Fragment {
 
         final ToggleButton toggle = (ToggleButton) getActivity().findViewById(R.id.startSearchButton);
 
+        if (getmService() != null) {
+            toggle.setChecked(getmService().isInRoleConsumer());
+        }
+
         toggle.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(final View view) {

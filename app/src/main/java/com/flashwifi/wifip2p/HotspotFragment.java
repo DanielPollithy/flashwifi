@@ -78,20 +78,23 @@ public class HotspotFragment extends Fragment {
             text.setText(String.format("%s peers", numberAvailableDevices));
             final View activity_view = getActivity().findViewById(R.id.drawer_layout);
         }
-        //if (intent.hasExtra("what") && intent.getExtras().getString("what", "").equals("connectivity_changed")) {
-
-
-
-
-
-        //}
 
     }
 
     @Override
     public void onStop() {
+        if (updateUIReceiver != null) {
+            getActivity().unregisterReceiver(updateUIReceiver);
+        }
         super.onStop();
-        getActivity().unregisterReceiver(updateUIReceiver);
+    }
+
+    @Override
+    public void onPause() {
+        if (updateUIReceiver != null) {
+            getActivity().unregisterReceiver(updateUIReceiver);
+        }
+        super.onPause();
     }
 
     @Override
@@ -118,29 +121,31 @@ public class HotspotFragment extends Fragment {
         filter.addAction("com.flashwifi.wifip2p.start_roaming");
         filter.addAction("com.flashwifi.wifip2p.stop_roaming");
 
-        updateUIReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                if (getActivity() == null) {
-                    Log.d(TAG, "onReceive: getActivity is null");
-                    return;
+        if (updateUIReceiver != null) {
+            updateUIReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    if (getActivity() == null) {
+                        Log.d(TAG, "onReceive: getActivity is null");
+                        return;
+                    }
+                    if (intent.getAction().equals("com.flashwifi.wifip2p.start_roaming")) {
+                        String mac = intent.getStringExtra("peer_mac_address");
+                        ToggleButton toggle = (ToggleButton) getActivity().findViewById(R.id.startAPButton);
+                        toggle.setChecked(false);
+                        ProgressBar progressBar = (ProgressBar) getActivity().findViewById(R.id.progressbarAP);
+                        progressBar.setVisibility(View.INVISIBLE);
+                    } else if (intent.getAction().equals("com.flashwifi.wifip2p.stop_roaming")) {
+                        ToggleButton toggle = (ToggleButton) getActivity().findViewById(R.id.startAPButton);
+                        toggle.setChecked(false);
+                        ProgressBar progressBar = (ProgressBar) getActivity().findViewById(R.id.progressbarAP);
+                        progressBar.setVisibility(View.INVISIBLE);
+                    } else {
+                        updateUi(intent);
+                    }
                 }
-                if (intent.getAction().equals("com.flashwifi.wifip2p.start_roaming")) {
-                    String mac = intent.getStringExtra("peer_mac_address");
-                    ToggleButton toggle = (ToggleButton) getActivity().findViewById(R.id.startAPButton);
-                    toggle.setChecked(false);
-                    ProgressBar progressBar = (ProgressBar) getActivity().findViewById(R.id.progressbarAP);
-                    progressBar.setVisibility(View.INVISIBLE);
-                } else if (intent.getAction().equals("com.flashwifi.wifip2p.stop_roaming")) {
-                    ToggleButton toggle = (ToggleButton) getActivity().findViewById(R.id.startAPButton);
-                    toggle.setChecked(false);
-                    ProgressBar progressBar = (ProgressBar) getActivity().findViewById(R.id.progressbarAP);
-                    progressBar.setVisibility(View.INVISIBLE);
-                } else {
-                    updateUi(intent);
-                }
-            }
-        };
+            };
+        }
 
         getActivity().registerReceiver(updateUIReceiver, filter);
 
@@ -222,6 +227,22 @@ public class HotspotFragment extends Fragment {
     private void initUI() {
         final View activity_view = getActivity().findViewById(R.id.drawer_layout);
         final ToggleButton button = (ToggleButton) getActivity().findViewById(R.id.startAPButton);
+
+        // recover the state
+        if (getmService() != null) {
+            button.setChecked(getmService().isInRoleHotspot());
+            if (getmService().isInRoleHotspot()) {
+                ProgressBar progressBar = (ProgressBar) getActivity().findViewById(R.id.progressbarAP);
+                progressBar.setVisibility(View.VISIBLE);
+
+                TextView text = (TextView) getActivity().findViewById(R.id.numberPeers);
+                String numberAvailableDevices = Integer.toString(getmService().getArrayList().size());
+                text.setText(String.format("%s peers", numberAvailableDevices));
+                text.setVisibility(View.VISIBLE);
+            }
+
+        }
+
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
