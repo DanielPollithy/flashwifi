@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!--
     <PreferenceCategory
         android:title="WiFi"
         android:key="pref_key_wifi_settings"
@@ -13,6 +14,7 @@
             android:title="Reset data usage"/>
 
     </PreferenceCategory>
+    -->
 
     <PreferenceCategory
         android:title="IOTA"
