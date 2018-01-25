@@ -329,8 +329,10 @@ public class WelcomeActivity extends AppCompatActivity {
                     boolean ok = true;
                     for (int grantResult: grantResults) {
                         if (grantResult != PackageManager.PERMISSION_GRANTED) {
-                            ok = false;
-                            Log.d("Permissions", "onRequestPermissionsResult: denied: " + permissions[i]);
+                            ok = androidSixDotZeroBugCheck(permissions[i]);
+                            if(!ok){
+                                Log.d("Permissions", "onRequestPermissionsResult: denied: " + permissions[i]);
+                            }
                         }
                         i++;
                     }
@@ -370,6 +372,18 @@ public class WelcomeActivity extends AppCompatActivity {
             // other 'case' lines to check for other
             // permissions this app might request
         }
+    }
+
+    private boolean androidSixDotZeroBugCheck(String permission) {
+        if(permission.equals("android.permission.CHANGE_NETWORK_STATE")) {
+            if (Build.VERSION.RELEASE.equals("6.0")) {
+                return true;
+            }
+            else{
+                return  false;
+            }
+        }
+        return false;
     }
 
     /**
