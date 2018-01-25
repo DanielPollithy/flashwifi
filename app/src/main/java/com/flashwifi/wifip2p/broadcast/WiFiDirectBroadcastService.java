@@ -12,6 +12,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.DhcpInfo;
 import android.net.NetworkInfo;
+import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
@@ -826,6 +827,22 @@ public class WiFiDirectBroadcastService extends Service {
         if (p2p_info.groupFormed) {
             currentDeviceConnected = p2p_info.groupOwnerAddress.getHostAddress();
             sendUpdateUIBroadcastNewConnection();
+            NetworkInfo network_info = getNetwork_info();
+            WifiP2pInfo p2p_info = getP2p_info();
+            WifiP2pGroup wifiP2pGroup = getP2p_group();
+
+            if (network_info.getState() == NetworkInfo.State.CONNECTED) {
+                // ToDo: look for the other device and make sure we are only two
+                if (p2p_info.isGroupOwner) {
+                    //Snackbar.make(activity_view, "You are the group owner", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+                    startNegotiationServer(false, wifiP2pGroup.getOwner().deviceAddress);
+                } else {
+                    InetAddress groupOwnerAddress = p2p_info.groupOwnerAddress;
+                    //Snackbar.make(activity_view, "You are only a member of the group", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+                    startNegotiationClient(groupOwnerAddress, false, null);
+                }
+
+            }
         }
     }
 

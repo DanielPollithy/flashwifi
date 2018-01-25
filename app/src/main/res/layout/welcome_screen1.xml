@@ -28,7 +28,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="The blablablablabla App"
+            android:text="Share remaining megabytes for iota"
             android:textColor="@android:color/white"
             android:textSize="20dp"
             android:layout_marginTop="15dp"/>

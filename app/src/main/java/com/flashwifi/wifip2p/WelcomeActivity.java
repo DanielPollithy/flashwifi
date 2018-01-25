@@ -127,7 +127,8 @@ public class WelcomeActivity extends AppCompatActivity {
             } else if(!firstTimeNoSeed) {
                 launchHomeScreen();
             } else {
-                startActivity(new Intent(WelcomeActivity.this, MainActivity.class));
+                launchHomeScreenNormal();
+                //startActivity(new Intent(WelcomeActivity.this, MainActivity.class));
             }
         });
     }
@@ -158,6 +159,14 @@ public class WelcomeActivity extends AppCompatActivity {
     private void launchHomeScreen() {
         prefManager.setFirstTimeLaunch(false);
         storeNewSeed();
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.putExtra("seed", seed);
+        intent.putExtra("password", password);
+        startActivity(intent);
+        finish();
+    }
+
+    private void launchHomeScreenNormal() {
         Intent intent = new Intent(this, MainActivity.class);
         intent.putExtra("seed", seed);
         intent.putExtra("password", password);
@@ -292,11 +301,10 @@ public class WelcomeActivity extends AppCompatActivity {
 
     private boolean decryptSeed(String password) {
         EncryptedPreferences encryptedPreferences = new EncryptedPreferences.Builder(this).withEncryptionPassword(password).build();
-        String seed = encryptedPreferences.getString(getString(R.string.encrypted_seed), null);
-        View view = findViewById(R.id.home_view);
+        seed = encryptedPreferences.getString(getString(R.string.encrypted_seed), null);
 
         if (seed != null) {
-            //Snackbar.make(view, getString(R.string.seed_decrypted), Snackbar.LENGTH_LONG).setAction("Action", null).show();
+            this.password = password;
             return true;
         } else {
             final EditText field = (EditText) findViewById(R.id.password);
