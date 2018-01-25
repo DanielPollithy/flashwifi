@@ -34,6 +34,10 @@ import android.widget.Toast;
 import com.flashwifi.wifip2p.billing.Accountant;
 import com.flashwifi.wifip2p.broadcast.WiFiDirectBroadcastService;
 import com.flashwifi.wifip2p.iotaAPI.Requests.WalletBalanceChecker;
+import com.flashwifi.wifip2p.iotaFlashWrapper.Example;
+import com.flashwifi.wifip2p.iotaFlashWrapper.IotaFlashBridge;
+
+import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener
@@ -126,6 +130,8 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+
+
     private void initUi() {
         /*final Switch switch_ = (Switch) findViewById(R.id.wifiSwitch);
         switch_.setOnCheckedChangeListener(new Switch.OnCheckedChangeListener() {
@@ -156,6 +162,25 @@ public class MainActivity extends AppCompatActivity
         Intent intent = getIntent();
         password = intent.getStringExtra("password");
         seed = intent.getStringExtra("seed");
+
+        /*
+        // iotalibflash
+        String iotaflash = readFile("iotaflash");
+        String iotaflashhelper = readFile("iotaflashhelper");
+
+        try {
+            IotaFlashBridge.boot(iotaflash, iotaflashhelper);
+            Example.setup();
+            Example.transaction(Example.one, Example.two);
+            Example.transaction(Example.two, Example.one);
+            Example.transaction(Example.one, Example.two);
+            Example.transaction(Example.one, Example.two);
+            Example.close(Example.one, Example.two);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }*/
 
         setBalanceHandler();
         updateBalance();

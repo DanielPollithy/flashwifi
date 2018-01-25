@@ -180,4 +180,8 @@ public class FlashChannelHelper {
     public double getOutput() {
         return Helpers.getBalanceOfUser(user);
     }
+
+    public static int getRequiredDepth(int transactionCount) {
+        return (int) Math.ceil(Math.log(transactionCount)/Math.log(2));
+    }
 }

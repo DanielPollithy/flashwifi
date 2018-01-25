@@ -25,7 +25,9 @@ public class Example {
     public static void setup() {
 
         double[] deposits = new double[]{100,100};
-        int depth = 4;
+
+        int transactionCount = 10;
+        int depth = FlashChannelHelper.getRequiredDepth(10);
 
 
         // Example of a user setup.
