@@ -8,11 +8,18 @@ import com.flashwifi.wifip2p.iotaFlashWrapper.Model.Digest;
 import com.flashwifi.wifip2p.iotaFlashWrapper.Model.FlashObject;
 import com.flashwifi.wifip2p.iotaFlashWrapper.Model.Multisig;
 import com.flashwifi.wifip2p.iotaFlashWrapper.Model.Signature;
+import com.flashwifi.wifip2p.iotaFlashWrapper.Model.Transfer;
 import com.flashwifi.wifip2p.iotaFlashWrapper.Model.UserObject;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import jota.IotaAPI;
+import jota.dto.response.GetInclusionStateResponse;
+import jota.dto.response.GetNewAddressResponse;
+import jota.dto.response.SendTransferResponse;
+import jota.error.ArgumentException;
+import jota.model.Input;
 import jota.utils.Checksum;
 
 /**
@@ -147,6 +154,21 @@ public class FlashChannelHelper {
         Helpers.applyTransfers(signedBundles, user);
     }
 
+    /**
+     * Returns a helper with the address to use and the number of new addresses to generate.
+     * Please create the new addresses before making the transaction.
+     * @return
+     */
+    public CreateTransactionHelperObject getTransactionHelper() {
+        return Helpers.getTransactionHelper(user.getFlash().getRoot());
+    }
+
+    public SendTransferResponse sendFundingTransfer(List<Input> inputs, long amount, String remainder, int security, int depth, int mwm) throws ArgumentException {
+        List<jota.model.Transfer> fundingTransfers = new ArrayList<>();
+        fundingTransfers.add((jota.model.Transfer) new Transfer(user.getFlash().getRoot().getAddress(), 100));
+        IotaAPI api = Helpers.getIotaAPI();
+        return api.sendTransfer(user.getSeed(), user.getSecurity(), depth, mwm, fundingTransfers, inputs, remainder, true);
+    }
 
     /**
      *  Closing utils
@@ -156,14 +178,11 @@ public class FlashChannelHelper {
         return Helpers.closeChannel(user);
     }
 
+
+
     /**
-     * Returns a helper with the address to use and the number of new addresses to generate.
-     * Please create the new addresses before making the transaction.
-     * @return
+     *  General utils
      */
-    public CreateTransactionHelperObject getTransactionHelper() {
-        return Helpers.getTransactionHelper(user.getFlash().getRoot());
-    }
 
     public UserObject getUser() {
         return user;
@@ -183,5 +202,49 @@ public class FlashChannelHelper {
 
     public static int getRequiredDepth(int transactionCount) {
         return (int) Math.ceil(Math.log(transactionCount)/Math.log(2));
+    }
+
+    public GetNewAddressResponse getNewAddresses(int number) throws ArgumentException {
+        IotaAPI api = Helpers.getIotaAPI();
+        GetNewAddressResponse resp = api.getNewAddress(user.getSeed(), user.getSecurity(), user.getSeedIndex(), false, number, true);
+        user.setSeedIndex(user.getSeedIndex() + number);
+        return resp;
+    }
+
+    public static void waitForTransfersToComplete(SendTransferResponse resp) throws ArgumentException {
+        // Create array with all hashes.
+        String[] transactionHashes = new String[resp.getTransactions().size()];
+        for (int i = 0; i < resp.getTransactions().size(); i++) {
+            transactionHashes[i] = resp.getTransactions().get(i).getHash();
+        }
+
+        IotaAPI api = Helpers.getIotaAPI();
+        boolean attached = false;
+        int time = 0;
+        while (true) {
+            if (time >= 30) {
+                Log.e("[ERROR]", "no attachment after 30 seconds...");
+                return;
+            }
+
+            GetInclusionStateResponse inclusionResp = api.getLatestInclusion(transactionHashes);
+
+            boolean completed = true;
+            for (boolean status : inclusionResp.getStates()) {
+                completed = completed && status;
+            }
+
+            if (completed) {
+                break;
+            }
+
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Log.d("[WARN]", "Thread does not want to sleep " + e.getLocalizedMessage());
+            }
+
+            time++;
+        }
     }
 }
