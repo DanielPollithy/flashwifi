@@ -19,10 +19,6 @@ Share remaining data from your android phone as a hotspot and get paid in iota.
 
 Minimum Required Android Code Name/Version/API Level: **Marshmallow / 6.0 / API level 23**
 
-## How to install
-
-TODO
-
 # How does it work?
 
 ## Iota setup
