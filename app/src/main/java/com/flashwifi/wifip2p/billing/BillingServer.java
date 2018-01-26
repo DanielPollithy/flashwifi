@@ -38,6 +38,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Random;
 
 import static android.content.Context.WIFI_SERVICE;
 
@@ -54,7 +55,7 @@ public class BillingServer {
     private static final String TAG = "BillingServer";
     private final Gson gson;
     private final String mac;
-    private final String channelRootAddress;
+    private final String channelRootAddress = null;
     private final String seed;
     private final int seedindex;
     private State state = State.NOT_PAIRED;
@@ -116,11 +117,12 @@ public class BillingServer {
 
         two.setupSettlementAddresses(settlementAddresses);
 
-        initialDigestsTwo = two.initialChannelDigests();
+       // initialDigestsTwo = two.initialChannelDigests();
+        initialDigestsTwo = new ArrayList<Digest>();
 
         int timeoutMinutesServer = 2 * 60 * 1000;
 
-        this.channelRootAddress = finalization.getDepositAddressFlashChannel();
+        //this.channelRootAddress = finalization.getDepositAddressFlashChannel();
 
         Accountant.getInstance().start(totalMegabytes, timeoutMinutesServer, totalMinutes, iotaDeposit, iotaPerMegabyte);
         gson = new GsonBuilder().create();
@@ -180,12 +182,12 @@ public class BillingServer {
                     // answer with billingOpenChannelAnswerString
 
                     // calculate ROOT ADDRESS
-                    List<List<Digest>> digestPairs = new ArrayList<>();
-                    digestPairs.add(billingOpenChannel.getClientDigests());
-                    digestPairs.add(initialDigestsTwo);
+//                    List<List<Digest>> digestPairs = new ArrayList<>();
+//                    digestPairs.add(billingOpenChannel.getClientDigests());
+//                    digestPairs.add(initialDigestsTwo);
 
                     // This will create the initial multisig addresses and the root address.
-                    two.setupChannelWithDigests(digestPairs);
+                    //two.setupChannelWithDigests(digestPairs);
 
                     Log.d("[ROOT ADDR]", two.getRootAddressWithChecksum());
 
@@ -240,6 +242,10 @@ public class BillingServer {
 
                         Log.d(TAG, "Bytes Received" + bytes_received);
                         Log.d(TAG, "Bytes Transferred" + bytes_transmitted);
+
+                        // ToDo: remove this mock
+                        Random r = new Random();
+                        total_bytes = r.nextInt(1000000-500000) + 500000;
 
                         b = Accountant.getInstance().createBill((int)total_bytes);
 

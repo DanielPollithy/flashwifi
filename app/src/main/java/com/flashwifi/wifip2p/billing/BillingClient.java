@@ -151,7 +151,8 @@ public class BillingClient {
                         // Set the addresses
                         one.setupSettlementAddresses(settlementAddresses);
 
-                        List<Digest> initialDigestsOne = one.initialChannelDigests();
+                        //List<Digest> initialDigestsOne = one.initialChannelDigests();
+                        List<Digest> initialDigestsOne = new ArrayList<Digest>();
                         int timeoutMinutesClient = 20 * 60 * 1000;
 
                         billingOpenChannel = new BillingOpenChannel(totalMegabytes, iotaPerMegabyte, treeDepth, initialDigestsOne, timeoutMinutesClient, totalMinutes);
@@ -166,19 +167,19 @@ public class BillingClient {
 
                         // now create the flash channel on our side
                         List<List<Digest>> digestPairs = new ArrayList<>();
-                        digestPairs.add(initialDigestsOne);
-                        digestPairs.add(billingOpenChannelAnswer.getHotspotDigests());
+                        //digestPairs.add(initialDigestsOne);
+                        //digestPairs.add(billingOpenChannelAnswer.getHotspotDigests());
 
-                        one.setupChannelWithDigests(digestPairs);
+                        //one.setupChannelWithDigests(digestPairs);
 
-                        Log.d("[ROOT ADDR]", one.getRootAddressWithChecksum());
+                        /*Log.d("[ROOT ADDR]", one.getRootAddressWithChecksum());
 
                         // assert that the root address of both parties are the same
                         if (one.getRootAddressWithChecksum().equals(billingOpenChannelAnswer.getChannelRootAddress())) {
                             Log.d(TAG, "start: HOOOORAY! The multisig addresses match!");
                         } else {
                             Log.d(TAG, "start: :( :( :( :( :( :( A day to cry. the multisig addresses don't match");
-                        }
+                        }*/
 
                         Accountant.getInstance().start(billingOpenChannel.getTotalMegabytes(), billingOpenChannel.getTimeoutMinutesClient(), billingOpenChannel.getTotalMinutes(), billingOpenChannelAnswer.getClientDepositIota(),
                                 billingOpenChannel.getIotaPerMegabyte());

@@ -156,7 +156,7 @@ public class Accountant {
     }
 
     public int getTotalBytes() {
-        return totalBytes / (1024*1024);
+        return totalBytes / (1000*1000);
     }
 
     public int getTotalIotaPrice() {

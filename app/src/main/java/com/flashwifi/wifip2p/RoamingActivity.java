@@ -203,7 +203,7 @@ public class RoamingActivity extends AppCompatActivity {
 
         int minutes = Accountant.getInstance().getTotalDurance() / 60;
         int minutes_max = Accountant.getInstance().getBookedMinutes();
-        int bytes_max = Accountant.getInstance().getBookedBytes();
+        int bytes_max = Accountant.getInstance().getBookedMegabytes();
         int bytes_used = Accountant.getInstance().getTotalBytes();
         int iotas_transferred = Accountant.getInstance().getTotalIotaPrice();
         int iotas_max = Accountant.getInstance().getTotalIotaDeposit();

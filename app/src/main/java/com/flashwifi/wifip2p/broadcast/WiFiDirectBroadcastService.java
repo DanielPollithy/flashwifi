@@ -1113,7 +1113,8 @@ public class WiFiDirectBroadcastService extends Service {
                 }
                 
             }
-            if (fundErrorCount < maxFundErrors) {
+            // ToDo: remove this mock
+            if (fundErrorCount < maxFundErrors && false) {
                 Log.d(TAG, "fundChannel: channel funded");
                 sendUpdateRoamingBroadcastWithMessage("Channel funded");
                 roamingStates.add(RoamingState.CHANNEL_FUNDED);
