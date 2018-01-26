@@ -4,7 +4,7 @@
 
 **Name of Project**: Wifiota
 
-**Description of your project**: Buy and sell data from your android device with WiFi direct paired peers through a generated hotspot. Transactions occur via the iota tangle and flash channels.
+**Description of your project**: Buy and sell data from your android device with WiFi direct paired peers through a generated hotspot. Transactions occur via the IOTA tangle and Flash Channels.
 
 **Link to demo of project**: https://tobywoerthle.github.io/flashWiFiSite/
 
