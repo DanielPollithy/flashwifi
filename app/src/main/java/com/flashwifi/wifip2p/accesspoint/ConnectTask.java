@@ -60,7 +60,7 @@ public class ConnectTask extends AsyncTask<Object, Void, String> {
         
         boolean connected = false;
 
-        int max_tries = 10;
+        int max_tries = 100;
         
         while (!connected && max_tries > 0) {
             max_tries--;
@@ -97,7 +97,7 @@ public class ConnectTask extends AsyncTask<Object, Void, String> {
                                 }
                             }
                             try {
-                                Thread.sleep(100);
+                                Thread.sleep(500);
                             } catch (InterruptedException e) {
                                 e.printStackTrace();
                             }

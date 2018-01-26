@@ -81,25 +81,25 @@ public class AccessPointTask extends AsyncTask<Object, Void, String> {
                     }
                     else
                     {
-                        sendUpdateUIBroadcastWithMessage("AP FAILED");
+                        sendUpdateUIBroadcastWithMessage("AP CREATION FAILED");
                     }
                 }
                 catch (IllegalArgumentException e) {
                     e.printStackTrace();
-                    sendUpdateUIBroadcastWithMessage("AP FAILED");
+                    sendUpdateUIBroadcastWithMessage("AP CREATION FAILED");
                 }
                 catch (IllegalAccessException e) {
                     e.printStackTrace();
-                    sendUpdateUIBroadcastWithMessage("AP FAILED");
+                    sendUpdateUIBroadcastWithMessage("AP CREATION FAILED");
                 }
                 catch (InvocationTargetException e) {
                     e.printStackTrace();
-                    sendUpdateUIBroadcastWithMessage("AP FAILED");
+                    sendUpdateUIBroadcastWithMessage("AP CREATION FAILED");
                 }
             }
         }
         if (!methodFound){
-            sendUpdateUIBroadcastWithMessage("AP FAILED");
+            sendUpdateUIBroadcastWithMessage("AP CREATION FAILED");
             //statusView.setText("Your phone's API does not contain setWifiApEnabled method to configure an access point");
         }
 

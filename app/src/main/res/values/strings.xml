@@ -91,5 +91,6 @@
     <string name="slide_4_desc">The app creates a new seed for you which is something like a cryptographic password for your iota balance. You can deposit and withdraw to it. </string>
     <string name="slide_5_desc">The app will only store a version of the seed that is encrypted by a password. Please enter a password! </string>
     <string name="slide_6_desc">Have fun with Wifiota and please always remember that we are still working on this app.</string>
+    <string name="ready">Ready</string>
 
 </resources>

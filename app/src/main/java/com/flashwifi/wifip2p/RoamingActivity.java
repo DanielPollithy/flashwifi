@@ -34,9 +34,11 @@ import android.widget.Toast;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Set;
 
 import com.flashwifi.wifip2p.billing.Accountant;
 import com.flashwifi.wifip2p.broadcast.WiFiDirectBroadcastService;
+import com.flashwifi.wifip2p.broadcast.WiFiDirectBroadcastService.RoamingState;
 import com.flashwifi.wifip2p.datastore.PeerStore;
 import com.flashwifi.wifip2p.protocol.NegotiationFinalization;
 
@@ -45,26 +47,15 @@ import org.w3c.dom.Text;
 
 public class RoamingActivity extends AppCompatActivity {
     private static final String TAG = "RoamingActivity";
-    ArrayList<String> arrayList;
-    ArrayAdapter<String> listAdapter;
-    ListView listView;
 
     String name;
     String address;
-    String ssid;
-    String key;
 
-    WiFiDirectBroadcastService mService;
-    //AccessPointService apService;
+    WiFiDirectBroadcastService mService = null;
     boolean mBound = false;
-    InetAddress groupOwnerAddress;
 
     BroadcastReceiver updateUIReceiver;
-    private boolean hotspot_running = false;
 
-    private Button stopButton;
-    private boolean endRoamingFlag = false;
-    private boolean initiatedEnd;
 
     @Override
     protected void onStart() {
@@ -74,21 +65,73 @@ public class RoamingActivity extends AppCompatActivity {
         filter.addAction("com.flashwifi.wifip2p.update_ui");
         filter.addAction("com.flashwifi.wifip2p.update_roaming");
 
-        updateUIReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                updateUi(intent);
-            }
-        };
-        registerReceiver(updateUIReceiver, filter);
+        if (updateUIReceiver == null) {
+            updateUIReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    updateUi(intent);
+                }
+            };
+            registerReceiver(updateUIReceiver, filter);
+        }
 
         // Bind to LocalService
-        Intent intent = new Intent(this, WiFiDirectBroadcastService.class);
-        bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+        if (mService == null) {
+            Intent intent = new Intent(this, WiFiDirectBroadcastService.class);
+            bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+        }
+    }
 
-        // Bind to
-        //Intent intent2 = new Intent(this, AccessPointService.class);
-        //bindService(intent2, apConnection, Context.BIND_AUTO_CREATE);
+    private void restoreUIFromService() {
+        // ACCESS POINT
+        if (mService.getRoamingStates().contains(RoamingState.ACCESS_POINT)) {
+            CheckBox apConnected = (CheckBox)findViewById(R.id.accessPointActive);
+            apConnected.setChecked(true);
+        }
+        // FLASH CHANNEL
+        if (mService.getRoamingStates().contains(RoamingState.FLASH_CHANNEL)) {
+            CheckBox flashEstablished = (CheckBox)findViewById(R.id.flashEstablished);
+            flashEstablished.setChecked(true);
+        }
+        // CHANNEL FUNDED
+        if (mService.getRoamingStates().contains(RoamingState.CHANNEL_FUNDED)) {
+            CheckBox channelFunded = (CheckBox)findViewById(R.id.channelFunded);
+            channelFunded.setChecked(true);
+        }
+
+        // STOP BUTTON
+        Button stopButton = (Button) findViewById(R.id.stopRoamingButton);
+        ProgressBar stopProgressBar = (ProgressBar) findViewById(R.id.stopProgressBar);
+        if (!mService.getRoamingStates().contains(RoamingState.END_REQUESTED)) {
+            stopButton.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    endRoaming();
+                }
+            });
+        } else {
+            stopProgressBar.setVisibility(View.VISIBLE);
+        }
+
+        // EXIT STATE
+        TextView stopText = (TextView) findViewById(R.id.stopText);
+        if (mService.getRoamingStates().contains(RoamingState.EXIT)) {
+            stopProgressBar.setVisibility(View.GONE);
+            stopButton.setVisibility(View.GONE);
+            stopText.setVisibility(View.VISIBLE);
+        }
+
+        if (mService.isInRoleHotspot() && !mService.getRoamingStates().contains(RoamingState.CHANNEL_ATTACHED) && mService.getRoamingStates().contains(RoamingState.EXIT)) {
+            CardView cardView = (CardView) findViewById(R.id.card_view_tangle_attachment);
+            cardView.setVisibility(View.VISIBLE);
+        }
+
+        updateBillingCard();
+        updateNotification();
+
+    }
+
+    private void updateNotification() {
+        // ToDo: what shall happen?
     }
 
     private void updateUi(Intent intent) {
@@ -100,22 +143,23 @@ public class RoamingActivity extends AppCompatActivity {
                 CheckBox apConnected = (CheckBox)findViewById(R.id.accessPointActive);
                 CheckBox flashEstablished = (CheckBox)findViewById(R.id.flashEstablished);
                 CheckBox channelFunded = (CheckBox)findViewById(R.id.channelFunded);
+
                 if (message.equals("AP SUCCESS")) {
                     apConnected.setChecked(true);
-                    mService.resetBillingState();
-                    // when the AP is setup we can start the server
-                    startBillingProtocol(5000);
+                    //startBillingProtocol(1000);
                 } else if (message.equals("AP FAILED")) {
                     apConnected.setChecked(false);
-                    Toast.makeText(getApplicationContext(), "Could not create Access point", Toast.LENGTH_LONG).show();
+                    Toast.makeText(getApplicationContext(), "Connect to AP failed", Toast.LENGTH_LONG).show();
+                    exitRoaming();
+                } else if (message.equals("AP CREATION FAILED")) {
+                    apConnected.setChecked(false);
+                    Toast.makeText(getApplicationContext(), "Create AP failed", Toast.LENGTH_LONG).show();
                     exitRoaming();
                 } else if (message.equals("AP STOPPED")) {
                     apConnected.setChecked(false);
                 } else if (message.equals("Channel established")) {
                     flashEstablished.setChecked(true);
                 } else if (message.equals("Start Channel funding")) {
-                    // start the task
-                    mService.fundChannel(address);
                 } else if (message.equals("Channel funded")) {
                     channelFunded.setChecked(true);
                 } else if (message.equals("Billing")) {
@@ -132,7 +176,6 @@ public class RoamingActivity extends AppCompatActivity {
                     Toast.makeText(getApplicationContext(), "Can't connect", Toast.LENGTH_LONG).show();
                     exitRoaming();
                 }
-                // ToDo: add a critical error that uses exitRoaming()
             }
 
         }
@@ -157,16 +200,23 @@ public class RoamingActivity extends AppCompatActivity {
 
     @SuppressLint("DefaultLocale")
     private void updateBillingCard() {
-        CardView summaryView = (CardView) findViewById(R.id.card_view_overview);
-        if (summaryView.getVisibility() != View.VISIBLE) {
-            summaryView.setVisibility(View.VISIBLE);
-        }
+
         int minutes = Accountant.getInstance().getTotalDurance() / 60;
         int minutes_max = Accountant.getInstance().getBookedMinutes();
         int bytes_max = Accountant.getInstance().getBookedBytes();
         int bytes_used = Accountant.getInstance().getTotalBytes();
         int iotas_transferred = Accountant.getInstance().getTotalIotaPrice();
         int iotas_max = Accountant.getInstance().getTotalIotaDeposit();
+
+        // only show the card if one bill came
+        if (minutes == 0) {
+            return;
+        }
+
+        CardView summaryView = (CardView) findViewById(R.id.card_view_overview);
+        if (summaryView.getVisibility() != View.VISIBLE) {
+            summaryView.setVisibility(View.VISIBLE);
+        }
 
         TextView summaryMinutes = (TextView) findViewById(R.id.summaryMinutes);
         summaryMinutes.setText(String.format("%d/%d minutes active", minutes, minutes_max));
@@ -188,35 +238,20 @@ public class RoamingActivity extends AppCompatActivity {
         ProgressBar progressIota = (ProgressBar) findViewById(R.id.progressbarIota);
         progressIota.setProgress(iotas_transferred);
         progressIota.setMax(iotas_max);
-
-
-    }
-
-    private void startBillingProtocol(int milliseconds_sleep) {
-        // setup the flash channel etc...
-        try {
-            Log.d(TAG, "startBillingProtocol: wait for some milliseconds");
-            Thread.sleep(milliseconds_sleep);
-            Log.d(TAG, "startBillingProtocol: now let's go");
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        if (mService.isInRoleHotspot()) {
-            mService.startBillingServer(address);
-        } else {
-            mService.startBillingClient(address);
-        }
     }
 
     @Override
     protected void onStop() {
-       /* if (!endRoamingFlag) {
-            endRoaming();
-        }*/
         super.onStop();
-        unregisterReceiver(updateUIReceiver);
-        unbindService(mConnection);
-        mBound = false;
+        if (updateUIReceiver != null) {
+            unregisterReceiver(updateUIReceiver);
+            updateUIReceiver = null;
+        }
+        if (mService != null) {
+            unbindService(mConnection);
+            mService = null;
+            mBound = false;
+        }
     }
 
     @Override
@@ -224,53 +259,14 @@ public class RoamingActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_roaming);
 
-        Accountant.getInstance().reset();
-
         // Get the Intent that started this activity and extract the string
         Intent intent = getIntent();
         name = intent.getStringExtra("name");
         address = intent.getStringExtra("address");
-        NegotiationFinalization negFin = PeerStore.getInstance().getLatestFinalization(address);
-        ssid = negFin.getHotspotName();
-        key = negFin.getHotspotPassword();
-
-        initUI();
-
-    }
-
-    private void cancelNotification() {
-
+        Log.d(TAG, "onCreate: Roaming activity got peer address: " + address);
     }
 
 
-    private void initUI() {
-
-    }
-
-    /** Defines callbacks for service binding, passed to bindService() */
-    private ServiceConnection mConnection = new ServiceConnection() {
-
-        @Override
-        public void onServiceConnected(ComponentName className,
-                                       IBinder service) {
-            // We've bound to LocalService, cast the IBinder and get LocalService instance
-            WiFiDirectBroadcastService.LocalBinder binder = (WiFiDirectBroadcastService.LocalBinder) service;
-            mService = binder.getService();
-            mBound = true;
-            // start hotspot
-            if (mService.isInRoleHotspot()) {
-                mService.startAP(ssid, key);
-            } else {
-                mService.connect2AP(ssid, key);
-            }
-            initUIWithService();
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName arg0) {
-            mBound = false;
-        }
-    };
 
     private void initUIWithService() {
 
@@ -281,24 +277,18 @@ public class RoamingActivity extends AppCompatActivity {
             info_text.setText(R.string.roaming_title_client);
         }
 
-        stopButton = (Button) findViewById(R.id.stopRoamingButton);
-        stopButton.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                endRoaming();
-            }
-        });
+        restoreUIFromService();
 
-        updateBillingCard();
 
-        // ToDo: update notification
-        //showNotification();
     }
 
     private void endRoaming() {
-        if (!initiatedEnd) {
-            initiatedEnd = true;
-            Accountant.getInstance().setCloseAfterwards(true);
+        if (!mService.getRoamingStates().contains(RoamingState.END_REQUESTED)) {
+            mService.addRoamingState(RoamingState.END_REQUESTED);
+
             // the next bill will send the close request
+            Accountant.getInstance().setCloseAfterwards(true);
+
             // meanwhile show a loading icon
             ProgressBar stopProgressBar = (ProgressBar) findViewById(R.id.stopProgressBar);
             stopProgressBar.setVisibility(View.VISIBLE);
@@ -306,20 +296,6 @@ public class RoamingActivity extends AppCompatActivity {
     }
 
     private void exitRoaming() {
-        Accountant.getInstance().setCloseAfterwards(true);
-        endRoamingFlag = true;
-        cancelNotification();
-        if (mService.isInRoleHotspot()){
-            mService.stopAP();
-        } else {
-            mService.disconnectAP();
-        }
-        mService.setRoaming(false);
-        mService.resetBillingState();
-        mService.setInRoleConsumer(false);
-        mService.setInRoleHotspot(false);
-
-        PeerStore.getInstance().clear();
 
         // hide the spinner and the stop button
         ProgressBar stopProgressBar = (ProgressBar) findViewById(R.id.stopProgressBar);
@@ -333,8 +309,6 @@ public class RoamingActivity extends AppCompatActivity {
         stopRoamingBroadcast();
 
         Toast.makeText(getApplicationContext(), "Press BACK now", Toast.LENGTH_LONG).show();
-        initiatedEnd = false;
-        //finish();
     }
 
     @Override
@@ -343,9 +317,31 @@ public class RoamingActivity extends AppCompatActivity {
             if (mService.isRoaming()) {
                 Toast.makeText(getApplicationContext(), "stop roaming before leaving", Toast.LENGTH_LONG).show();
             } else {
+                mService.setRoaming(false);
+                mService.changeApplicationState(WiFiDirectBroadcastService.State.READY);
                 super.onBackPressed();
             }
         }
     }
+
+    /** Defines callbacks for service binding, passed to bindService() */
+    private ServiceConnection mConnection = new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName className,
+                                       IBinder service) {
+            // We've bound to LocalService, cast the IBinder and get LocalService instance
+            WiFiDirectBroadcastService.LocalBinder binder = (WiFiDirectBroadcastService.LocalBinder) service;
+            mService = binder.getService();
+            mBound = true;
+
+            initUIWithService();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName arg0) {
+            mBound = false;
+        }
+    };
 
 }

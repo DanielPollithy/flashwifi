@@ -34,10 +34,6 @@ import android.widget.Toast;
 import com.flashwifi.wifip2p.billing.Accountant;
 import com.flashwifi.wifip2p.broadcast.WiFiDirectBroadcastService;
 import com.flashwifi.wifip2p.iotaAPI.Requests.WalletBalanceChecker;
-import com.flashwifi.wifip2p.iotaFlashWrapper.Example;
-import com.flashwifi.wifip2p.iotaFlashWrapper.IotaFlashBridge;
-
-import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener
@@ -59,6 +55,8 @@ public class MainActivity extends AppCompatActivity
     boolean doubleBackToExitPressedOnce = false;
 
     BroadcastReceiver updateUIReceiver;
+    private boolean startHotspotFragmentAfterwards = false;
+    private boolean startSearchFragmentAfterwards = false;
 
     private void subscribeToBroadcasts() {
         IntentFilter filter = new IntentFilter();
@@ -75,9 +73,9 @@ public class MainActivity extends AppCompatActivity
                 } catch (Exception e) {
                 }
                 if (intent.getAction().equals("com.flashwifi.wifip2p.start_roaming")) {
-                    startRoamingView(intent.getStringExtra("peer_mac_address"),
+                    /*startRoamingView(intent.getStringExtra("peer_mac_address"),
                             intent.getStringExtra("ssid"),
-                            intent.getStringExtra("key"));
+                            intent.getStringExtra("key"));*/
                 } else if (intent.getAction().equals("com.flashwifi.wifip2p.stop_roaming")) {
                     Log.d(TAG, "onReceive: Reset billing state");
 
@@ -103,14 +101,22 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     protected void onPause() {
-        super.onPause();
-        //unbindWifiBroadcast();
+        unbindWifiBroadcast();
         unsubscribeFromBroadcast();
+        super.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        // ToDo: remove intent receivers of
+        super.onDestroy();
     }
 
     private void unbindWifiBroadcast() {
-        try {unregisterReceiver(updateUIReceiver);
+        try {
+            unregisterReceiver(updateUIReceiver);
             unbindService(mConnection);
+            mBound = false;
         }
         catch(IllegalArgumentException e) {
         }
@@ -129,8 +135,6 @@ public class MainActivity extends AppCompatActivity
         } catch (Exception e){
         }
     }
-
-
 
     private void initUi() {
         /*final Switch switch_ = (Switch) findViewById(R.id.wifiSwitch);
@@ -183,8 +187,6 @@ public class MainActivity extends AppCompatActivity
         }*/
 
         setBalanceHandler();
-        updateBalance();
-
         Accountant.getInstance().setSeed(seed);
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -202,6 +204,20 @@ public class MainActivity extends AppCompatActivity
 
         Intent intent2 = new Intent(this, WiFiDirectBroadcastService.class);
         bindService(intent2, mConnection, Context.BIND_AUTO_CREATE);
+
+        if (intent.getAction() != null) {
+            if (intent.getAction().equals(Constants.ACTION.HOTSPOT)) {
+                startHotspotFragmentAfterwards = true;
+            } else if (intent.getAction().equals(Constants.ACTION.SEARCH)) {
+                startSearchFragmentAfterwards = true;
+            } else {
+                Log.d(TAG, "onCreate: UNKWNOWN ACTION FOR MAIN");
+            }
+        } else {
+            // INITIAL CREATION OF ACTIVITY
+            updateBalance();
+            startStartFragment();
+        }
     }
 
     public WiFiDirectBroadcastService getmService() {
@@ -213,8 +229,11 @@ public class MainActivity extends AppCompatActivity
 
     private void beginForegroundService() {
         if (!isTheServiceRunning()) {
+            Log.d(TAG, "beginForegroundService: The foreground service was not running");
             Intent startIntent = new Intent(MainActivity.this, WiFiDirectBroadcastService.class);
             startIntent.setAction(Constants.ACTION.STARTFOREGROUND_ACTION);
+            startIntent.putExtra("seed", seed);
+            startIntent.putExtra("password", password);
             startService(startIntent);
         } else {
             Log.d(TAG, "beginForegroundService: Service is already running");
@@ -228,14 +247,20 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     protected void onStop() {
-        super.onStop();
+        unbindWifiBroadcast();
+        unsubscribeFromBroadcast();
 
-        try {unregisterReceiver(updateUIReceiver);
-            unbindService(mConnection);
-        }
-        catch(IllegalArgumentException e) {
-            System.out.println(e);
-        }
+        super.onStop();
+    }
+
+    public MenuItem getMenuItem(int i) {
+        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
+
+        Menu menu = navigationView.getMenu();
+        MenuItem item = menu.getItem(i);
+        item.setChecked(true);
+
+        return item;
     }
 
     @Override
@@ -268,9 +293,9 @@ public class MainActivity extends AppCompatActivity
 
         if (id == R.id.nav_search) {
             // Handle the camera action
-            startSearchFragment();
+            return startSearchFragment();
         } else if (id == R.id.nav_start) {
-            startHotspotFragment();
+            return startHotspotFragment();
 //        } else if (id == R.id.nav_itp) {
 //
         } else if (id == R.id.nav_fund) {
@@ -314,11 +339,23 @@ public class MainActivity extends AppCompatActivity
         balanceChecker.execute();
     }
 
-    public void startSearchFragment() {
+    public void startStartFragment() {
+        Fragment fragment = new StartFragment();
+
+        // Insert the fragment by replacing any existing fragment
+        FragmentManager fragmentManager = getFragmentManager();
+        fragmentManager.beginTransaction()
+                .replace(R.id.content_frame, fragment)
+                .commit();
+    }
+
+    public boolean startSearchFragment() {
         if (mBound && mService.isInRoleHotspot()) {
             Toast.makeText(this, "Can't start search because you are hotspot", Toast.LENGTH_SHORT).show();
+            return false;
         } else if (!settingsAreReady()) {
             Toast.makeText(this, "Navigate to settings and assign all variables", Toast.LENGTH_SHORT).show();
+            return false;
         } else {
             Fragment fragment = new SearchFragment();
 
@@ -327,6 +364,9 @@ public class MainActivity extends AppCompatActivity
             fragmentManager.beginTransaction()
                     .replace(R.id.content_frame, fragment)
                     .commit();
+            DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+            drawer.closeDrawer(GravityCompat.START);
+            return true;
         }
 
     }
@@ -346,19 +386,15 @@ public class MainActivity extends AppCompatActivity
                 }
             });
         }
-
-        Intent intent = new Intent(this, RoamingActivity.class);
-        intent.putExtra("address", macAddress);
-        intent.putExtra("key", key);
-        intent.putExtra("ssid", ssid);
-        startActivity(intent);
     }
 
-    public void startHotspotFragment() {
+    public boolean startHotspotFragment() {
         if (mBound && mService.isInRoleConsumer()) {
             Toast.makeText(this, "Can't start hotspot because you are searching", Toast.LENGTH_SHORT).show();
+            return false;
         } else if (!settingsAreReady()) {
             Toast.makeText(this, "Navigate to settings and assign all variables", Toast.LENGTH_SHORT).show();
+            return false;
         } else {
             Fragment fragment = new HotspotFragment();
             Bundle args = new Bundle();
@@ -368,6 +404,9 @@ public class MainActivity extends AppCompatActivity
             fragmentManager.beginTransaction()
                     .replace(R.id.content_frame, fragment)
                     .commit();
+            DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+            drawer.closeDrawer(GravityCompat.START);
+            return true;
         }
     }
 
@@ -379,6 +418,9 @@ public class MainActivity extends AppCompatActivity
         fragment.setArguments(bundle);
         fragment.setRetainInstance(true);
 
+        if (mBound) {
+            mService.changeApplicationState(WiFiDirectBroadcastService.State.FUND_WALLET);
+        }
         // Insert the fragment by replacing any existing fragment
         FragmentManager fragmentManager = getFragmentManager();
         fragmentManager.beginTransaction()
@@ -394,6 +436,10 @@ public class MainActivity extends AppCompatActivity
         fragment.setArguments(bundle);
         fragment.setRetainInstance(true);
 
+        if (mBound) {
+            mService.changeApplicationState(WiFiDirectBroadcastService.State.WITHDRAW_WALLET);
+        }
+
         // Insert the fragment by replacing any existing fragment
         FragmentManager fragmentManager = getFragmentManager();
         fragmentManager.beginTransaction()
@@ -408,6 +454,9 @@ public class MainActivity extends AppCompatActivity
         fragment.setArguments(bundle);
         fragment.setRetainInstance(true);
 
+        if (mBound) {
+            mService.changeApplicationState(WiFiDirectBroadcastService.State.SETTINGS);
+        }
         // Insert the fragment by replacing any existing fragment
         FragmentManager fragmentManager = getFragmentManager();
         fragmentManager.beginTransaction()
@@ -451,6 +500,13 @@ public class MainActivity extends AppCompatActivity
             mService = binder.getService();
             mBound = true;
             mService.enableService();
+            if (startHotspotFragmentAfterwards) {
+                startHotspotFragmentAfterwards = false;
+                startHotspotFragment();
+            } else if (startSearchFragmentAfterwards) {
+                startSearchFragmentAfterwards = false;
+                startSearchFragment();
+            }
         }
 
         @Override

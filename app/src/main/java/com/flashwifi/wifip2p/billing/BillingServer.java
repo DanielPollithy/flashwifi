@@ -106,10 +106,19 @@ public class BillingServer {
 
         Log.d(TAG, "start: Billing server has been started");
 
+        try {
+            Log.d(TAG, "startBillingProtocol: wait for some milliseconds");
+            Thread.sleep(5000);
+            Log.d(TAG, "startBillingProtocol: now let's go");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+
         int max_errors = 1;
         int errors = 0;
 
-        while (state != State.CLOSED) {
+        while (state != State.CLOSED && state != State.ERROR && errors < max_errors) {
             try {
                 // create server socket
                 serverSocket = new ServerSocket(PORT);

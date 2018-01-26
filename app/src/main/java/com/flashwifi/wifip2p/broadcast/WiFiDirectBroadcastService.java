@@ -1,6 +1,8 @@
 package com.flashwifi.wifip2p.broadcast;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Notification;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -12,6 +14,8 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.DhcpInfo;
 import android.net.NetworkInfo;
+import android.net.wifi.SupplicantState;
+import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.net.wifi.p2p.WifiP2pConfig;
@@ -26,14 +30,17 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.preference.PreferenceManager;
+import android.support.annotation.NonNull;
 import android.support.v4.app.NotificationCompat;
 import android.text.format.Formatter;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.flashwifi.wifip2p.AddressBalanceTransfer;
 import com.flashwifi.wifip2p.Constants;
 import com.flashwifi.wifip2p.MainActivity;
 import com.flashwifi.wifip2p.R;
+import com.flashwifi.wifip2p.RoamingActivity;
 import com.flashwifi.wifip2p.accesspoint.AccessPointTask;
 import com.flashwifi.wifip2p.accesspoint.ConnectTask;
 import com.flashwifi.wifip2p.accesspoint.StopAccessPointTask;
@@ -52,6 +59,8 @@ import com.flashwifi.wifip2p.protocol.NegotiationOfferAnswer;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.io.IOException;
+import java.lang.reflect.Array;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
 import java.net.Inet6Address;
@@ -60,7 +69,9 @@ import java.net.NetworkInterface;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import jota.IotaAPI;
 import jota.dto.response.GetBalancesResponse;
@@ -82,6 +93,7 @@ public class WiFiDirectBroadcastService extends Service {
     private boolean billingClientIsRunning = false;
 
     private boolean enabled = false;
+    private Set<RoamingState> roamingStates;
 
     // broadcast stuff
     WifiP2pManager mManager;
@@ -93,7 +105,7 @@ public class WiFiDirectBroadcastService extends Service {
     ArrayList<String> arrayList = new ArrayList<>();
     WifiP2pInfo p2p_info;
     NetworkInfo network_info;
-    WifiP2pGroup p2p_group;
+    WifiP2pGroup p2p_group = null;
     ArrayList<String> receivedMessages = new ArrayList<>();
 
     // async task store
@@ -107,61 +119,196 @@ public class WiFiDirectBroadcastService extends Service {
 
     // HOTSPOT
     // socket stuff
-    AccessPointTask apTask;
+    Thread apTask;
     boolean apRuns = false;
     ConnectTask connectTask;
     private boolean negotiatorRunning = false;
     private String ownMacAddressStore = null;
 
+    private State applicationState = State.READY;
+    private String password;
+    private String seed;
+    private boolean busy;
+
+    private BroadcastReceiver roamingUIReceiver;
+    private String peerMacAddress;
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent.getAction().equals(Constants.ACTION.STARTFOREGROUND_ACTION)) {
             Log.i(TAG, "Received Start Foreground Intent ");
-            Intent notificationIntent = new Intent(this, MainActivity.class);
-            notificationIntent.setAction(Constants.ACTION.MAIN_ACTION);
-            notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                    | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
-                    notificationIntent, 0);
-/*
-            Intent previousIntent = new Intent(this, WiFiDirectBroadcastService.class);
-            previousIntent.setAction(Constants.ACTION.PREV_ACTION);
-            PendingIntent ppreviousIntent = PendingIntent.getService(this, 0,
-                    previousIntent, 0);
+            password = intent.getStringExtra("password");
+            seed = intent.getStringExtra("seed");
 
-            Intent playIntent = new Intent(this, WiFiDirectBroadcastService.class);
-            playIntent.setAction(Constants.ACTION.PLAY_ACTION);
-            PendingIntent pplayIntent = PendingIntent.getService(this, 0,
-                    playIntent, 0);*/
-
-            Intent stopIntent = new Intent(this, WiFiDirectBroadcastService.class);
-            stopIntent.setAction(Constants.ACTION.STOPFOREGROUND_ACTION);
-            PendingIntent pstopIntent = PendingIntent.getService(this, 0,
-                    stopIntent, 0);
-
-            Bitmap icon = BitmapFactory.decodeResource(getResources(),
-                    R.drawable.icon_tethering_on);
-
-            Notification notification = new NotificationCompat.Builder(this)
-                    .setContentTitle(getString(R.string.app_name))
-                    .setTicker(getString(R.string.app_name))
-                    .setContentText(getString(R.string.notification_doing_nothing))
-                    .setSmallIcon(R.drawable.icon_tethering_on)
-                    .setLargeIcon(
-                            Bitmap.createScaledBitmap(icon, 128, 128, false))
-                    .setContentIntent(pendingIntent)
-                    .setOngoing(true)
-                    .addAction(R.drawable.icon_tethering_off, "Stop",
-                            pstopIntent).build();
             startForeground(Constants.NOTIFICATION_ID.FOREGROUND_SERVICE,
-                    notification);
+                    getMyActivityNotification(getString(R.string.ready)));
         } else if (intent.getAction().equals(
                 Constants.ACTION.STOPFOREGROUND_ACTION)) {
             Log.i(TAG, "Received Stop Foreground Intent");
             stopForeground(true);
             stopSelf();
+            stopAP();
+            try {
+                Thread.sleep(1000);
+            } catch (Exception e) {
+
+            }
+            System.exit(0);
         }
         return START_STICKY;
+    }
+
+    private Intent getNotificationIntent() {
+        Intent notificationIntent = null;
+        if  (applicationState == State.HOTSPOT)  {
+            notificationIntent = new Intent(this, MainActivity.class);
+            notificationIntent.setAction(Constants.ACTION.HOTSPOT);
+            notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        } else if (applicationState == State.SEARCH) {
+            notificationIntent = new Intent(this, MainActivity.class);
+            notificationIntent.setAction(Constants.ACTION.SEARCH);
+            notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        } else if (applicationState == State.P2P_CONNECTING) {
+            Log.d(TAG, "getMyActivityNotification: please wait ");
+            // ToDo: show progress bar
+        } else if (applicationState == State.ROAMING) {
+            notificationIntent = new Intent(this, RoamingActivity.class);
+            notificationIntent.setAction(Constants.ACTION.ROAMING);
+            notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        }
+        else {
+            notificationIntent = new Intent(this, MainActivity.class);
+            notificationIntent.setAction(Constants.ACTION.MAIN_ACTION);
+            notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        }
+        notificationIntent.putExtra("password", password);
+        notificationIntent.putExtra("seed", seed);
+        return notificationIntent;
+    }
+
+    public void listenToRoamingBroadcast() {
+        IntentFilter filter = new IntentFilter();
+        filter.addAction("com.flashwifi.wifip2p.update_ui");
+        filter.addAction("com.flashwifi.wifip2p.update_roaming");
+
+        if (roamingUIReceiver == null) {
+            roamingUIReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    if (intent.getAction() != null && intent.getAction().equals("com.flashwifi.wifip2p.update_roaming")) {
+                        String message = intent.getStringExtra("message");
+                        if (message != null) {
+                            Log.d(TAG, "updateUi: message=" + message);
+                            if (message.equals("AP SUCCESS")) {
+                                startBillingProtocol();
+                                roamingStates.add(RoamingState.ACCESS_POINT);
+                            } else if (message.equals("AP FAILED")) {
+                                roamingStates.add(RoamingState.ACCESS_POINT_ERROR);
+                                exitRoaming();
+                            } else if (message.equals("AP CREATION FAILED")) {
+                                roamingStates.add(RoamingState.ACCESS_POINT_ERROR);
+                                exitRoaming();
+                            } else if (message.equals("AP STOPPED")) {
+                                roamingStates.add(RoamingState.ACCESS_POINT_STOPPED);
+                            } else if (message.equals("Channel established")) {
+                                roamingStates.add(RoamingState.FLASH_CHANNEL);
+                            } else if (message.equals("Start Channel funding")) {
+                                fundChannel();
+                            } else if (message.equals("Channel funded")) {
+                                roamingStates.add(RoamingState.CHANNEL_FUNDED);
+                            } else if (message.equals("Billing")) {
+                            } else if (message.equals("Channel closed")) {
+                                exitRoaming();
+                                if (isInRoleHotspot()) {
+                                    // ToDo: retransfer stuff
+                                }
+                            } else if (message.equals("Socket exception")) {
+                            } else if (message.equals("Exit")) {
+                                exitRoaming();
+                            }
+                        }
+
+                    }
+                }
+            };
+            registerReceiver(roamingUIReceiver, filter);
+        }
+    }
+
+    private void exitRoaming() {
+        roamingStates.add(RoamingState.EXIT);
+        Accountant.getInstance().setCloseAfterwards(true);
+        stopRoaming();
+    }
+
+    public void stopListenToRoamingBroadcast() {
+        if (roamingUIReceiver != null) {
+            unregisterReceiver(roamingUIReceiver);
+            roamingUIReceiver = null;
+        }
+    }
+
+    private void startBillingProtocol() {
+        resetBillingState();
+
+        Log.d(TAG, "startBillingProtocol: with MAC <<<<<<<<<< " + peerMacAddress);
+
+        if (isInRoleHotspot()) {
+            startBillingServer(peerMacAddress);
+        } else {
+            startBillingClient(peerMacAddress);
+        }
+    }
+
+    public Set<RoamingState> getRoamingStates() {
+        return roamingStates;
+    }
+
+    public void addRoamingState(RoamingState roamingState) {
+        this.roamingStates.add(roamingState);
+    }
+
+    private Notification getMyActivityNotification(String text){
+        CharSequence title = getText(R.string.app_name);
+
+        // what to do on click?
+        Intent notificationIntent = getNotificationIntent();
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
+
+        Intent stopIntent = new Intent(this, WiFiDirectBroadcastService.class);
+        stopIntent.setAction(Constants.ACTION.STOPFOREGROUND_ACTION);
+        PendingIntent pstopIntent = PendingIntent.getService(this, 0,
+                stopIntent, 0);
+
+
+        return new NotificationCompat.Builder(this)
+                .setContentTitle(title)
+                .setTicker(getString(R.string.app_name))
+                .setContentText(text)
+                .setSmallIcon(R.drawable.ic_stat_name)
+                .setContentIntent(pendingIntent)
+                .setOngoing(true)
+                .addAction(R.drawable.icon_tethering_off, "Force Quit",
+                        pstopIntent).build();
+    }
+
+    /**
+     * This is the method that can be called to update the Notification
+     */
+    private void updateNotification(String text) {
+        Notification notification = getMyActivityNotification(text);
+
+        NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        mNotificationManager.notify(Constants.NOTIFICATION_ID.FOREGROUND_SERVICE, notification);
+    }
+
+    public void changeApplicationState(State state) {
+        this.applicationState = state;
+        updateNotification(state.toString());
     }
 
     public boolean isSetup() {
@@ -177,6 +324,30 @@ public class WiFiDirectBroadcastService extends Service {
         }
     }
 
+    public void startRoaming(String macAddress, String key, String ssid, String seed, String password) {
+        listenToRoamingBroadcast();
+        changeApplicationState(State.ROAMING);
+        roamingStates = new HashSet<RoamingState>();
+
+        Intent intent = new Intent(this, RoamingActivity.class);
+        intent.putExtra("address", macAddress);
+        intent.putExtra("key", key);
+        intent.putExtra("ssid", ssid);
+        intent.putExtra("seed", seed);
+        intent.putExtra("password", password);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+
+
+        if (isInRoleHotspot()) {
+            startAP(ssid, key);
+        } else {
+            connect2AP(ssid, key);
+        }
+
+        Accountant.getInstance().reset();
+    }
+
     public void disableWiFi() {
         WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
 
@@ -186,12 +357,14 @@ public class WiFiDirectBroadcastService extends Service {
         }
     }
 
+
+
     public void resetBillingState() {
         billingClientIsRunning = false;
         billingServerIsRunning = false;
     }
 
-    public void startBillingServer(String mac){
+    public void startBillingServer(@NonNull String mac){
         if (!billingServerIsRunning) {
             billingServerIsRunning = true;
 
@@ -199,7 +372,6 @@ public class WiFiDirectBroadcastService extends Service {
                 @Override
                 public void run() {
                     Log.d(TAG, "run: instantiate billing server");
-                    // ToDo: remove magic numbers
                     BillingServer billingServer = new BillingServer(mac, getApplicationContext());
 
                     try {
@@ -207,7 +379,6 @@ public class WiFiDirectBroadcastService extends Service {
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
-                    // ToDo: handle billingServer EXIT CODES
                     // -> close the roaming etc.
                 }
             };
@@ -265,9 +436,103 @@ public class WiFiDirectBroadcastService extends Service {
     }
 
     public void connect2AP(String ssid, String key) {
-        connectTask = new ConnectTask();
         Log.d(TAG, "connect2AP: CONNECT TO THE HOTSPOT");
-        connectTask.execute(getApplicationContext(), ssid, key);
+
+        Runnable task = new Runnable() {
+            @Override
+            public void run() {
+
+                WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+
+                WifiInfo info = wifiManager.getConnectionInfo(); //get WifiInfo
+                int old_network_id = info.getNetworkId(); //get id of currently connected network
+
+                WifiConfiguration wifiConfig = new WifiConfiguration();
+                wifiConfig.status = WifiConfiguration.Status.ENABLED;
+                wifiConfig.SSID = String.format("\"%s\"", ssid);
+                wifiConfig.preSharedKey = String.format("\"%s\"", key);
+
+                Log.d(TAG, "doInBackground: GO to sleep");
+                try {
+                    Thread.sleep(15 * 1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                Log.d(TAG, "doInBackground: disconnect");
+                int netId = wifiManager.addNetwork(wifiConfig);
+
+                boolean connected = false;
+
+                int max_tries = 100;
+
+                while (!connected && max_tries > 0) {
+                    max_tries--;
+                    Log.d(TAG, "doInBackground: try to find the network");
+                    List<WifiConfiguration> list = wifiManager.getConfiguredNetworks();
+                    WifiInfo wifiInfo;
+                    for( WifiConfiguration i : list ) {
+                        if(i.SSID != null && i.SSID.equals("\"" + ssid + "\"")) {
+                            Log.d(TAG, "doInBackground: found it!!!");
+                            wifiManager.disconnect();
+                            wifiManager.disableNetwork(old_network_id);
+                            wifiManager.reconnect();
+                            boolean worked = wifiManager.enableNetwork(i.networkId, true);
+                            if (worked) {
+                                connected = true;
+                                boolean connected_to_it = false;
+                                String new_ssid;
+                                Log.d(TAG, "New network added!");
+                                int max_seconds = 10;
+                                boolean wrong_network = false;
+                                while (!connected_to_it && max_seconds > 0 && !wrong_network) {
+                                    Log.d(TAG, "try to connect to hotspot");
+                                    wifiInfo = wifiManager.getConnectionInfo();
+                                    if (wifiInfo.getSupplicantState() == SupplicantState.COMPLETED) {
+                                        new_ssid = wifiInfo.getSSID();
+                                        if (new_ssid.contains(ssid)) {
+                                            connected_to_it = true;
+                                            Log.d(TAG, "doInBackground: WORKED enableNetwork");
+                                            sendUpdateRoamingBroadcastWithMessage("AP SUCCESS");
+                                            roamingStates.add(RoamingState.ACCESS_POINT);
+
+                                        } else {
+                                            Log.d(TAG, "WRONG NETWORK");
+                                            wrong_network = true;
+                                        }
+                                    }
+                                    try {
+                                        Thread.sleep(500);
+                                    } catch (InterruptedException e) {
+                                        e.printStackTrace();
+                                    }
+                                    max_seconds--;
+                                    if (max_seconds == 0) {
+                                        Log.d(TAG, "TRIED TOO LONG TO CONNECT TO HOTSPOT -> stop");
+                                        connected = false;
+                                    }
+                                }
+
+                            } else {
+                                Log.d(TAG, "doInBackground: Error connecting to the network");
+                                Log.d(TAG, "doInBackground: Let's try it again");
+                            }
+                        }
+                    }
+                    if (max_tries == 0) {
+                        Log.d(TAG, "doInBackground: Error connecting to the network");
+                        Log.d(TAG, "doInBackground: THIS WAS THE LAST TRY");
+                        sendUpdateRoamingBroadcastWithMessage("AP FAILED");
+                        roamingStates.add(RoamingState.ACCESS_POINT);
+                    }
+
+                }
+
+            }
+        };
+
+        Thread thread = new Thread(task);
+        //threads.add(thread);
+        thread.start();
     }
 
 
@@ -279,8 +544,120 @@ public class WiFiDirectBroadcastService extends Service {
         if (!apRuns) {
             Log.d(TAG, "start Access point");
             apRuns = true;
-            apTask = new AccessPointTask();
-            apTask.execute(getApplicationContext(), ssid, key);
+
+            Runnable task = new Runnable() {
+                @Override
+                public void run() {
+                    WifiManager wifi = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+                    WifiInfo w = wifi.getConnectionInfo();
+                    Log.d("dsd", w.toString());
+
+                    if (wifi.isWifiEnabled())
+                    {
+                        wifi.setWifiEnabled(false);
+                    }
+                    Method[] wmMethods = wifi.getClass().getDeclaredMethods(); //Get all declared methods in WifiManager class
+                    boolean methodFound = false;
+
+                    for (Method method: wmMethods){
+                        if (method.getName().equals("setWifiApEnabled")){
+                            methodFound = true;
+                            WifiConfiguration netConfig = new WifiConfiguration();
+                            netConfig.SSID = String.format("%s", ssid);
+                            netConfig.preSharedKey = String.format("%s", key);
+                            netConfig.allowedAuthAlgorithms.set(WifiConfiguration.AuthAlgorithm.SHARED);
+                            netConfig.allowedProtocols.set(WifiConfiguration.Protocol.RSN);
+                            netConfig.allowedProtocols.set(WifiConfiguration.Protocol.WPA);
+                            netConfig.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.WPA_PSK);
+
+                            try {
+                                boolean apstatus = (Boolean) method.invoke(wifi, netConfig,true);
+                                //statusView.setText("Creating a Wi-Fi Network \""+netConfig.SSID+"\"");
+                                for (Method isWifiApEnabledmethod: wmMethods)
+                                {
+                                    if (isWifiApEnabledmethod.getName().equals("isWifiApEnabled")){
+                                        while (!(Boolean)isWifiApEnabledmethod.invoke(wifi)){
+                                        };
+                                        for (Method method1: wmMethods){
+                                            if(method1.getName().equals("getWifiApState")){
+                                                int apstate;
+                                                apstate = (Integer)method1.invoke(wifi);
+                                                //                      netConfig = (WifiConfiguration)method1.invoke(wifi);
+                                                //statusView.append("\nSSID:"+netConfig.SSID+"\nPassword:"+netConfig.preSharedKey+"\n");
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if(apstatus)
+                                {
+                                    sendUpdateRoamingBroadcastWithMessage("AP SUCCESS");
+                                    roamingStates.add(RoamingState.ACCESS_POINT);
+                                }
+                                else
+                                {
+                                    sendUpdateRoamingBroadcastWithMessage("AP CREATION FAILED");
+                                    roamingStates.add(RoamingState.ACCESS_POINT_ERROR);
+                                }
+                            }
+                            catch (IllegalArgumentException e) {
+                                e.printStackTrace();
+                                sendUpdateRoamingBroadcastWithMessage("AP CREATION FAILED");
+                                roamingStates.add(RoamingState.ACCESS_POINT_ERROR);
+                            }
+                            catch (IllegalAccessException e) {
+                                e.printStackTrace();
+                                sendUpdateRoamingBroadcastWithMessage("AP CREATION FAILED");
+                                roamingStates.add(RoamingState.ACCESS_POINT_ERROR);
+                            }
+                            catch (InvocationTargetException e) {
+                                e.printStackTrace();
+                                sendUpdateRoamingBroadcastWithMessage("AP CREATION FAILED");
+                                roamingStates.add(RoamingState.ACCESS_POINT_ERROR);
+                            }
+                        }
+                    }
+                    if (!methodFound){
+                        sendUpdateRoamingBroadcastWithMessage("AP CREATION FAILED");
+                        roamingStates.add(RoamingState.ACCESS_POINT_ERROR);
+                        //statusView.setText("Your phone's API does not contain setWifiApEnabled method to configure an access point");
+                    }
+
+                    int number_minutes = 60*24;
+                    for (int i=0; i<number_minutes; i++) {
+                        try {
+                            Thread.sleep(1000*60);
+                        } catch (InterruptedException e) {
+                            Log.d(TAG, "stopAP: THIS IS STOPPING THE AP");
+                            WifiManager wifiManager = (WifiManager) getApplicationContext().getApplicationContext().getSystemService(WIFI_SERVICE);
+
+                            Method[] methods = wifiManager.getClass().getDeclaredMethods();
+                            for (Method method : methods) {
+                                if (method.getName().equals("setWifiApEnabled")) {
+                                    try {
+                                        method.invoke(wifiManager, null, false);
+                                    } catch (Exception ex) {
+                                        ex.printStackTrace();
+                                    }
+                                    break;
+                                }
+                            }
+
+                            if (!wifi.isWifiEnabled())
+                            {
+                                wifi.setWifiEnabled(true);
+                            }
+                            roamingStates.add(RoamingState.ACCESS_POINT_STOPPED);
+                            break;
+                        }
+                    }
+                }
+            };
+
+            Thread thread = new Thread(task);
+            apTask = thread;
+            thread.start();
+
         } else {
             Log.d(TAG, "Access point ALREADY RUNNING");
         }
@@ -290,46 +667,10 @@ public class WiFiDirectBroadcastService extends Service {
         Log.d(TAG, "stop AP");
         if (apRuns) {
             apRuns = false;
-            //new StopAccessPointTask().execute(getApplicationContext());
-            apTask.cancel(true);
+            apTask.interrupt();
         } else {
-            Log.d("", "startSocketServer: ALREADY RUNNING");
+            Log.d("", "AP was not running");
         }
-    }
-
-    public String getWFDMacAddress(){
-        Log.d(TAG, "getWFDMacAddress: GET MAC ADRESS =========================");
-        if (ownMacAddressStore != null) {
-            return ownMacAddressStore;
-        }
-        try {
-            List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
-            for (NetworkInterface ntwInterface : interfaces) {
-
-                byte[] byteMac = ntwInterface.getHardwareAddress();
-                if (byteMac==null){
-                    return null;
-                }
-                StringBuilder strBuilder = new StringBuilder();
-                for (int i=0; i<byteMac.length; i++) {
-                    strBuilder.append(String.format("%02X:", byteMac[i]));
-                }
-
-                if (strBuilder.length()>0){
-                    strBuilder.deleteCharAt(strBuilder.length()-1);
-                }
-
-                Log.d(TAG, "getWFDMacAddress: " + strBuilder.toString());
-
-                if (ntwInterface.getName().equalsIgnoreCase("p2p0")) {
-                    this.ownMacAddressStore = strBuilder.toString();
-                }
-
-            }
-        } catch (Exception e) {
-            Log.d(TAG, e.getMessage());
-        }
-        return this.ownMacAddressStore;
     }
 
     private void stopAllTasks() {
@@ -340,14 +681,16 @@ public class WiFiDirectBroadcastService extends Service {
     }
 
 
-    public void startNegotiationServer(final boolean isClient, String macAddress) {
+    public void startNegotiationServer(final boolean isClient, String macAddress, String peerMac) {
         Runnable task = new Runnable() {
             @Override
             public void run() {
-                Negotiator negotiator = new Negotiator(isClient,
-                        getWFDMacAddress(),
+                Negotiator negotiator = new Negotiator(
+                        isClient,
+                        macAddress,
                         PreferenceManager.getDefaultSharedPreferences(getApplicationContext()),
-                        getBaseContext()
+                        getBaseContext(),
+                        peerMac
                         );
 
                 String peer_mac_address = null;
@@ -408,6 +751,9 @@ public class WiFiDirectBroadcastService extends Service {
     }
 
     private void sendStartRoamingBroadcast(String peer_mac_address, String ssid, String key) {
+        startRoaming(peer_mac_address, key, ssid, seed, password);
+        this.peerMacAddress = peer_mac_address;
+
         Intent local = new Intent();
         local.setAction("com.flashwifi.wifip2p.start_roaming");
         local.putExtra("peer_mac_address", peer_mac_address);
@@ -416,15 +762,16 @@ public class WiFiDirectBroadcastService extends Service {
         this.sendBroadcast(local);
     }
 
-    public void startNegotiationClient(final InetAddress address, final boolean isClient, String macAddress) {
+    public void startNegotiationClient(final InetAddress address, final boolean isClient, String macAddress, String peerMacAddress) {
         Runnable task = new Runnable() {
             @Override
             public void run() {
                 Negotiator negotiator = new Negotiator(
                         isClient,
-                        getWFDMacAddress(),
+                        macAddress,
                         PreferenceManager.getDefaultSharedPreferences(getApplicationContext()),
-                        getBaseContext()
+                        getBaseContext(),
+                        peerMacAddress
                 );
                 String peer_mac_address = null;
                 boolean restartAfterwards = true;
@@ -566,6 +913,9 @@ public class WiFiDirectBroadcastService extends Service {
     }
 
     public void setInRoleHotspot(boolean inRoleHotspot) {
+        if (inRoleHotspot) {
+            changeApplicationState(State.HOTSPOT);
+        }
         this.inRoleHotspot = inRoleHotspot;
     }
 
@@ -574,6 +924,9 @@ public class WiFiDirectBroadcastService extends Service {
     }
 
     public void setInRoleConsumer(boolean inRoleConsumer) {
+        if (inRoleConsumer) {
+            changeApplicationState(State.SEARCH);
+        }
         this.inRoleConsumer = inRoleConsumer;
     }
 
@@ -582,7 +935,9 @@ public class WiFiDirectBroadcastService extends Service {
     }
 
     public void setRoaming(boolean roaming) {
-        if (!roaming) {
+        if (roaming) {
+            changeApplicationState(State.ROAMING);
+        } else {
             stopAllTasks();
         }
         isRoaming = roaming;
@@ -592,7 +947,8 @@ public class WiFiDirectBroadcastService extends Service {
 
     }
 
-    public void fundChannel(String address) {
+    public void fundChannel() {
+        String address = this.peerMacAddress;
         // get the necessary data
         NegotiationOffer offer = PeerStore.getInstance().getLatestNegotiationOffer(address);
         NegotiationOfferAnswer offerAnser = PeerStore.getInstance().getLatestNegotiationOfferAnswer(address);
@@ -751,8 +1107,10 @@ public class WiFiDirectBroadcastService extends Service {
             if (fundErrorCount < maxFundErrors) {
                 Log.d(TAG, "fundChannel: channel funded");
                 sendUpdateRoamingBroadcastWithMessage("Channel funded");
+                roamingStates.add(RoamingState.CHANNEL_FUNDED);
             } else {
                 Log.d(TAG, "fundChannel: too many fund errors");
+                roamingStates.add(RoamingState.FUNDING_ERROR);
             }
 
 
@@ -763,6 +1121,32 @@ public class WiFiDirectBroadcastService extends Service {
         threads.add(thread);
         thread.start();
 
+    }
+
+    public void setP2PGroup(WifiP2pGroup p2PGroup) {
+        this.p2p_group = p2PGroup;
+    }
+
+    public void setBusy(boolean busy) {
+        this.busy = busy;
+    }
+
+    public void stopRoaming() {
+        if (isInRoleHotspot()){
+            stopAP();
+        } else {
+            disconnectAP();
+        }
+
+        setRoaming(false);
+        resetBillingState();
+        setInRoleConsumer(false);
+        setInRoleHotspot(false);
+        setBusy(false);
+
+
+        PeerStore.getInstance().clear();
+        stopListenToRoamingBroadcast();
     }
 
 
@@ -819,9 +1203,17 @@ public class WiFiDirectBroadcastService extends Service {
     public void setArrayList(ArrayList<String> arrayList) {
         this.arrayList = arrayList;
         sendUpdateUIBroadcast();
+        updateNotificationNumberPeers(arrayList.size());
     }
 
-    public void setNewIncomingConnection(WifiP2pInfo wifiP2pInfo){
+    @SuppressLint("DefaultLocale")
+    private void updateNotificationNumberPeers(int size) {
+        if (applicationState == State.SEARCH || applicationState == State.HOTSPOT) {
+            updateNotification(applicationState + ": " + String.format("%d peers", size));
+        }
+    }
+
+    public void setNewIncomingConnection(WifiP2pInfo wifiP2pInfo, String ownerMac, String clientMac){
         // This method is called when a new device connected to this one
         this.p2p_info = wifiP2pInfo;
         if (p2p_info.groupFormed) {
@@ -829,17 +1221,14 @@ public class WiFiDirectBroadcastService extends Service {
             sendUpdateUIBroadcastNewConnection();
             NetworkInfo network_info = getNetwork_info();
             WifiP2pInfo p2p_info = getP2p_info();
-            WifiP2pGroup wifiP2pGroup = getP2p_group();
 
             if (network_info.getState() == NetworkInfo.State.CONNECTED) {
                 // ToDo: look for the other device and make sure we are only two
                 if (p2p_info.isGroupOwner) {
-                    //Snackbar.make(activity_view, "You are the group owner", Snackbar.LENGTH_LONG).setAction("Action", null).show();
-                    startNegotiationServer(false, wifiP2pGroup.getOwner().deviceAddress);
+                    startNegotiationServer(isInRoleConsumer(), ownerMac, clientMac);
                 } else {
                     InetAddress groupOwnerAddress = p2p_info.groupOwnerAddress;
-                    //Snackbar.make(activity_view, "You are only a member of the group", Snackbar.LENGTH_LONG).setAction("Action", null).show();
-                    startNegotiationClient(groupOwnerAddress, false, null);
+                    startNegotiationClient(groupOwnerAddress, isInRoleConsumer(), clientMac, ownerMac);
                 }
 
             }
@@ -881,14 +1270,69 @@ public class WiFiDirectBroadcastService extends Service {
         this.sendBroadcast(local);
     }
 
+    // groupOwnerIntent determines how much you want to become the group onwer
+    // 0 means little and 15 means a lot
+    // https://stackoverflow.com/questions/18703881/how-to-make-a-specific-group-owner-in-wifi-direct-android
     public void connect(String address, WifiP2pManager.ActionListener actionListener) {
-        WifiP2pDevice device;
-        WifiP2pConfig config = new WifiP2pConfig();
-        config.deviceAddress = address;
-        // groupOwnerIntent determines how much you want to become the group onwer
-        // 0 means little and 15 means a lot
-        // https://stackoverflow.com/questions/18703881/how-to-make-a-specific-group-owner-in-wifi-direct-android
-        config.groupOwnerIntent = 0;
-        mManager.connect(mChannel, config, actionListener);
+        if (!busy) {
+            busy = true;
+
+            Runnable task = new Runnable() {
+                @Override
+                public void run() {
+                    Log.d(TAG, "run: connect");
+                    WifiP2pConfig config = new WifiP2pConfig();
+                    config.deviceAddress = address;
+                    config.groupOwnerIntent = 0;
+                    mManager.connect(mChannel, config, new WifiP2pManager.ActionListener() {
+                        @Override
+                        public void onSuccess() {
+                            Toast.makeText(getApplicationContext(), "Connected to peer", Toast.LENGTH_SHORT).show();
+                        }
+                        @Override
+                        public void onFailure(int reason) {
+                            Toast.makeText(getApplicationContext(), "Error connecting to peer", Toast.LENGTH_SHORT).show();
+                            busy = false;
+                        }
+                    });
+                }
+            };
+            Log.d(TAG, "start connect thread");
+            Thread thread = new Thread(task);
+            threads.add(thread);
+            thread.start();
+        } else {
+            Log.d(TAG, "connecting blocked due to business");
+        }
+    }
+
+    public enum State {
+        READY,
+        SEARCH,
+        HOTSPOT,
+        P2P_CONNECTING,
+        NEGOTIATING,
+        ROAMING,
+
+
+        FUND_WALLET,
+        WITHDRAW_WALLET,
+        SETTINGS
+    }
+
+    public enum RoamingState {
+        ACCESS_POINT,
+        FLASH_CHANNEL,
+        CHANNEL_FUNDED,
+        END_REQUESTED,
+        EXIT,
+        CHANNEL_ATTACHED,
+        ACCESS_POINT_STOPPED,
+
+
+        FUNDING_ERROR,
+        ACCESS_POINT_ERROR,
+        ERROR
+
     }
 }
