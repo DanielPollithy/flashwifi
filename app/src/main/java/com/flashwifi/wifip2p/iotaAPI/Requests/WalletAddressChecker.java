@@ -21,8 +21,11 @@ public class WalletAddressChecker {
     private Context context;
     private String prefFile;
 
-    boolean containsPendingTransaction = false;
-    boolean keyIndexChanged = false;
+    private boolean containsPendingTransaction = false;
+    private boolean keyIndexChanged = false;
+    private int keyIndex;
+    private String nextAddress;
+
 
     public WalletAddressChecker(Context inContext, String inPrefFile){
 
@@ -62,11 +65,13 @@ public class WalletAddressChecker {
         }
     }
 
+
+
     public List<String> getAddress(String seed) {
 
         Boolean foundAddress = false;
         List<String> addressList = new ArrayList<>();
-        int keyIndex = getKeyIndex();
+        keyIndex = getKeyIndex();
         ArrayList<String> hashStringList = new ArrayList<>();
 
         while(foundAddress == false){
@@ -102,6 +107,7 @@ public class WalletAddressChecker {
 
                 if(transactionsForAddress == null || transactionsForAddress.isEmpty() || (transactionsForAddress.size() == 0)){
                     //Transactions not found, use this address
+                    nextAddress = addressResponse.getAddresses().get(0);
                     foundAddress = true;
                 }
                 else{
@@ -149,6 +155,14 @@ public class WalletAddressChecker {
         }
 
         return addressList;
+    }
+
+    public int getNextKeyIndex(){
+        return keyIndex;
+    }
+
+    public String getNextAddress(){
+        return nextAddress;
     }
 
     private int getKeyIndex() {
