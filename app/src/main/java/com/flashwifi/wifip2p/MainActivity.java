@@ -34,6 +34,10 @@ import android.widget.Toast;
 import com.flashwifi.wifip2p.billing.Accountant;
 import com.flashwifi.wifip2p.broadcast.WiFiDirectBroadcastService;
 import com.flashwifi.wifip2p.iotaAPI.Requests.WalletBalanceChecker;
+import com.flashwifi.wifip2p.iotaFlashWrapper.Helpers;
+
+import java.io.IOException;
+import java.io.InputStream;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener
@@ -152,6 +156,18 @@ public class MainActivity extends AppCompatActivity
                 }
             }
         });*/
+    }
+
+    private String readFile(String name) {
+        InputStream ins = getResources().openRawResource(
+                getResources().getIdentifier(name,
+                        "raw", getPackageName()));
+        try {
+            return Helpers.convertStreamToString(ins);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     @Override

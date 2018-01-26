@@ -8,6 +8,8 @@ import jota.model.Transaction;
 
 
 import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.ArrayList;
@@ -463,5 +465,30 @@ public class Helpers {
                 transaction.getAttachmentTimestampLowerBound(),
                 transaction.getAttachmentTimestampUpperBound()
         );
+    }
+
+    public static String convertStreamToString(InputStream p_is) throws IOException {
+    /*
+     * To convert the InputStream to String we use the
+     * BufferedReader.readLine() method. We iterate until the BufferedReader
+     * return null which means there's no more data to read. Each line will
+     * appended to a StringBuilder and returned as String.
+     */
+        if (p_is != null) {
+            StringBuilder m_sb = new StringBuilder();
+            String m_line;
+            try {
+                BufferedReader m_reader = new BufferedReader(
+                        new InputStreamReader(p_is));
+                while ((m_line = m_reader.readLine()) != null) {
+                    m_sb.append(m_line).append("\n");
+                }
+            } finally {
+                p_is.close();
+            }
+            return m_sb.toString();
+        } else {
+            return "";
+        }
     }
 }
