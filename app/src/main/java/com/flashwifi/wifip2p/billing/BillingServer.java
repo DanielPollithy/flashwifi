@@ -5,6 +5,7 @@ import android.app.usage.NetworkStatsManager;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
+import android.net.TrafficStats;
 import android.net.wifi.WifiManager;
 import android.os.RemoteException;
 import android.text.format.Formatter;
@@ -114,6 +115,9 @@ public class BillingServer {
             e.printStackTrace();
         }
 
+        long start_bytes_received = TrafficStats.getTotalRxBytes();
+        long start_bytes_transmitted = TrafficStats.getTotalTxBytes();
+
 
         int max_errors = 1;
         int errors = 0;
@@ -180,31 +184,43 @@ public class BillingServer {
 
                     // loop until roaming ends
                     int count = 0;
+                    int billing_interval_seconds = 60;
 
                     while (state == State.ROAMING) {
                         // sleep 1 minute
                         Log.d(TAG, "start: I go to sleep for 1 minute!");
-                        Thread.sleep(60 * 1000);
+                        Thread.sleep(billing_interval_seconds * 1000);
                         Log.d(TAG, "start: Good morning!");
                         // create new bill
-                        // ToDo: integrate real network data
-                        NetworkStats.Bucket bucket;
                         long total_bytes;
-                        try {
-                            bucket = networkStatsManager.querySummaryForDevice(ConnectivityManager.TYPE_WIFI,
-                                    "",
-                                    Accountant.getInstance().getLastTime() * 1000,
-                                    System.currentTimeMillis());
-                            long bytes_received = bucket.getRxBytes();
-                            long bytes_transmitted = bucket.getTxBytes();
-                            total_bytes = bytes_received + bytes_transmitted;
-                        } catch (RemoteException e) {
-                            Log.d(TAG, "start: Can't get the network traffic.");
-                            total_bytes = 0;
-                        }
+                        NetworkStats  networkStats;
+
+                        long new_bytes_received = TrafficStats.getTotalRxBytes();
+                        long new_bytes_transmitted = TrafficStats.getTotalTxBytes();
+
+                        long bytes_received = new_bytes_received - start_bytes_received;
+                        long bytes_transmitted = new_bytes_transmitted - start_bytes_transmitted;
+
+                        start_bytes_received = new_bytes_received;
+                        start_bytes_transmitted = new_bytes_transmitted;
+
+                        total_bytes = bytes_received + bytes_transmitted;
+
+                        Log.d(TAG, "Bytes Received" + bytes_received);
+                        Log.d(TAG, "Bytes Transferred" + bytes_transmitted);
+
                         b = Accountant.getInstance().createBill((int)total_bytes);
+
+                        // check if the resources are empty
+                        boolean closeAfterwards = false;
+                        if (Accountant.getInstance().shouldCloseChannel()) {
+                            Log.d(TAG, "start: SHOULD CLOSE CHANNEL!");
+                            closeAfterwards = true;
+                        }
+
+
                         // ToDo: integrate real flash channel
-                        latestBill = new BillMessage(b, "<flash obj>", Accountant.getInstance().isCloseAfterwards());
+                        latestBill = new BillMessage(b, "<flash obj>", Accountant.getInstance().isCloseAfterwards() || closeAfterwards);
                         latestBillString = gson.toJson(latestBill);
                         socketWrapper.sendLine(latestBillString);
 

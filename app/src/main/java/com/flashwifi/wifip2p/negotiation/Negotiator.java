@@ -269,6 +269,21 @@ public class Negotiator {
             disagree_reason = R.string.err_client_minutes_not_acceptable_for_hotspot;
         }
 
+        // check consumer has enough iotas
+        SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        String defaultValue = "0";
+        String storedBalance = sharedPref.getString("balance", defaultValue);
+        int iotaBalance = Integer.parseInt(storedBalance);
+
+        Log.d(TAG, "runConsumerProtocol: MY IOTA BALANCE: " + iotaBalance);
+
+        // Assumption 1 MB per minute
+        if (iotaBalance < client_roaming_minutes * iotaPerMegabyte) {
+            Log.d(TAG, "runConsumerProtocol: Balance too low");
+            agree = false;
+            disagree_reason = R.string.err_client_not_enough_iota;
+        }
+
         // SEND NegotiationAnswer
         NegotiationOfferAnswer answer = new NegotiationOfferAnswer(agree, client_roaming_minutes, ownMacAddress);
         PeerStore.getInstance().setLatestOfferAnswer(otherMac, answer);
@@ -321,6 +336,19 @@ public class Negotiator {
         if (maxMinutes < 0) {
             return error(R.string.err_max_minutes_bad_setting, false);
         }
+
+        // check consumer has enough iotas
+        SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        String defaultValue = "0";
+        String storedBalance = sharedPref.getString("balance", defaultValue);
+        int iotaBalance = Integer.parseInt(storedBalance);
+
+        // Assumption 1 MB per minute
+        if (iotaBalance < maxMinutes * iotaPerMegabyte) {
+            Log.d(TAG, "runHotspotProtocol: Balance too low");
+            return error(R.string.err_hotspot_not_enough_iota, false);
+        }
+
         NegotiationOffer offer = new NegotiationOffer(minMinutes, maxMinutes, iotaPerMegabyte, ownMacAddress);
 
         String offerString = gson.toJson(offer);

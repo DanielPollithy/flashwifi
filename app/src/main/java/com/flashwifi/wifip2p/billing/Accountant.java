@@ -138,6 +138,19 @@ public class Accountant {
         return false;
     }
 
+    public boolean shouldCloseChannel() {
+        if (getTotalBytes() >= getBookedBytes()) {
+            return true;
+        }
+        if ((Accountant.getInstance().getTotalDurance() / 60) >= Accountant.getInstance().getBookedMinutes()) {
+            return true;
+        }
+        if (Accountant.getInstance().getTotalIotaPrice() >= Accountant.getInstance().getTotalIotaDeposit()) {
+            return true;
+        }
+        return false;
+    }
+
     public int getTotalMegabytes() {
         return totalBytes / (1024*1024);
     }
@@ -159,7 +172,7 @@ public class Accountant {
     }
 
     public int getBookedBytes() {
-        return bookedMegabytes;
+        return bookedMegabytes * 1000000;
     }
 
     public int getTimeoutMinutes() {

@@ -681,6 +681,7 @@ public class WiFiDirectBroadcastService extends Service {
     }
 
 
+
     public void startNegotiationServer(final boolean isClient, String macAddress, String peerMac) {
         Runnable task = new Runnable() {
             @Override

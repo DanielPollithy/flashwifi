@@ -17,4 +17,6 @@
     <string name="err_timeout">Timeout</string>
     <string name="err_io_exception">IO Exception</string>
     <string name="err_peer_quit">Peer quit the conversation</string>
+    <string name="err_client_not_enough_iota">Client doesn\'t have enough iota balance</string>
+    <string name="err_hotspot_not_enough_iota">Not enough iota balance</string>
 </resources>
