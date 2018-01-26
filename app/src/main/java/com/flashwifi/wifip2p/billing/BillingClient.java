@@ -9,6 +9,9 @@ import android.util.Log;
 
 import com.flashwifi.wifip2p.datastore.PeerInformation;
 import com.flashwifi.wifip2p.datastore.PeerStore;
+import com.flashwifi.wifip2p.iotaFlashWrapper.*;
+import com.flashwifi.wifip2p.iotaFlashWrapper.FlashChannelHelper;
+import com.flashwifi.wifip2p.iotaFlashWrapper.Model.Digest;
 import com.flashwifi.wifip2p.negotiation.SocketWrapper;
 import com.flashwifi.wifip2p.protocol.BillMessage;
 import com.flashwifi.wifip2p.protocol.BillMessageAnswer;
@@ -28,7 +31,9 @@ import java.net.NetworkInterface;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.List;
 
 import static android.content.Context.WIFI_SERVICE;
 
@@ -44,6 +49,8 @@ public class BillingClient {
     private static final String TAG = "BillingClient";
     private final Gson gson;
     private final String mac;
+    private final String seed;
+    private final int seedindex;
     private State state = State.NOT_PAIRED;
     private Socket socket;
     private SocketWrapper socketWrapper;
@@ -55,6 +62,8 @@ public class BillingClient {
     private BillingOpenChannelAnswer billingOpenChannelAnswer;
     private BillMessage[] billMessages;
 
+    FlashChannelHelper one;
+
     Context context;
 
     private void sendUpdateUIBroadcastWithMessage(String message){
@@ -64,10 +73,12 @@ public class BillingClient {
         context.sendBroadcast(local);
     }
 
-    public BillingClient(String mac, Context context){
+    public BillingClient(String mac, Context context, String seed, int seedindex){
         this.context = context;
         this.mac = mac;
         gson = new GsonBuilder().create();
+        this.seed = seed;
+        this.seedindex = seedindex;
     }
 
 
@@ -114,25 +125,61 @@ public class BillingClient {
                         NegotiationOfferAnswer answer = PeerStore.getInstance().getLatestNegotiationOfferAnswer(mac);
                         NegotiationFinalization finalization = PeerStore.getInstance().getLatestFinalization(mac);
 
-                        // ToDo: replace magic number with setting
-                        int totalMegabytes = 100;
-                        int treeDepth = 8;
-                        String[] digests = new String[]{"1234", "2345", "3456"};
-                        int timeoutMinutesClient = 20 * 60 * 1000;
-
                         int iotaPerMegabyte = offer.getIotaPerMegabyte();
-                        String clientRefundAddress = finalization.getClientRefundAddress();
+                        //String clientRefundAddress = finalization.getClientRefundAddress();
                         int totalMinutes = answer.getDuranceInMinutes();
 
-                        billingOpenChannel = new BillingOpenChannel(totalMegabytes, iotaPerMegabyte, clientRefundAddress, treeDepth, digests, timeoutMinutesClient, totalMinutes);
+                        // the deposit of one party
+                        int iotaDeposit = Accountant.getInstance().getTotalIotaDeposit();
+                        int totalMegabytes = totalMinutes; // assumption 1MB per minute
+                        int treeDepth = com.flashwifi.wifip2p.iotaFlashWrapper.FlashChannelHelper.getRequiredDepth(10);
+
+                        one = FlashChannelHelper.getInstance();
+                        double[] deposits = new double[]{iotaDeposit, iotaDeposit};
+                        // client is always userIndex==0
+                        // ToDo: remove mocked data
+                        String seed = "RDNUSLPNOQUGDIZVOINTYRIRRIJMLODOC9ZTQU9KQSCDXPVSBILXUE9AHEOA9MNYZWNSECAVPQ9QSAHCN";
+                        one.setupUser(0, seed, seedindex, 1);
+                        one.setupFlash(deposits, treeDepth);
+
+                        // The addresses must be exchanged over the network.
+                        // When done setup the settlementAddresses.
+                        ArrayList<String> settlementAddresses = new ArrayList<>();
+                        settlementAddresses.add(answer.getClientSettlementAddress());
+                        settlementAddresses.add(finalization.getHotspotSettlementAddress());
+
+                        // Set the addresses
+                        one.setupSettlementAddresses(settlementAddresses);
+
+                        List<Digest> initialDigestsOne = one.initialChannelDigests();
+                        int timeoutMinutesClient = 20 * 60 * 1000;
+
+                        billingOpenChannel = new BillingOpenChannel(totalMegabytes, iotaPerMegabyte, treeDepth, initialDigestsOne, timeoutMinutesClient, totalMinutes);
                         PeerStore.getInstance().setLatestBillingOpenChannel(mac, billingOpenChannel);
                         String billingOpenChannelString = gson.toJson(billingOpenChannel);
                         socketWrapper.sendLine(billingOpenChannelString);
+
                         // receive the hotspot details for the flash channel
                         String billingOpenChannelAnswerString = socketWrapper.getLineThrowing();
                         billingOpenChannelAnswer = gson.fromJson(billingOpenChannelAnswerString, BillingOpenChannelAnswer.class);
                         PeerStore.getInstance().setLatestBillingOpenChannelAnswer(mac, billingOpenChannelAnswer);
+
                         // now create the flash channel on our side
+                        List<List<Digest>> digestPairs = new ArrayList<>();
+                        digestPairs.add(initialDigestsOne);
+                        digestPairs.add(billingOpenChannelAnswer.getHotspotDigests());
+
+                        one.setupChannelWithDigests(digestPairs);
+
+                        Log.d("[ROOT ADDR]", one.getRootAddressWithChecksum());
+
+                        // assert that the root address of both parties are the same
+                        if (one.getRootAddressWithChecksum().equals(billingOpenChannelAnswer.getChannelRootAddress())) {
+                            Log.d(TAG, "start: HOOOORAY! The multisig addresses match!");
+                        } else {
+                            Log.d(TAG, "start: :( :( :( :( :( :( A day to cry. the multisig addresses don't match");
+                        }
+
                         Accountant.getInstance().start(billingOpenChannel.getTotalMegabytes(), billingOpenChannel.getTimeoutMinutesClient(), billingOpenChannel.getTotalMinutes(), billingOpenChannelAnswer.getClientDepositIota(),
                                 billingOpenChannel.getIotaPerMegabyte());
                         sendUpdateUIBroadcastWithMessage("Channel established");

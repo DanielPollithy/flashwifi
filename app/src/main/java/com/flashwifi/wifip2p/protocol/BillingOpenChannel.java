@@ -1,6 +1,10 @@
 package com.flashwifi.wifip2p.protocol;
 
 
+import com.flashwifi.wifip2p.iotaFlashWrapper.Model.Digest;
+
+import java.util.List;
+
 public class BillingOpenChannel {
     private int totalMegabytes;
     private int totalMinutes;
@@ -8,10 +12,10 @@ public class BillingOpenChannel {
     private int timeoutMinutesClient;
     private String clientRefundAddress;
     private int treeDepth;
-    private String[] clientDigests;
+    private List<Digest> clientDigests;
 
-    public BillingOpenChannel(int totalMegabytes, int iotaPerMegabyte, String clientRefundAddress,
-                              int treeDepth, String[] clientDigests, int timeoutMinutesClient,
+    public BillingOpenChannel(int totalMegabytes, int iotaPerMegabyte,
+                              int treeDepth, List<Digest> clientDigests, int timeoutMinutesClient,
                               int totalMinutes) {
         this.totalMegabytes = totalMegabytes;
         this.totalMinutes = totalMinutes;
@@ -34,15 +38,12 @@ public class BillingOpenChannel {
         return iotaPerMegabyte;
     }
 
-    public String getClientRefundAddress() {
-        return clientRefundAddress;
-    }
 
     public int getTreeDepth() {
         return treeDepth;
     }
 
-    public String[] getClientDigests() {
+    public List<Digest> getClientDigests() {
         return clientDigests;
     }
 

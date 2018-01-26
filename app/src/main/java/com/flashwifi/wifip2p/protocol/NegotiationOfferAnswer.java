@@ -6,12 +6,14 @@ public class NegotiationOfferAnswer {
     private boolean agreeToConditions;
     private int duranceInMinutes;
     private String consumerMac;
+    private String clientSettlementAddress;
 
-    public NegotiationOfferAnswer(boolean agreeToConditions, int duranceInMinutes, String consumerMac) {
+    public NegotiationOfferAnswer(boolean agreeToConditions, int duranceInMinutes, String consumerMac, String clientSettlementAddress) {
         this.type = "answerToOffer";
         this.agreeToConditions = agreeToConditions;
         this.duranceInMinutes = duranceInMinutes;
         this.consumerMac = consumerMac;
+        this.clientSettlementAddress = clientSettlementAddress;
     }
 
     public String getType() {
@@ -28,5 +30,9 @@ public class NegotiationOfferAnswer {
 
     public String getConsumerMac() {
         return consumerMac;
+    }
+
+    public String getClientSettlementAddress() {
+        return clientSettlementAddress;
     }
 }

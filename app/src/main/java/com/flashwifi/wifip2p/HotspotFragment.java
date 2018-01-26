@@ -21,6 +21,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.widget.ToggleButton;
 
 import java.net.InetAddress;
@@ -78,6 +79,16 @@ public class HotspotFragment extends Fragment {
             text.setText(String.format("%s peers", numberAvailableDevices));
             final View activity_view = getActivity().findViewById(R.id.drawer_layout);
         }
+
+        String what = intent.getStringExtra("what");
+        String message = intent.getStringExtra("message");
+
+        if (message != null && message.equals("error")) {
+            String snd_message = intent.getStringExtra("snd_message");
+            Toast.makeText(getContext(), snd_message, Toast.LENGTH_SHORT).show();
+        }
+
+
 
     }
 

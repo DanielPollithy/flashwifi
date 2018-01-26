@@ -1,18 +1,20 @@
 package com.flashwifi.wifip2p.protocol;
 
 
+import com.flashwifi.wifip2p.iotaFlashWrapper.Model.Digest;
+
+import java.util.List;
+
 public class BillingOpenChannelAnswer {
     private int hotspotDepositIota;
     private int clientDepositIota;
     private int timeoutMinutesHotspot;
-    private String hotspotRefundAddress;
     private String channelRootAddress;
-    private String[] hotspotDigests;
+    private List<Digest>  hotspotDigests;
 
-    public BillingOpenChannelAnswer(int hotspotDepositIota, int clientDepositIota, String hotspotRefundAddress, String channelRootAddress, String[] hotspotDigests) {
+    public BillingOpenChannelAnswer(int hotspotDepositIota, int clientDepositIota, String channelRootAddress, List<Digest> hotspotDigests) {
         this.hotspotDepositIota = hotspotDepositIota;
         this.clientDepositIota = clientDepositIota;
-        this.hotspotRefundAddress = hotspotRefundAddress;
         this.channelRootAddress = channelRootAddress;
         this.hotspotDigests = hotspotDigests;
     }
@@ -29,15 +31,11 @@ public class BillingOpenChannelAnswer {
         return timeoutMinutesHotspot;
     }
 
-    public String getHotspotRefundAddress() {
-        return hotspotRefundAddress;
-    }
-
     public String getChannelRootAddress() {
         return channelRootAddress;
     }
 
-    public String[] getHotspotDigests() {
+    public List<Digest> getHotspotDigests() {
         return hotspotDigests;
     }
 }

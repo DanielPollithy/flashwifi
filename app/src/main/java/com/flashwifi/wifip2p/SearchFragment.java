@@ -114,6 +114,11 @@ public class SearchFragment extends Fragment {
         if (message != null && message.equals("error")) {
             String snd_message = intent.getStringExtra("snd_message");
             Snackbar.make(view, snd_message, Snackbar.LENGTH_LONG).setAction("Action", null).show();
+            if (getmService() != null) {
+                getmService().setBusy(false);
+            }
+
+            PeerStore.getInstance().clear();
             updateList();
         }
     }

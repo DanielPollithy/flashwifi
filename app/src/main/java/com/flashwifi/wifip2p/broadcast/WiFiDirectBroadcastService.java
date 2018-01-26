@@ -372,7 +372,9 @@ public class WiFiDirectBroadcastService extends Service {
                 @Override
                 public void run() {
                     Log.d(TAG, "run: instantiate billing server");
-                    BillingServer billingServer = new BillingServer(mac, getApplicationContext());
+                    // ToDo: Replace seedindex
+                    int seedindex = 0;
+                    BillingServer billingServer = new BillingServer(mac, getApplicationContext(), seed, seedindex);
 
                     try {
                         billingServer.start();
@@ -403,7 +405,7 @@ public class WiFiDirectBroadcastService extends Service {
             Runnable task = new Runnable() {
                 @Override
                 public void run() {
-                    BillingClient billingClient = new BillingClient(mac, getApplicationContext());
+                    BillingClient billingClient = new BillingClient(mac, getApplicationContext(), seed, 0); // ToDo: remove the magic number
                     // Gget the AP gateway ip address
                     // https://stackoverflow.com/questions/9035784/how-to-know-ip-address-of-the-router-from-code-in-android
                     final WifiManager manager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
@@ -683,6 +685,10 @@ public class WiFiDirectBroadcastService extends Service {
 
 
     public void startNegotiationServer(final boolean isClient, String macAddress, String peerMac) {
+        // ToDo: settlementAddress
+        String settlementAddress = "RDNUSLPNOQUGDIZVOINTYRIRRIJMLODOC9ZTQU9KQSCDXPVSBILXUE9AHEOA9MNYZWNSECAVPQ9QSAHCN";
+
+
         Runnable task = new Runnable() {
             @Override
             public void run() {
@@ -691,7 +697,8 @@ public class WiFiDirectBroadcastService extends Service {
                         macAddress,
                         PreferenceManager.getDefaultSharedPreferences(getApplicationContext()),
                         getBaseContext(),
-                        peerMac
+                        peerMac,
+                        "IUQDBHFDXK9EHKC9VUHCUXDLICLRANNDHYRMDYFCGSZMROWCZBLBNRKXWBSWZYDMLLHIHMP9ZPOPIFUSW"// settlementAddress
                         );
 
                 String peer_mac_address = null;
@@ -763,7 +770,7 @@ public class WiFiDirectBroadcastService extends Service {
         this.sendBroadcast(local);
     }
 
-    public void startNegotiationClient(final InetAddress address, final boolean isClient, String macAddress, String peerMacAddress) {
+    public void startNegotiationClient(final InetAddress address, final boolean isClient, String macAddress, String peerMacAddress, String settlementAddress) {
         Runnable task = new Runnable() {
             @Override
             public void run() {
@@ -772,7 +779,8 @@ public class WiFiDirectBroadcastService extends Service {
                         macAddress,
                         PreferenceManager.getDefaultSharedPreferences(getApplicationContext()),
                         getBaseContext(),
-                        peerMacAddress
+                        peerMacAddress,
+                        "RDNUSLPNOQUGDIZVOINTYRIRRIJMLODOC9ZTQU9KQSCDXPVSBILXUE9AHEOA9MNYZWNSECAVPQ9QSAHCN" //settlementAddress
                 );
                 String peer_mac_address = null;
                 boolean restartAfterwards = true;
@@ -1229,7 +1237,9 @@ public class WiFiDirectBroadcastService extends Service {
                     startNegotiationServer(isInRoleConsumer(), ownerMac, clientMac);
                 } else {
                     InetAddress groupOwnerAddress = p2p_info.groupOwnerAddress;
-                    startNegotiationClient(groupOwnerAddress, isInRoleConsumer(), clientMac, ownerMac);
+                    // ToDo: get the settlementAddress
+                    String settlementAddress = "RDNUSLPNOQUGDIZVOINTYRIRRIJMLODOC9ZTQU9KQSCDXPVSBILXUE9AHEOA9MNYZWNSECAVPQ9QSAHCN";
+                    startNegotiationClient(groupOwnerAddress, isInRoleConsumer(), clientMac, ownerMac, settlementAddress);
                 }
 
             }

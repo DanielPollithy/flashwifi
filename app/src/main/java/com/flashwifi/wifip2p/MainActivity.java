@@ -141,21 +141,6 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void initUi() {
-        /*final Switch switch_ = (Switch) findViewById(R.id.wifiSwitch);
-        switch_.setOnCheckedChangeListener(new Switch.OnCheckedChangeListener() {
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked) {
-                    if (!mBound) {
-                        switch_.setChecked(false);
-                        Toast.makeText(getApplicationContext(), "Wifi Broadcast not bound", Toast.LENGTH_SHORT).show();
-                    } else {
-                        mService.enableService();
-                    }
-                } else {
-                    mService.disableService();
-                }
-            }
-        });*/
     }
 
     private String readFile(String name) {

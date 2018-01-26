@@ -12,6 +12,9 @@ import android.text.format.Formatter;
 import android.util.Log;
 
 import com.flashwifi.wifip2p.datastore.PeerStore;
+import com.flashwifi.wifip2p.iotaFlashWrapper.*;
+import com.flashwifi.wifip2p.iotaFlashWrapper.FlashChannelHelper;
+import com.flashwifi.wifip2p.iotaFlashWrapper.Model.Digest;
 import com.flashwifi.wifip2p.negotiation.SocketWrapper;
 import com.flashwifi.wifip2p.protocol.BillMessage;
 import com.flashwifi.wifip2p.protocol.BillMessageAnswer;
@@ -32,7 +35,9 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.List;
 
 import static android.content.Context.WIFI_SERVICE;
 
@@ -49,15 +54,17 @@ public class BillingServer {
     private static final String TAG = "BillingServer";
     private final Gson gson;
     private final String mac;
-    private final String hotspotRefundAddress;
     private final String channelRootAddress;
-    private final String[] digests;
+    private final String seed;
+    private final int seedindex;
     private State state = State.NOT_PAIRED;
     private ServerSocket serverSocket;
     private Socket socket;
     private SocketWrapper socketWrapper;
     private int PORT = 9199;
     private static final int serverTimeoutMillis = 2 * 60 * 1000;
+    FlashChannelHelper two;
+    List<Digest> initialDigestsTwo;
 
     Context context;
     NetworkStatsManager networkStatsManager;
@@ -69,9 +76,11 @@ public class BillingServer {
         context.sendBroadcast(local);
     }
 
-    public BillingServer(String mac, Context context){
+    public BillingServer(String mac, Context context, String seed, int seedindex){
         this.context = context;
         this.mac = mac;
+        this.seed = seed;
+        this.seedindex = seedindex;
 
         Log.d(TAG, "BillingServer: MAC of other part: " + mac);
 
@@ -80,22 +89,40 @@ public class BillingServer {
         NegotiationOfferAnswer answer = PeerStore.getInstance().getLatestNegotiationOfferAnswer(mac);
         NegotiationFinalization finalization = PeerStore.getInstance().getLatestFinalization(mac);
         // get the necessary values
-        // ToDo: replace magic number with setting
-        int totalMegabytes = 100;
-        int treeDepth = 8;
-        this.digests = new String[]{"1234", "2345", "3456"};
-        int timeoutMinutesServer = 2 * 60 * 1000;
-
-        this.hotspotRefundAddress = finalization.getHotspotRefundAddress();
-        this.channelRootAddress = finalization.getDepositAddressFlashChannel();
-
 
         int iotaPerMegabyte = offer.getIotaPerMegabyte();
-        int iotaDepositClient = totalMegabytes * iotaPerMegabyte;
-        String clientRefundAddress = finalization.getClientRefundAddress();
+        //String clientRefundAddress = finalization.getClientRefundAddress();
         int totalMinutes = answer.getDuranceInMinutes();
 
-        Accountant.getInstance().start(totalMegabytes, timeoutMinutesServer, totalMinutes, iotaDepositClient, iotaPerMegabyte);
+        // the deposit of one party
+        int iotaDeposit = finalization.getDepositServerFlashChannelInIota();
+        int totalMegabytes = totalMinutes; // assumption 1MB per minute
+        int treeDepth = com.flashwifi.wifip2p.iotaFlashWrapper.FlashChannelHelper.getRequiredDepth(10);
+
+
+        two = com.flashwifi.wifip2p.iotaFlashWrapper.FlashChannelHelper.getInstance();
+        double[] deposits = new double[]{iotaDeposit, iotaDeposit};
+        // client is always userIndex==1
+        // ToDo: remove mock data
+        seed = "IUQDBHFDXK9EHKC9VUHCUXDLICLRANNDHYRMDYFCGSZMROWCZBLBNRKXWBSWZYDMLLHIHMP9ZPOPIFUSW";
+        two.setupUser(1, seed, seedindex, 1);
+        two.setupFlash(deposits, treeDepth);
+
+        // The addresses must be exchanged over the network.
+        // When done setup the settlementAddresses.
+        ArrayList<String> settlementAddresses = new ArrayList<>();
+        settlementAddresses.add(answer.getClientSettlementAddress());
+        settlementAddresses.add(finalization.getHotspotSettlementAddress());
+
+        two.setupSettlementAddresses(settlementAddresses);
+
+        initialDigestsTwo = two.initialChannelDigests();
+
+        int timeoutMinutesServer = 2 * 60 * 1000;
+
+        this.channelRootAddress = finalization.getDepositAddressFlashChannel();
+
+        Accountant.getInstance().start(totalMegabytes, timeoutMinutesServer, totalMinutes, iotaDeposit, iotaPerMegabyte);
         gson = new GsonBuilder().create();
         networkStatsManager = (NetworkStatsManager) context.getSystemService(Context.NETWORK_STATS_SERVICE);
     }
@@ -152,16 +179,21 @@ public class BillingServer {
                     PeerStore.getInstance().setLatestBillingOpenChannel(mac, billingOpenChannel);
                     // answer with billingOpenChannelAnswerString
 
+                    // calculate ROOT ADDRESS
+                    List<List<Digest>> digestPairs = new ArrayList<>();
+                    digestPairs.add(billingOpenChannel.getClientDigests());
+                    digestPairs.add(initialDigestsTwo);
 
-                    // ToDo: create the flash channel
+                    // This will create the initial multisig addresses and the root address.
+                    two.setupChannelWithDigests(digestPairs);
 
-                    
+                    Log.d("[ROOT ADDR]", two.getRootAddressWithChecksum());
+
                     BillingOpenChannelAnswer billingOpenChannelAnswer = new BillingOpenChannelAnswer(
                             Accountant.getInstance().getTotalIotaDeposit(),
                             Accountant.getInstance().getTotalIotaDeposit(),
-                            hotspotRefundAddress,
-                            channelRootAddress,
-                            digests);
+                            two.getRootAddressWithChecksum(),
+                            initialDigestsTwo);
                     PeerStore.getInstance().setLatestBillingOpenChannelAnswer(mac, billingOpenChannelAnswer);
                     String billingOpenChannelAnswerString = gson.toJson(billingOpenChannelAnswer);
                     socketWrapper.sendLine(billingOpenChannelAnswerString);

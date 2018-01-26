@@ -32,6 +32,7 @@ public class Negotiator {
     private static final int clientTimeoutMillis = 5000;
     private static final int serverTimeoutMillis = 5000;
     private final String peerMac;
+    private final String clientSettlementAddress;
     private String ownMacAddress;
 
     private SocketWrapper socketWrapper;
@@ -83,13 +84,14 @@ public class Negotiator {
     }
 
     public Negotiator(boolean isConsumer, String ownMacAddress, SharedPreferences prefs, Context context,
-                      String peerMac) {
+                      String peerMac, String clientSettlementAddress) {
         this.peerMac = peerMac;
         this.isConsumer = isConsumer;
         gson = new GsonBuilder().create();
         this.ownMacAddress = ownMacAddress;
         this.prefs = prefs;
         this.context = context;
+        this.clientSettlementAddress = clientSettlementAddress;
         Log.d(TAG, "Negotiator: " + ownMacAddress);
     }
 
@@ -274,6 +276,8 @@ public class Negotiator {
         String defaultValue = "0";
         String storedBalance = sharedPref.getString("balance", defaultValue);
         int iotaBalance = Integer.parseInt(storedBalance);
+        // ToDo: remove the mock
+        iotaBalance = 100000;
 
         Log.d(TAG, "runConsumerProtocol: MY IOTA BALANCE: " + iotaBalance);
 
@@ -285,7 +289,7 @@ public class Negotiator {
         }
 
         // SEND NegotiationAnswer
-        NegotiationOfferAnswer answer = new NegotiationOfferAnswer(agree, client_roaming_minutes, ownMacAddress);
+        NegotiationOfferAnswer answer = new NegotiationOfferAnswer(agree, client_roaming_minutes, ownMacAddress, clientSettlementAddress);
         PeerStore.getInstance().setLatestOfferAnswer(otherMac, answer);
         String answerString = gson.toJson(answer);
         socketWrapper.sendLine(answerString);
@@ -342,6 +346,8 @@ public class Negotiator {
         String defaultValue = "0";
         String storedBalance = sharedPref.getString("balance", defaultValue);
         int iotaBalance = Integer.parseInt(storedBalance);
+        // ToDo: remove the mock
+        iotaBalance = 100000;
 
         // Assumption 1 MB per minute
         if (iotaBalance < maxMinutes * iotaPerMegabyte) {
@@ -404,14 +410,15 @@ public class Negotiator {
         // ToDo: get depositAddressFlashChannel from SharedPreferences
         // ToDo: get the bandwidth of the hotspot
         // ToDo: create initial flash object
-        double bandwidth = 0.1; // megabyte per second;
+        double bandwidth = 1.0; // megabyte per second;
         int max_data_volume_megabytes = (int) (answer.getDuranceInMinutes() * bandwidth);
         int max_iota_transferred = max_data_volume_megabytes * offer.getIotaPerMegabyte();
         max_iota_transferred = 10;
         String rootAddress = "JZWUMRUEYFJOCDDRZCNIIMDZSX9LWMITNMDIAIUJKUV9LVDLSICDABFYTTBZFGEBJOADDN9WZ9IJJJD9DXRJRR9TOW";
+        String hotspotSettlementAddress = "IUQDBHFDXK9EHKC9VUHCUXDLICLRANNDHYRMDYFCGSZMROWCZBLBNRKXWBSWZYDMLLHIHMP9ZPOPIFUSW";
         // send the most important message to the user
         NegotiationFinalization finalization = new NegotiationFinalization(hotspotName, password,
-                rootAddress, max_iota_transferred, max_iota_transferred, "<flashObj>");
+                rootAddress, max_iota_transferred, max_iota_transferred, hotspotSettlementAddress);
         PeerStore.getInstance().setLatestFinalization(otherMac, finalization);
         String finalizationString = gson.toJson(finalization);
 
