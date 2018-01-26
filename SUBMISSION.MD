@@ -1,4 +1,4 @@
-**Email Address**: tobiaswoerthle@gmail.com, [Daniel's email], [Wlad's email]
+**Email Address**: tobiaswoerthle@gmail.com, daniel@pollithy.com, [Wlad's email]
 
 **Full Name**: Tobias Woerthle, Daniel Pollithy, Wlad Meixner
 
